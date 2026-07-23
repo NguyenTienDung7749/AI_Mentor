@@ -76,6 +76,14 @@ first request allows 1,200 completion tokens. If a reasoning model reports
 `finish_reason=length`, the app retries once with 2,400 tokens and never stores the partial
 answer. Temporary network, HTTP 408/429 and 5xx failures are also retried at most once. Only
 the final `content` is displayed; provider `reasoning_content` is never shown or persisted.
+Each HTTP call has a 25-second total deadline. A full-call timeout skips another slow retry and
+immediately activates offline fallback so the loading indicator cannot wait indefinitely.
+The hybrid engine also enforces an independent 28-second deadline around the remote worker.
+This covers Android DNS/TLS calls that may remain blocked below OkHttp's cancellable layer;
+late remote results are discarded and never create duplicate history records.
+The provider client resolves public hostnames with OkHttp DNS-over-HTTPS using Google DNS
+bootstrap IPs. This avoids emulator/system resolver stalls without pinning the provider to a
+temporary CDN address; unit tests continue to use the local system resolver for MockWebServer.
 
 When no key is configured, `AiEngineFactory` selects `LocalAiEngine`, a deterministic,
 rule-based study coach that computes arithmetic and returns structured offline guidance.

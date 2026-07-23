@@ -7,12 +7,17 @@ import com.example.aimentor.network.model.ChatMessage;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Dns;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
+import okhttp3.dnsoverhttps.DnsOverHttps;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -25,6 +30,7 @@ public class RemoteAiEngine implements AiEngine {
     private static final int INITIAL_MAX_TOKENS = 1200;
     private static final int EXTENDED_MAX_TOKENS = 2400;
     private static final int MAX_ATTEMPTS = 2;
+    private static final long DEFAULT_CALL_TIMEOUT_MS = 25_000L;
     private static final long DEFAULT_RETRY_DELAY_MS = 500L;
 
     private static final String SYSTEM_PROMPT =
@@ -49,16 +55,20 @@ public class RemoteAiEngine implements AiEngine {
     private final LocalAiEngine localQuizEngine = new LocalAiEngine();
 
     public RemoteAiEngine(String baseUrl, String apiKey) {
-        this(baseUrl, apiKey, 15_000L, 45_000L, DEFAULT_RETRY_DELAY_MS);
+        this(baseUrl, apiKey, 15_000L, 45_000L,
+                DEFAULT_CALL_TIMEOUT_MS, DEFAULT_RETRY_DELAY_MS,
+                createResilientDns());
     }
 
     RemoteAiEngine(String baseUrl, String apiKey,
                    long connectTimeoutMs, long readTimeoutMs) {
-        this(baseUrl, apiKey, connectTimeoutMs, readTimeoutMs, 0L);
+        this(baseUrl, apiKey, connectTimeoutMs, readTimeoutMs,
+                Math.max(1L, readTimeoutMs), 0L, Dns.SYSTEM);
     }
 
     RemoteAiEngine(String baseUrl, String apiKey,
-                   long connectTimeoutMs, long readTimeoutMs, long retryDelayMs) {
+                   long connectTimeoutMs, long readTimeoutMs,
+                   long callTimeoutMs, long retryDelayMs, Dns dns) {
         if (apiKey == null || apiKey.trim().isEmpty()) {
             throw AiServiceException.configuration("The AI API key is missing.");
         }
@@ -73,6 +83,10 @@ public class RemoteAiEngine implements AiEngine {
                 .connectTimeout(connectTimeoutMs, TimeUnit.MILLISECONDS)
                 .readTimeout(readTimeoutMs, TimeUnit.MILLISECONDS)
                 .writeTimeout(15, TimeUnit.SECONDS)
+                // Bounds DNS, TLS, request, response and retries inside one
+                // HTTP call so the loading state cannot spin indefinitely.
+                .callTimeout(callTimeoutMs, TimeUnit.MILLISECONDS)
+                .dns(dns)
                 .build();
 
         Retrofit retrofit = new Retrofit.Builder()
@@ -82,6 +96,29 @@ public class RemoteAiEngine implements AiEngine {
                         new GsonBuilder().create()))
                 .build();
         this.service = retrofit.create(HcnsecApiService.class);
+    }
+
+    private static Dns createResilientDns() {
+        try {
+            OkHttpClient bootstrapClient = new OkHttpClient.Builder()
+                    .connectTimeout(5, TimeUnit.SECONDS)
+                    .readTimeout(5, TimeUnit.SECONDS)
+                    .callTimeout(8, TimeUnit.SECONDS)
+                    .build();
+            return new DnsOverHttps.Builder()
+                    .client(bootstrapClient)
+                    .url(HttpUrl.get("https://dns.google/dns-query"))
+                    .bootstrapDnsHosts(
+                            InetAddress.getByAddress(new byte[]{8, 8, 8, 8}),
+                            InetAddress.getByAddress(new byte[]{8, 8, 4, 4}))
+                    .includeIPv6(false)
+                    .post(true)
+                    .build();
+        } catch (UnknownHostException ignored) {
+            // Numeric bootstrap addresses should always parse. Retain the
+            // platform resolver as a safe construction-time fallback.
+            return Dns.SYSTEM;
+        }
     }
 
     @Override

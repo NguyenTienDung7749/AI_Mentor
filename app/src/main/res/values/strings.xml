@@ -29,7 +29,7 @@
     <!-- Home / Ask -->
     <string name="ask_hint">Type your academic question here…</string>
     <string name="ask_button">Ask AI Mentor</string>
-    <string name="preparing_answer">Preparing your answer…</string>
+    <string name="preparing_answer">Contacting online AI (offline fallback within 28 seconds)…</string>
     <string name="offline_fallback_notice">Online AI was unavailable, so the app prepared offline guidance.</string>
     <string name="subject">Subject</string>
 
@@ -60,7 +60,7 @@
     <string name="answer_source_cached">Cached answer</string>
     <string name="answer_source_cached_model">Cached answer • originally %1$s</string>
     <string name="answer_source_saved">Saved answer</string>
-    <string name="answer_response_time_suffix"> • %1$.1f s</string>
+    <string name="answer_response_time_suffix">&#160;•&#160;%1$.1f s</string>
     <string name="source_short_online">online AI</string>
     <string name="source_short_offline">offline</string>
     <string name="source_short_fallback">offline fallback</string>

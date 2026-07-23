@@ -6,6 +6,8 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class FallbackAiEngineTest {
 
@@ -56,21 +58,63 @@ public class FallbackAiEngineTest {
         assertEquals(AnswerSource.REMOTE, AnswerSource.fromStorage("REMOTE"));
     }
 
+    @Test
+    public void answer_remoteWorkerHangs_returnsFallbackAtIndependentDeadline() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        TestEngine remote = new TestEngine("remote", false, 2_000L);
+        TestEngine local = new TestEngine("local", false);
+        FallbackAiEngine engine = new FallbackAiEngine(
+                remote, local, executor, 40L);
+        long startedAt = System.nanoTime();
+
+        try {
+            AiAnswer answer = engine.answer(
+                    "Question", "High School", "Detailed", "Auto");
+            long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
+
+            assertEquals(AnswerSource.LOCAL_FALLBACK, answer.getSource());
+            assertEquals(1, local.answerCalls);
+            assertTrueDeadline(elapsedMs);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private void assertTrueDeadline(long elapsedMs) {
+        if (elapsedMs >= 500L) {
+            throw new AssertionError("Fallback exceeded deadline: " + elapsedMs + " ms");
+        }
+    }
+
     private static class TestEngine implements AiEngine {
         private final String engineName;
         private final boolean fail;
+        private final long delayMs;
         int answerCalls;
         int quizCalls;
 
         TestEngine(String engineName, boolean fail) {
+            this(engineName, fail, 0L);
+        }
+
+        TestEngine(String engineName, boolean fail, long delayMs) {
             this.engineName = engineName;
             this.fail = fail;
+            this.delayMs = delayMs;
         }
 
         @Override
         public AiAnswer answer(String question, String educationLevel,
                                String explanationStyle, String subjectHint) {
             answerCalls++;
+            if (delayMs > 0L) {
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw AiServiceException.network(e);
+                }
+            }
             if (fail) {
                 throw AiServiceException.http(500);
             }

@@ -161,17 +161,16 @@ public class RemoteAiEngineTest {
     }
 
     @Test
-    public void answer_timeout_isNetworkFailure() {
+    public void answer_fullCallTimeout_isNotRetried() {
         server.enqueue(jsonResponse(200, completionBody("Late answer"))
-                .setBodyDelay(250, TimeUnit.MILLISECONDS));
-        server.enqueue(jsonResponse(200, completionBody("Still late"))
                 .setBodyDelay(250, TimeUnit.MILLISECONDS));
         RemoteAiEngine engine = engine(1_000, 50);
 
         AiServiceException error = expectFailure(engine);
 
-        assertEquals(AiServiceException.Kind.NETWORK, error.getKind());
-        assertTrue(error.isRetryable());
+        assertEquals(AiServiceException.Kind.TIMEOUT, error.getKind());
+        assertTrue(!error.isRetryable());
+        assertEquals(1, server.getRequestCount());
     }
 
     private RemoteAiEngine engine(long connectTimeoutMs, long readTimeoutMs) {
