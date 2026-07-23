@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?actionBarSize"
+        android:background="@color/surface"
+        android:elevation="4dp"
+        app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"
+        app:title="Practice quiz"
+        app:titleTextColor="@color/text_primary" />
+
+    <TextView
+        android:id="@+id/tvProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:text="Question 1"
+        android:textColor="@color/text_secondary"
+        android:textStyle="bold" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp">
+
+            <TextView
+                android:id="@+id/tvQuestionPrompt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rgOptions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp">
+
+                <RadioButton android:id="@+id/rbOpt0" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:padding="12dp" />
+                <RadioButton android:id="@+id/rbOpt1" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:padding="12dp" />
+                <RadioButton android:id="@+id/rbOpt2" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:padding="12dp" />
+                <RadioButton android:id="@+id/rbOpt3" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:padding="12dp" />
+            </RadioGroup>
+
+            <TextView
+                android:id="@+id/tvFeedback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:padding="12dp"
+                android:text=""
+                android:textSize="14sp"
+                android:visibility="gone" />
+        </LinearLayout>
+    </ScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAction"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:paddingVertical="12dp"
+        android:text="@string/check_answer"
+        android:textSize="16sp" />
+</LinearLayout>

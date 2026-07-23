@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Demo Event Android Java"
+        android:textSize="22sp"
+        android:layout_gravity="center_horizontal"/>
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="#A5E3EB"
+        android:layout_marginTop="10dp"
+        android:inputType="text"
+        android:autofillHints="false"
+        android:hint="Enter data"
+        android:id="@+id/edtText"/>
+    <CheckBox
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Agree with conditions"
+        android:id="@+id/cbAgree"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/tvTextData"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"/>
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#03A9F4"
+        android:text="Submit"
+        android:textColor="@color/white"
+        android:id="@+id/btnSubmit"/>
+    <RadioGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/radGAddress"
+        android:layout_marginTop="20dp">
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ha Noi"
+            android:id="@+id/radHN"/>
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bac Ninh"
+            android:id="@+id/radBN"/>
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thai Nguyen"
+            android:id="@+id/radTN"/>
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Phu Tho"
+            android:id="@+id/radPT"/>
+    </RadioGroup>
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Answer"
+        android:id="@+id/btnAnswer"
+        android:layout_marginTop="10dp"/>
+</LinearLayout>

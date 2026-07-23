@@ -1,0 +1,152 @@
+package com.example.aimentor.Fragments;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.aimentor.R;
+import com.example.aimentor.activities.AnswerActivity;
+import com.example.aimentor.adapters.QuestionAdapter;
+import com.example.aimentor.data.Question;
+import com.example.aimentor.repo.StudyRepository;
+import com.example.aimentor.util.SessionManager;
+import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.textfield.TextInputEditText;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class CategoryFragment extends Fragment implements QuestionAdapter.Listener {
+
+    private StudyRepository studyRepository;
+    private SessionManager session;
+    private QuestionAdapter adapter;
+
+    private TextInputEditText etSearch;
+    private Spinner spSubjectFilter;
+    private SwitchMaterial switchBookmarked;
+    private RecyclerView rvHistory;
+    private TextView tvEmpty, tvSuggest;
+
+    public CategoryFragment() { }
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_category, container, false);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        studyRepository = new StudyRepository(requireContext());
+        session = new SessionManager(requireContext());
+
+        etSearch = view.findViewById(R.id.etSearch);
+        spSubjectFilter = view.findViewById(R.id.spSubjectFilter);
+        switchBookmarked = view.findViewById(R.id.switchBookmarked);
+        rvHistory = view.findViewById(R.id.rvHistory);
+        tvEmpty = view.findViewById(R.id.tvEmpty);
+        tvSuggest = view.findViewById(R.id.tvSuggest);
+
+        adapter = new QuestionAdapter(this);
+        rvHistory.setLayoutManager(new LinearLayoutManager(requireContext()));
+        rvHistory.setAdapter(adapter);
+
+        ArrayAdapter<String> filterAdapter = new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_item,
+                Arrays.asList("All subjects", "Mathematics", "Science", "Programming",
+                        "History", "Languages", "General"));
+        filterAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spSubjectFilter.setAdapter(filterAdapter);
+
+        etSearch.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+            public void onTextChanged(CharSequence s, int a, int b, int c) { refresh(); }
+            public void afterTextChanged(Editable s) { }
+        });
+        spSubjectFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(AdapterView<?> parent, View v, int pos, long id) { refresh(); }
+            public void onNothingSelected(AdapterView<?> parent) { }
+        });
+        switchBookmarked.setOnCheckedChangeListener((b, checked) -> refresh());
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        refresh();
+    }
+
+    private void refresh() {
+        long userId = session.getCurrentUserId();
+        String query = etSearch.getText() == null ? "" : etSearch.getText().toString().trim();
+        boolean bookmarkedOnly = switchBookmarked.isChecked();
+        String subjectFilter = (String) spSubjectFilter.getSelectedItem();
+
+        List<Question> base;
+        if (bookmarkedOnly) {
+            base = studyRepository.getBookmarked(userId);
+        } else if (!query.isEmpty()) {
+            base = studyRepository.search(userId, query);
+        } else {
+            base = studyRepository.getHistory(userId);
+        }
+
+        List<Question> filtered = new ArrayList<>();
+        for (Question q : base) {
+            if (bookmarkedOnly && !query.isEmpty()
+                    && !q.questionText.toLowerCase().contains(query.toLowerCase())) {
+                continue;
+            }
+            if (subjectFilter != null && !subjectFilter.equals("All subjects")
+                    && !subjectFilter.equals(q.subject)) {
+                continue;
+            }
+            filtered.add(q);
+        }
+
+        adapter.setItems(filtered);
+        boolean empty = filtered.isEmpty();
+        tvEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+        rvHistory.setVisibility(empty ? View.GONE : View.VISIBLE);
+
+        StudyRepository.Progress p = studyRepository.getProgress(userId);
+        if (p.totalQuestions >= 3 && !"-".equals(p.topSubject)) {
+            tvSuggest.setVisibility(View.VISIBLE);
+            tvSuggest.setText("Suggested review: you often ask about " + p.topSubject
+                    + ". Revisit those answers to reinforce your learning.");
+        } else {
+            tvSuggest.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void onOpen(Question question) {
+        Intent intent = new Intent(requireContext(), AnswerActivity.class);
+        intent.putExtra(AnswerActivity.EXTRA_QUESTION_ID, question.id);
+        startActivity(intent);
+    }
+
+    @Override
+    public void onBookmarkToggle(Question question) {
+        studyRepository.toggleBookmark(question.id);
+        refresh();
+    }
+}

@@ -1,0 +1,56 @@
+<resources>
+    <string name="app_name">AI Study Mentor</string>
+    <string name="open_nav">Open</string>
+    <string name="close_nav">Close</string>
+
+    <!-- Auth -->
+    <string name="login">Log in</string>
+    <string name="sign_up">Sign up</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm password</string>
+    <string name="full_name">Full name (optional)</string>
+    <string name="no_account">Don\'t have an account? Sign up</string>
+    <string name="have_account">Already have an account? Log in</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Let\'s personalise your learning</string>
+    <string name="education_level">Education level</string>
+    <string name="subjects_interest">Subjects of interest</string>
+    <string name="explanation_style">Preferred explanation style</string>
+    <string name="get_started">Get started</string>
+
+    <!-- Tabs -->
+    <string name="tab_home">Home</string>
+    <string name="tab_library">Library</string>
+    <string name="tab_quiz">Quiz</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Home / Ask -->
+    <string name="ask_hint">Type your academic question here…</string>
+    <string name="ask_button">Ask AI Mentor</string>
+    <string name="subject">Subject</string>
+
+    <!-- Library -->
+    <string name="search_hint">Search your questions…</string>
+    <string name="bookmarked_only">Bookmarked only</string>
+    <string name="empty_history">No questions yet. Ask your first question on the Home tab!</string>
+
+    <!-- Quiz -->
+    <string name="start_quiz">Start quiz</string>
+    <string name="check_answer">Check</string>
+    <string name="next_question">Next</string>
+    <string name="finish_quiz">Finish</string>
+
+    <!-- Settings -->
+    <string name="save_preferences">Save preferences</string>
+    <string name="dark_theme">Dark theme</string>
+    <string name="send_reminder">Send me a review reminder</string>
+    <string name="logout">Log out</string>
+
+    <!-- Answer -->
+    <string name="bookmark">Bookmark</string>
+    <string name="bookmarked">Bookmarked</string>
+    <string name="mark_reviewed">Mark as reviewed</string>
+    <string name="reviewed">Reviewed</string>
+</resources>

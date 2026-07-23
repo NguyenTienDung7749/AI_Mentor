@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView android:id="@+id/tvName" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Student"
+                    android:textColor="@color/text_primary" android:textSize="18sp"
+                    android:textStyle="bold" />
+                <TextView android:id="@+id/tvEmail" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="email"
+                    android:textColor="@color/text_secondary" android:textSize="14sp" />
+                <TextView android:id="@+id/tvLevelInfo" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                    android:text="Level 1 - Beginner (0 XP)"
+                    android:textColor="@color/primary" android:textStyle="bold" />
+                <TextView android:id="@+id/tvBadges" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                    android:text="Badges: none yet"
+                    android:textColor="@color/text_secondary" android:textSize="13sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Learning preferences"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="@string/education_level"
+            android:textColor="@color/text_secondary" />
+        <Spinner android:id="@+id/spLevel" android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="@string/subjects_interest"
+            android:textColor="@color/text_secondary" />
+        <CheckBox android:id="@+id/cbMath" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Mathematics" />
+        <CheckBox android:id="@+id/cbScience" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Science" />
+        <CheckBox android:id="@+id/cbProgramming" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Programming" />
+        <CheckBox android:id="@+id/cbHistory" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="History" />
+        <CheckBox android:id="@+id/cbLanguages" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Languages" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="@string/explanation_style"
+            android:textColor="@color/text_secondary" />
+        <Spinner android:id="@+id/spStyle" android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSavePrefs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/save_preferences" />
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:layout_marginVertical="16dp" android:background="@color/primary_light" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchTheme"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/dark_theme" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRemind"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/send_reminder" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:backgroundTint="@color/error"
+            android:text="@string/logout" />
+    </LinearLayout>
+</ScrollView>

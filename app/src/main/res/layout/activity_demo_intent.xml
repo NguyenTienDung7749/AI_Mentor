@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp">
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="EnterData"
+        android:inputType="text"
+        android:autofillHints="false"
+        android:layout_marginBottom="10dp"
+        android:id="@+id/edtData"/>
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#03A9F4"
+        android:text="Go to an other Activity"
+        android:textColor="@color/white"
+        android:id="@+id/btnOtherActivity"/>
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="#AEE0E7"
+        android:layout_marginTop="20dp"
+        android:hint="Enter phone number"
+        android:paddingStart="10dp"
+        android:inputType="phone"
+        android:autofillHints="false"
+        android:id="@+id/edtPhone"/>
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFC107"
+        android:layout_marginTop="10dp"
+        android:text="CALL PHONE"
+        android:id="@+id/btnCallPhone"/>
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="20dp"
+        android:hint="Enter URL ..."
+        android:inputType="textUri"
+        android:autofillHints="false"
+        android:id="@+id/edtUrl"/>
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFEB3B"
+        android:text="Load Website from URL"
+        android:id="@+id/btnURL"/>
+
+</LinearLayout>
