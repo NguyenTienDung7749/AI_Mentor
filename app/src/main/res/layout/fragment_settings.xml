@@ -194,12 +194,38 @@
             android:layout_marginTop="12dp"
             android:text="@string/send_reminder" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/privacy_and_data"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/demo_privacy_notice"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLogout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            app:backgroundTint="@color/error"
             android:text="@string/logout" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDeleteAccount"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/delete_account"
+            android:textColor="@color/error"
+            app:strokeColor="@color/error" />
     </LinearLayout>
 </ScrollView>

@@ -3,7 +3,11 @@ package com.example.aimentor.util;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-/** Tracks which user is currently signed in (simple session persistence). */
+/**
+ * Tracks the local prototype session. Only the Room user id and a non-sensitive
+ * theme preference are stored here; passwords and API credentials are never
+ * written to SharedPreferences.
+ */
 public class SessionManager {
 
     private static final String PREFS = "ai_mentor_session";

@@ -17,6 +17,8 @@ import com.example.aimentor.util.Validators;
 
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 
 /** JVM unit tests for the pure-Java study logic (run with ./gradlew test). */
@@ -83,8 +85,30 @@ public class StudyLogicTest {
     public void security_hashRoundTrip() {
         String salt = SecurityUtils.generateSalt();
         String hash = SecurityUtils.hashPassword("Study2026", salt);
+        assertTrue(hash.startsWith("pbkdf2-"));
+        assertFalse(SecurityUtils.needsUpgrade(hash));
         assertTrue(SecurityUtils.verify("Study2026", salt, hash));
         assertFalse(SecurityUtils.verify("wrong", salt, hash));
+    }
+
+    @Test
+    public void security_legacyHashStillVerifiesAndRequestsUpgrade() throws Exception {
+        String salt = "00112233445566778899aabbccddeeff";
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        digest.update(hexToBytes(salt));
+        String legacyHash = toHex(digest.digest(
+                "Study2026".getBytes(StandardCharsets.UTF_8)));
+
+        assertTrue(SecurityUtils.verify("Study2026", salt, legacyHash));
+        assertFalse(SecurityUtils.verify("wrong", salt, legacyHash));
+        assertTrue(SecurityUtils.needsUpgrade(legacyHash));
+    }
+
+    @Test
+    public void security_corruptCredentialFailsClosed() {
+        assertFalse(SecurityUtils.verify("Study2026", "not-hex", "broken"));
+        assertFalse(SecurityUtils.verify("Study2026", "00",
+                "pbkdf2-sha256$999999999$00"));
     }
 
     @Test
@@ -116,5 +140,21 @@ public class StudyLogicTest {
         }
         assertTrue(hasMultipleChoice);
         assertTrue(hasTrueFalse);
+    }
+
+    private static byte[] hexToBytes(String hex) {
+        byte[] result = new byte[hex.length() / 2];
+        for (int i = 0; i < hex.length(); i += 2) {
+            result[i / 2] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
+        }
+        return result;
+    }
+
+    private static String toHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) {
+            result.append(String.format("%02x", value & 0xff));
+        }
+        return result.toString();
     }
 }

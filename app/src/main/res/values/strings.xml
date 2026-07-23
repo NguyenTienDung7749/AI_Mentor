@@ -64,6 +64,15 @@
     <string name="dark_theme">Dark theme</string>
     <string name="send_reminder">Send me a review reminder</string>
     <string name="logout">Log out</string>
+    <string name="privacy_and_data">Privacy and data</string>
+    <string name="demo_privacy_notice">Classroom prototype: use fictional study data only. Successful questions are sent to Groq for an answer and stored locally; OCR runs on-device. Offline fallback answers are not saved. App data is excluded from Android backup.</string>
+    <string name="delete_account">Delete account and local data</string>
+    <string name="delete_account_title">Permanently delete this account?</string>
+    <string name="delete_account_message">Enter your password to delete this local account, its saved answers, quiz results, progress, XP and badges. This cannot be undone.</string>
+    <string name="delete_account_password_hint">Current password</string>
+    <string name="delete_account_confirm">Delete permanently</string>
+    <string name="delete_account_cancel">Cancel</string>
+    <string name="delete_account_success">Account and local study data deleted.</string>
     <string name="learning_progress">Learning progress</string>
     <string name="progress_summary">%1$s  •  %2$s\n%3$d / %4$d quiz answers correct  •  %5$d%% accuracy\n%6$s</string>
     <string name="xp_progress">%1$d / %2$d XP in this level • %3$d XP to next</string>

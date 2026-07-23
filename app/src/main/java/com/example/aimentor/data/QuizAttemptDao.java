@@ -23,4 +23,7 @@ public interface QuizAttemptDao {
 
     @Query("SELECT IFNULL(SUM(total), 0) FROM quiz_attempts WHERE userId = :userId")
     int totalAnswered(long userId);
+
+    @Query("DELETE FROM quiz_attempts WHERE userId = :userId")
+    void deleteForUser(long userId);
 }

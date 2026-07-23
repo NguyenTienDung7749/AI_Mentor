@@ -9,13 +9,17 @@ import com.example.aimentor.util.PasswordValidator;
 import com.example.aimentor.util.SecurityUtils;
 import com.example.aimentor.util.Validators;
 
+import java.util.Locale;
+
 /** Registration and authentication backed by the local Room database. */
 public class UserRepository {
 
+    private final AppDatabase database;
     private final UserDao userDao;
 
     public UserRepository(Context context) {
-        this.userDao = AppDatabase.getInstance(context).userDao();
+        this.database = AppDatabase.getInstance(context);
+        this.userDao = database.userDao();
     }
 
     public static class Result {
@@ -30,7 +34,7 @@ public class UserRepository {
     }
 
     public Result register(String name, String email, String password) {
-        String cleanEmail = email == null ? "" : email.trim().toLowerCase();
+        String cleanEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
         if (!Validators.isValidEmail(cleanEmail)) {
             return new Result(false, "Please enter a valid email address.", -1);
         }
@@ -52,7 +56,7 @@ public class UserRepository {
     }
 
     public Result login(String email, String password) {
-        String cleanEmail = email == null ? "" : email.trim().toLowerCase();
+        String cleanEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
         if (!Validators.isValidEmail(cleanEmail)) {
             return new Result(false, "Please enter a valid email address.", -1);
         }
@@ -60,8 +64,15 @@ public class UserRepository {
         if (user == null) {
             return new Result(false, "No account found for this email.", -1);
         }
-        if (!SecurityUtils.verify(password == null ? "" : password, user.salt, user.passwordHash)) {
+        String safePassword = password == null ? "" : password;
+        if (!SecurityUtils.verify(safePassword, user.salt, user.passwordHash)) {
             return new Result(false, "Incorrect password.", -1);
+        }
+        if (SecurityUtils.needsUpgrade(user.passwordHash)) {
+            String upgradedSalt = SecurityUtils.generateSalt();
+            user.salt = upgradedSalt;
+            user.passwordHash = SecurityUtils.hashPassword(safePassword, upgradedSalt);
+            userDao.update(user);
         }
         return new Result(true, "Welcome back!", user.id);
     }
@@ -87,5 +98,30 @@ public class UserRepository {
         user.subjects = subjects;
         user.explanationStyle = style;
         userDao.update(user);
+    }
+
+    /**
+     * Deletes only the authenticated student's local account and related study
+     * records. The transaction prevents a partially deleted account.
+     */
+    public Result deleteAccount(long userId, String password) {
+        User user = userDao.findById(userId);
+        if (user == null) {
+            return new Result(false, "Account not found.", -1);
+        }
+        if (!SecurityUtils.verify(password == null ? "" : password,
+                user.salt, user.passwordHash)) {
+            return new Result(false, "Incorrect password.", -1);
+        }
+        try {
+            database.runInTransaction(() -> {
+                database.questionDao().deleteForUser(userId);
+                database.quizAttemptDao().deleteForUser(userId);
+                userDao.deleteById(userId);
+            });
+        } catch (RuntimeException deletionFailed) {
+            return new Result(false, "Could not delete local data. Please try again.", -1);
+        }
+        return new Result(true, "Account and local study data deleted.", userId);
     }
 }

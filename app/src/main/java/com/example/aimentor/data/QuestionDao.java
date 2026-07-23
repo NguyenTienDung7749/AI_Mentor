@@ -34,4 +34,7 @@ public interface QuestionDao {
 
     @Query("SELECT * FROM questions WHERE id = :id LIMIT 1")
     Question findById(long id);
+
+    @Query("DELETE FROM questions WHERE userId = :userId")
+    void deleteForUser(long userId);
 }

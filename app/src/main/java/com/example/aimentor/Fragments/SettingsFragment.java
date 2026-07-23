@@ -2,11 +2,13 @@ package com.example.aimentor.Fragments;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
@@ -15,6 +17,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
@@ -27,6 +30,7 @@ import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import java.text.SimpleDateFormat;
@@ -90,6 +94,7 @@ public class SettingsFragment extends Fragment {
         MaterialButton btnSavePrefs = view.findViewById(R.id.btnSavePrefs);
         MaterialButton btnRemind = view.findViewById(R.id.btnRemind);
         MaterialButton btnLogout = view.findViewById(R.id.btnLogout);
+        MaterialButton btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
 
         spLevel.setAdapter(makeAdapter(Arrays.asList("Middle School", "High School", "University")));
         spStyle.setAdapter(makeAdapter(Arrays.asList("Short", "Detailed", "Step-by-step")));
@@ -104,6 +109,7 @@ public class SettingsFragment extends Fragment {
         btnSavePrefs.setOnClickListener(v -> savePrefs());
         btnRemind.setOnClickListener(v -> sendReminder());
         btnLogout.setOnClickListener(v -> logout());
+        btnDeleteAccount.setOnClickListener(v -> showDeleteAccountDialog());
     }
 
     @Override
@@ -281,6 +287,45 @@ public class SettingsFragment extends Fragment {
 
     private void logout() {
         session.logout();
+        navigateToLogin();
+    }
+
+    private void showDeleteAccountDialog() {
+        EditText passwordInput = new EditText(requireContext());
+        passwordInput.setHint(R.string.delete_account_password_hint);
+        passwordInput.setSingleLine(true);
+        passwordInput.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        int horizontalPadding = dp(24);
+        passwordInput.setPadding(horizontalPadding, dp(8), horizontalPadding, dp(8));
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.delete_account_title)
+                .setMessage(R.string.delete_account_message)
+                .setView(passwordInput)
+                .setNegativeButton(R.string.delete_account_cancel, null)
+                .setPositiveButton(R.string.delete_account_confirm, null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(v -> {
+                    String password = passwordInput.getText() == null
+                            ? "" : passwordInput.getText().toString();
+                    UserRepository.Result result = userRepository.deleteAccount(
+                            session.getCurrentUserId(), password);
+                    if (!result.success) {
+                        passwordInput.setError(result.message);
+                        return;
+                    }
+                    session.logout();
+                    dialog.dismiss();
+                    Toast.makeText(requireContext(),
+                            R.string.delete_account_success, Toast.LENGTH_SHORT).show();
+                    navigateToLogin();
+                }));
+        dialog.show();
+    }
+
+    private void navigateToLogin() {
         Intent login = new Intent(requireContext(), LoginActivity.class);
         login.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(login);

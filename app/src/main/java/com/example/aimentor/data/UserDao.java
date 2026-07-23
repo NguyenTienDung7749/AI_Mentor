@@ -22,4 +22,7 @@ public interface UserDao {
 
     @Query("SELECT COUNT(*) FROM users WHERE email = :email")
     int countByEmail(String email);
+
+    @Query("DELETE FROM users WHERE id = :userId")
+    int deleteById(long userId);
 }
