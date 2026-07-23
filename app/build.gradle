@@ -8,6 +8,7 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.withInputStream { localProperties.load(it) }
 }
 def hcnsecApiKey = localProperties.getProperty("HCNSEC_API_KEY", "")
+def hcnsecModel = localProperties.getProperty("HCNSEC_MODEL", "DeepSeek-V4-Flash")
 
 android {
     namespace 'com.example.aimentor'
@@ -23,6 +24,7 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "HCNSEC_API_KEY", "\"${hcnsecApiKey}\""
         buildConfigField "String", "HCNSEC_BASE_URL", "\"https://api.hcnsec.cn/v1/\""
+        buildConfigField "String", "HCNSEC_MODEL", "\"${hcnsecModel}\""
         vectorDrawables {
             useSupportLibrary true
         }

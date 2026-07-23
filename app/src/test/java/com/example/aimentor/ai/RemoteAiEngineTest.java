@@ -56,7 +56,7 @@ public class RemoteAiEngineTest {
         assertEquals("/v1/chat/completions", request.getPath());
         JsonObject requestBody = JsonParser.parseString(
                 request.getBody().readUtf8()).getAsJsonObject();
-        assertEquals("auto", requestBody.get("model").getAsString());
+        assertEquals("DeepSeek-V4-Flash", requestBody.get("model").getAsString());
         assertEquals(1200, requestBody.get("max_tokens").getAsInt());
         assertTrue(!requestBody.get("stream").getAsBoolean());
     }

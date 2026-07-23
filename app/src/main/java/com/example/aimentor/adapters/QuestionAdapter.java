@@ -77,8 +77,6 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionAdapter.VH> {
                 return holder.itemView.getContext().getString(R.string.source_short_offline);
             case LOCAL_FALLBACK:
                 return holder.itemView.getContext().getString(R.string.source_short_fallback);
-            case CACHE:
-                return holder.itemView.getContext().getString(R.string.source_short_cached);
             case LEGACY:
             default:
                 return holder.itemView.getContext().getString(R.string.source_short_saved);

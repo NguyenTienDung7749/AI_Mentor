@@ -14,7 +14,8 @@ public final class AiEngineFactory {
             return new LocalAiEngine();
         }
         return new FallbackAiEngine(
-                new RemoteAiEngine(BuildConfig.HCNSEC_BASE_URL, key),
+                new RemoteAiEngine(BuildConfig.HCNSEC_BASE_URL, key,
+                        BuildConfig.HCNSEC_MODEL),
                 new LocalAiEngine());
     }
 }

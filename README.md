@@ -27,8 +27,8 @@ practise with auto-generated quizzes and track their progress through XP, levels
 | Gamification (XP, levels, badges) | `util/Gamification`, `repo/StudyRepository` |
 | Notifications (review reminders, level-up) | `util/NotificationHelper` |
 | Security & safety (password strength, salted hashing, abuse detection) | `util/PasswordValidator`, `util/SecurityUtils`, `util/ContentModerator` |
-| Offline access | Everything is stored locally in Room (`data/`) |
-| AI cost management (reuse similar/identical questions) | `repo/StudyRepository#ask` (similar-question cache) |
+| Offline access | Successful online answers are stored locally in Room; temporary offline guidance is not persisted |
+| Fresh online answers | Every submission calls the remote model again; earlier answers are never reused as a cache |
 | Light / dark theme | `util/SessionManager`, `AiMentorApp`, Material 3 day/night themes |
 
 See the pull request description for the full requirement-by-requirement checklist,
@@ -68,19 +68,21 @@ Text answers use the OpenAI-compatible HCNSEC chat-completions endpoint when
 
 ```properties
 HCNSEC_API_KEY=replace-with-a-local-demo-key
+HCNSEC_MODEL=DeepSeek-V4-Flash
 ```
 
-`RemoteAiEngine` requests model `auto` and maps structured JSON into `AiAnswer`. The request
-runs through `StudyRepository`'s IO executor, so it never blocks Android's main thread. The
-first request allows 1,200 completion tokens. If a reasoning model reports
+`RemoteAiEngine` requests the developer-configured `HCNSEC_MODEL` (currently
+`DeepSeek-V4-Flash`) and maps structured JSON into `AiAnswer`. The request runs through
+`StudyRepository`'s IO executor, so it never blocks Android's main thread. The first request
+allows 1,200 completion tokens. If a reasoning model reports
 `finish_reason=length`, the app retries once with 2,400 tokens and never stores the partial
 answer. Temporary network, HTTP 408/429 and 5xx failures are also retried at most once. Only
 the final `content` is displayed; provider `reasoning_content` is never shown or persisted.
-Each HTTP call has a 25-second total deadline. A full-call timeout skips another slow retry and
-immediately activates offline fallback so the loading indicator cannot wait indefinitely.
-The hybrid engine also enforces an independent 28-second deadline around the remote worker.
-This covers Android DNS/TLS calls that may remain blocked below OkHttp's cancellable layer;
-late remote results are discarded and never create duplicate history records.
+The online operation has a 60-second total deadline. While that minute remains, the loading
+state keeps waiting for the remote answer. At the deadline, the hybrid engine cancels the
+remote worker and produces temporary offline guidance. This also covers Android DNS/TLS calls
+that may remain blocked below OkHttp's cancellable layer; late remote results are discarded
+and never create history records.
 The provider client resolves public hostnames with OkHttp DNS-over-HTTPS using Google DNS
 bootstrap IPs. This avoids emulator/system resolver stalls without pinning the provider to a
 temporary CDN address; unit tests continue to use the local system resolver for MockWebServer.
@@ -88,9 +90,12 @@ temporary CDN address; unit tests continue to use the local system resolver for 
 When no key is configured, `AiEngineFactory` selects `LocalAiEngine`, a deterministic,
 rule-based study coach that computes arithmetic and returns structured offline guidance.
 When a key is configured but the remote provider still fails after its bounded retry,
-`FallbackAiEngine` returns clearly labelled offline guidance instead of crashing. Saved
-questions record whether the answer came from online AI, local mode, offline fallback or the
-cache, together with the model name and response time. Practice quizzes currently remain local.
+`FallbackAiEngine` returns clearly labelled offline guidance instead of crashing. Offline
+guidance is shown for the current screen only: it is not added to Room, history, progress or
+XP. Only successful remote answers are saved with model name and response time. Submitting an
+identical question later makes a fresh online request instead of reusing the earlier answer.
+The version 2-to-3 Room migration clears the existing question table once while preserving
+users and quiz attempts. Practice quizzes currently remain local.
 
 There is no API-key field in the app UI: the assignment developer configures the key at build
 time and students simply install the APK. For this assignment demo the local key is compiled

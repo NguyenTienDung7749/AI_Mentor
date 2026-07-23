@@ -19,9 +19,6 @@ public interface QuestionDao {
     @Query("SELECT * FROM questions WHERE userId = :userId ORDER BY createdAt DESC")
     List<Question> getForUser(long userId);
 
-    @Query("SELECT * FROM questions WHERE userId = :userId ORDER BY createdAt DESC LIMIT :limit")
-    List<Question> getRecent(long userId, int limit);
-
     @Query("SELECT * FROM questions WHERE userId = :userId AND bookmarked = 1 ORDER BY createdAt DESC")
     List<Question> getBookmarked(long userId);
 

@@ -25,12 +25,12 @@ import retrofit2.converter.gson.GsonConverterFactory;
 /** Blocking remote implementation. Call only through StudyRepository's IO executor. */
 public class RemoteAiEngine implements AiEngine {
 
-    private static final String MODEL = "auto";
+    private static final String DEFAULT_MODEL = "DeepSeek-V4-Flash";
     private static final double TEMPERATURE = 0.3;
     private static final int INITIAL_MAX_TOKENS = 1200;
     private static final int EXTENDED_MAX_TOKENS = 2400;
     private static final int MAX_ATTEMPTS = 2;
-    private static final long DEFAULT_CALL_TIMEOUT_MS = 25_000L;
+    private static final long DEFAULT_CALL_TIMEOUT_MS = 60_000L;
     private static final long DEFAULT_RETRY_DELAY_MS = 500L;
 
     private static final String SYSTEM_PROMPT =
@@ -50,23 +50,28 @@ public class RemoteAiEngine implements AiEngine {
             + "\"commonMistakes\":[\"mistake\"],\"followUps\":[\"practice question\"]}.";
 
     private final String apiKey;
+    private final String model;
     private final HcnsecApiService service;
     private final long retryDelayMs;
     private final LocalAiEngine localQuizEngine = new LocalAiEngine();
 
     public RemoteAiEngine(String baseUrl, String apiKey) {
-        this(baseUrl, apiKey, 15_000L, 45_000L,
+        this(baseUrl, apiKey, DEFAULT_MODEL);
+    }
+
+    public RemoteAiEngine(String baseUrl, String apiKey, String model) {
+        this(baseUrl, apiKey, model, 15_000L, 60_000L,
                 DEFAULT_CALL_TIMEOUT_MS, DEFAULT_RETRY_DELAY_MS,
                 createResilientDns());
     }
 
     RemoteAiEngine(String baseUrl, String apiKey,
                    long connectTimeoutMs, long readTimeoutMs) {
-        this(baseUrl, apiKey, connectTimeoutMs, readTimeoutMs,
+        this(baseUrl, apiKey, DEFAULT_MODEL, connectTimeoutMs, readTimeoutMs,
                 Math.max(1L, readTimeoutMs), 0L, Dns.SYSTEM);
     }
 
-    RemoteAiEngine(String baseUrl, String apiKey,
+    RemoteAiEngine(String baseUrl, String apiKey, String model,
                    long connectTimeoutMs, long readTimeoutMs,
                    long callTimeoutMs, long retryDelayMs, Dns dns) {
         if (apiKey == null || apiKey.trim().isEmpty()) {
@@ -75,8 +80,12 @@ public class RemoteAiEngine implements AiEngine {
         if (baseUrl == null || baseUrl.trim().isEmpty()) {
             throw AiServiceException.configuration("The AI base URL is missing.");
         }
+        if (model == null || model.trim().isEmpty()) {
+            throw AiServiceException.configuration("The AI model is missing.");
+        }
 
         this.apiKey = apiKey.trim();
+        this.model = model.trim();
         this.retryDelayMs = Math.max(0L, retryDelayMs);
         String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
         OkHttpClient client = new OkHttpClient.Builder()
@@ -163,7 +172,7 @@ public class RemoteAiEngine implements AiEngine {
                     throw AiServiceException.invalidResponse();
                 }
                 answer.setSource(AnswerSource.REMOTE);
-                answer.setModelName(defaultIfBlank(body.model, MODEL));
+                answer.setModelName(defaultIfBlank(body.model, model));
                 return answer;
             } catch (AiServiceException error) {
                 if (attempt + 1 < MAX_ATTEMPTS && error.isRetryable()) {
@@ -187,7 +196,7 @@ public class RemoteAiEngine implements AiEngine {
 
     @Override
     public String name() {
-        return "HCNSEC AI (auto)";
+        return "HCNSEC AI (" + model + ")";
     }
 
     private String buildStudentPrompt(String question, String educationLevel,
@@ -213,7 +222,7 @@ public class RemoteAiEngine implements AiEngine {
 
     private ChatCompletionResponse executeCompletion(List<ChatMessage> messages, int maxTokens) {
         ChatCompletionRequest request = new ChatCompletionRequest(
-                MODEL, messages, TEMPERATURE, maxTokens, false);
+                model, messages, TEMPERATURE, maxTokens, false);
         Response<ChatCompletionResponse> response;
         try {
             response = service.createCompletion("Bearer " + apiKey, request).execute();

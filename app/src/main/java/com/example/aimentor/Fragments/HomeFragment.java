@@ -113,8 +113,9 @@ public class HomeFragment extends Fragment {
         if (result.leveledUp) {
             Toast.makeText(requireContext(), "Level up! Keep learning.", Toast.LENGTH_SHORT).show();
         }
-        Intent intent = new Intent(requireContext(), AnswerActivity.class);
-        intent.putExtra(AnswerActivity.EXTRA_QUESTION_ID, result.questionId);
+        Intent intent = result.saved
+                ? AnswerActivity.savedAnswerIntent(requireContext(), result.questionId)
+                : AnswerActivity.transientAnswerIntent(requireContext(), result.answer);
         startActivity(intent);
     }
 

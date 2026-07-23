@@ -16,7 +16,6 @@ public class AiAnswer {
     private final List<String> keyConcepts = new ArrayList<>();
     private final List<String> commonMistakes = new ArrayList<>();
     private final List<String> followUps = new ArrayList<>();
-    private boolean reusedFromCache = false;
     private AnswerSource source = AnswerSource.LOCAL;
     private String modelName = "";
 
@@ -37,9 +36,6 @@ public class AiAnswer {
     public List<String> getCommonMistakes() { return commonMistakes; }
     public List<String> getFollowUps() { return followUps; }
 
-    public boolean isReusedFromCache() { return reusedFromCache; }
-    public void setReusedFromCache(boolean reusedFromCache) { this.reusedFromCache = reusedFromCache; }
-
     public AnswerSource getSource() { return source; }
     public void setSource(AnswerSource source) {
         this.source = source == null ? AnswerSource.LEGACY : source;
@@ -52,7 +48,8 @@ public class AiAnswer {
 
     /**
      * Renders the structured answer into a human readable block of text that is
-     * stored in the local database and shown to the student (works fully offline).
+     * shown to the student. The repository decides whether the answer is eligible
+     * to be stored in the local database.
      */
     public String toDisplayString() {
         StringBuilder sb = new StringBuilder();
@@ -79,9 +76,6 @@ public class AiAnswer {
         if (!followUps.isEmpty()) {
             sb.append("\nFollow-up questions to practise\n");
             for (String c : followUps) sb.append("- ").append(c).append("\n");
-        }
-        if (reusedFromCache) {
-            sb.append("\n(Answer reused from a very similar earlier question to save AI cost.)");
         }
         return sb.toString().trim();
     }

@@ -21,7 +21,8 @@ public class Question {
     public String difficulty = "";
     public String answerText = "";
     public boolean bookmarked = false;
-    public boolean reused = false;   // answer reused from a similar earlier question (AI cost saving)
+    // Legacy schema field retained for Room compatibility; new answers are never reused.
+    public boolean reused = false;
     public boolean reviewed = false; // student has reviewed this saved answer (awards review XP once)
 
     @NonNull

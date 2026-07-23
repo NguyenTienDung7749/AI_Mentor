@@ -1,14 +1,13 @@
 package com.example.aimentor.ai;
 
 /**
- * Identifies how a saved answer was produced without exposing credentials or
+ * Identifies how an answer was produced without exposing credentials or
  * provider error details.
  */
 public enum AnswerSource {
     REMOTE,
     LOCAL,
     LOCAL_FALLBACK,
-    CACHE,
     LEGACY;
 
     public static AnswerSource fromStorage(String value) {

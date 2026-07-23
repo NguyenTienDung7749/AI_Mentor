@@ -25,16 +25,15 @@ import com.example.aimentor.util.Gamification;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Core study logic: asking questions (with a similar-question cache to save AI
- * cost), generating practice quizzes, recording results, awarding XP and
- * computing progress statistics. Persisted study data remains local, while the
- * answer engine is selected by {@link AiEngineFactory}.
+ * Core study logic: asking fresh online questions, generating practice
+ * quizzes, recording results, awarding XP and computing progress statistics.
+ * Only successful remote answers are persisted; offline fallback answers are
+ * transient and never enter the student's library.
  */
 public class StudyRepository {
 
@@ -65,17 +64,20 @@ public class StudyRepository {
         public final boolean success;
         public final String message;
         public final long questionId;
-        public final boolean reused;
+        public final boolean saved;
         public final boolean leveledUp;
         public final AnswerSource source;
-        AskResult(boolean success, String message, long questionId, boolean reused,
-                  boolean leveledUp, AnswerSource source) {
+        public final Question answer;
+
+        AskResult(boolean success, String message, long questionId, boolean saved,
+                  boolean leveledUp, AnswerSource source, Question answer) {
             this.success = success;
             this.message = message;
             this.questionId = questionId;
-            this.reused = reused;
+            this.saved = saved;
             this.leveledUp = leveledUp;
             this.source = source == null ? AnswerSource.LEGACY : source;
+            this.answer = answer;
         }
     }
 
@@ -97,7 +99,7 @@ public class StudyRepository {
             } catch (RuntimeException ignored) {
                 result = new AskResult(false,
                         "Unable to prepare an answer. Please try again.",
-                        -1, false, false, AnswerSource.LEGACY);
+                        -1, false, false, AnswerSource.LEGACY, null);
             }
             AskResult deliveredResult = result;
             mainHandler.post(() -> callback.onResult(deliveredResult));
@@ -109,83 +111,42 @@ public class StudyRepository {
         ContentModerator.Result mod = ContentModerator.check(questionText);
         if (!mod.allowed) {
             return new AskResult(false, mod.reason, -1, false, false,
-                    AnswerSource.LEGACY);
+                    AnswerSource.LEGACY, null);
         }
         User user = userDao.findById(userId);
         if (user == null) {
             return new AskResult(false, "Please sign in again.", -1, false, false,
-                    AnswerSource.LEGACY);
+                    AnswerSource.LEGACY, null);
         }
 
-        String normalized = normalize(questionText);
-        Question cached = findSimilar(userId, normalized);
+        long startedAt = System.nanoTime();
+        AiAnswer generated = engine.answer(questionText,
+                user.educationLevel, user.explanationStyle, subjectHint);
+        long elapsedNanos = System.nanoTime() - startedAt;
 
+        AnswerSource answerSource = generated.getSource();
         Question q = new Question();
         q.userId = userId;
         q.questionText = questionText.trim();
-        boolean reused = false;
-        AnswerSource answerSource;
+        q.subject = generated.getSubject();
+        q.difficulty = generated.getDifficulty();
+        q.answerText = generated.toDisplayString();
+        q.answerSource = answerSource.name();
+        q.modelName = generated.getModelName();
+        q.responseTimeMs = Math.max(0L, elapsedNanos / 1_000_000L);
 
-        if (cached != null) {
-            // Reuse the earlier answer instead of regenerating (AI cost saving).
-            q.subject = cached.subject;
-            q.difficulty = cached.difficulty;
-            q.answerText = cached.answerText;
-            q.reused = true;
-            q.answerSource = AnswerSource.CACHE.name();
-            q.modelName = cached.modelName;
-            q.responseTimeMs = 0L;
-            reused = true;
-            answerSource = AnswerSource.CACHE;
-        } else {
-            long startedAt = System.nanoTime();
-            AiAnswer answer = engine.answer(questionText,
-                    user.educationLevel, user.explanationStyle, subjectHint);
-            long elapsedNanos = System.nanoTime() - startedAt;
-            q.subject = answer.getSubject();
-            q.difficulty = answer.getDifficulty();
-            q.answerText = answer.toDisplayString();
-            answerSource = answer.getSource();
-            q.answerSource = answerSource.name();
-            q.modelName = answer.getModelName();
-            q.responseTimeMs = Math.max(0L, elapsedNanos / 1_000_000L);
+        if (answerSource == AnswerSource.REMOTE) {
+            long id = questionDao.insert(q);
+            q.id = id;
+            boolean leveledUp = addXp(user, Gamification.XP_ASK);
+            return new AskResult(true, "Online answer ready and saved.",
+                    id, true, leveledUp, answerSource, q);
         }
 
-        long id = questionDao.insert(q);
-        boolean leveledUp = addXp(user, Gamification.XP_ASK);
-        String message = answerSource == AnswerSource.LOCAL_FALLBACK
-                ? "Online AI was unavailable. Offline guidance is ready."
-                : reused ? "Reused a saved answer." : "Answer ready.";
-        return new AskResult(true, message, id, reused, leveledUp, answerSource);
-    }
-
-    private Question findSimilar(long userId, String normalized) {
-        if (normalized.isEmpty()) return null;
-        List<Question> recent = questionDao.getRecent(userId, 100);
-        for (Question prev : recent) {
-            if (normalize(prev.questionText).equals(normalized)) {
-                return prev;
-            }
-        }
-        return null;
-    }
-
-    private String normalize(String text) {
-        if (text == null) return "";
-        StringBuilder sb = new StringBuilder();
-        String lower = text.toLowerCase(Locale.ROOT);
-        boolean lastSpace = false;
-        for (int i = 0; i < lower.length(); i++) {
-            char c = lower.charAt(i);
-            if (Character.isLetterOrDigit(c)) {
-                sb.append(c);
-                lastSpace = false;
-            } else if (!lastSpace) {
-                sb.append(' ');
-                lastSpace = true;
-            }
-        }
-        return sb.toString().trim();
+        q.id = -1L;
+        return new AskResult(true,
+                "Offline guidance is temporary and was not saved.",
+                -1L, false, false, answerSource, q);
     }
 
     // --------------------------------------------------------------- Library

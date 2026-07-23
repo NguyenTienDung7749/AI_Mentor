@@ -9,8 +9,9 @@ import androidx.room.migration.Migration;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
 /**
- * Room database — the single local source of truth. This makes the whole app
- * work offline: questions, answers and quiz results are all stored on device.
+ * Room database — the local source of truth for accounts, successful online
+ * answers and quiz results stored on the device.
+ * Temporary offline guidance is intentionally not persisted.
  *
  * For this MVP {@code allowMainThreadQueries()} is enabled to keep the code
  * simple for a junior team; the data volume per user is small. Moving DB access
@@ -18,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
  */
 @Database(
         entities = {User.class, Question.class, QuizAttempt.class},
-        version = 2,
+        version = 3,
         exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -41,6 +42,17 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 
+    /**
+     * One-time reset requested for the assignment demo. It removes legacy,
+     * cached and offline question history while preserving users and quizzes.
+     */
+    public static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("DELETE FROM questions");
+        }
+    };
+
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
             synchronized (AppDatabase.class) {
@@ -50,7 +62,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     AppDatabase.class,
                                     "ai_mentor.db")
                             .allowMainThreadQueries()
-                            .addMigrations(MIGRATION_1_2)
+                            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                             .build();
                 }
             }

@@ -16,7 +16,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class FallbackAiEngine implements AiEngine {
 
-    private static final long DEFAULT_REMOTE_DEADLINE_MS = 28_000L;
+    private static final long DEFAULT_REMOTE_DEADLINE_MS = 60_000L;
     private static final ExecutorService REMOTE_EXECUTOR = new ThreadPoolExecutor(
             0, 1, 30L, TimeUnit.SECONDS, new SynchronousQueue<>(),
             runnable -> {
