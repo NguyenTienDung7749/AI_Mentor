@@ -57,4 +57,11 @@ public class AiResponseParserTest {
     public void parse_emptyText_isRejected() {
         AiResponseParser.parse(" ", "General", "Intermediate");
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void parse_truncatedJson_isRejectedInsteadOfStoredAsPlainText() {
+        AiResponseParser.parse(
+                "{\"directAnswer\":\"This object was cut off",
+                "General", "Intermediate");
+    }
 }

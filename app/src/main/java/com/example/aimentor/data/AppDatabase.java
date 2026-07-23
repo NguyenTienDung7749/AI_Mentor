@@ -5,6 +5,8 @@ import android.content.Context;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.migration.Migration;
+import androidx.sqlite.db.SupportSQLiteDatabase;
 
 /**
  * Room database — the single local source of truth. This makes the whole app
@@ -16,7 +18,7 @@ import androidx.room.RoomDatabase;
  */
 @Database(
         entities = {User.class, Question.class, QuizAttempt.class},
-        version = 1,
+        version = 2,
         exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -25,6 +27,19 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract QuizAttemptDao quizAttemptDao();
 
     private static volatile AppDatabase INSTANCE;
+
+    /** Preserves existing question history while adding AI provenance metadata. */
+    public static final Migration MIGRATION_1_2 = new Migration(1, 2) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE questions "
+                    + "ADD COLUMN answerSource TEXT NOT NULL DEFAULT 'LEGACY'");
+            database.execSQL("ALTER TABLE questions "
+                    + "ADD COLUMN modelName TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE questions "
+                    + "ADD COLUMN responseTimeMs INTEGER NOT NULL DEFAULT 0");
+        }
+    };
 
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
@@ -35,7 +50,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     AppDatabase.class,
                                     "ai_mentor.db")
                             .allowMainThreadQueries()
-                            .fallbackToDestructiveMigration()
+                            .addMigrations(MIGRATION_1_2)
                             .build();
                 }
             }

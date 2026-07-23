@@ -28,6 +28,8 @@ public class LocalAiEngine implements AiEngine {
     public AiAnswer answer(String question, String educationLevel,
                            String explanationStyle, String subjectHint) {
         AiAnswer a = new AiAnswer();
+        a.setSource(AnswerSource.LOCAL);
+        a.setModelName(name());
         String q = question == null ? "" : question.trim();
 
         String subject = (subjectHint != null && !subjectHint.isEmpty()

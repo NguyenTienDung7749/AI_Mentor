@@ -18,6 +18,7 @@ import androidx.lifecycle.Lifecycle;
 
 import com.example.aimentor.R;
 import com.example.aimentor.activities.AnswerActivity;
+import com.example.aimentor.ai.AnswerSource;
 import com.example.aimentor.data.User;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.repo.UserRepository;
@@ -105,6 +106,10 @@ public class HomeFragment extends Fragment {
             return;
         }
         etQuestion.setText("");
+        if (result.source == AnswerSource.LOCAL_FALLBACK) {
+            Toast.makeText(requireContext(), R.string.offline_fallback_notice,
+                    Toast.LENGTH_LONG).show();
+        }
         if (result.leveledUp) {
             Toast.makeText(requireContext(), "Level up! Keep learning.", Toast.LENGTH_SHORT).show();
         }

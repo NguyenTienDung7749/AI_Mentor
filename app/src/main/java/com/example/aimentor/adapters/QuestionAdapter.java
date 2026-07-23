@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.aimentor.R;
+import com.example.aimentor.ai.AnswerSource;
 import com.example.aimentor.data.Question;
 
 import java.util.ArrayList;
@@ -50,7 +51,8 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionAdapter.VH> {
         holder.tvQuestion.setText(q.questionText);
         CharSequence when = DateUtils.getRelativeTimeSpanString(
                 q.createdAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
-        holder.tvMeta.setText(q.subject + "  \u2022  " + when + (q.reused ? "  \u2022  reused" : ""));
+        String source = sourceLabel(holder, q);
+        holder.tvMeta.setText(q.subject + "  \u2022  " + source + "  \u2022  " + when);
         holder.tvBookmark.setText(q.bookmarked ? "\u2605" : "\u2606");
 
         holder.itemView.setOnClickListener(v -> {
@@ -64,6 +66,23 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionAdapter.VH> {
     @Override
     public int getItemCount() {
         return items.size();
+    }
+
+    private String sourceLabel(VH holder, Question question) {
+        AnswerSource source = AnswerSource.fromStorage(question.answerSource);
+        switch (source) {
+            case REMOTE:
+                return holder.itemView.getContext().getString(R.string.source_short_online);
+            case LOCAL:
+                return holder.itemView.getContext().getString(R.string.source_short_offline);
+            case LOCAL_FALLBACK:
+                return holder.itemView.getContext().getString(R.string.source_short_fallback);
+            case CACHE:
+                return holder.itemView.getContext().getString(R.string.source_short_cached);
+            case LEGACY:
+            default:
+                return holder.itemView.getContext().getString(R.string.source_short_saved);
+        }
     }
 
     static class VH extends RecyclerView.ViewHolder {

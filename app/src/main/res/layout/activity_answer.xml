@@ -13,7 +13,7 @@
         android:background="@color/surface"
         android:elevation="4dp"
         app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"
-        app:title="Answer"
+        app:title="@string/answer_title"
         app:titleTextColor="@color/text_primary" />
 
     <ScrollView
@@ -40,10 +40,20 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/tvAnswerSource"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/answer_source_saved"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Your question"
+                android:text="@string/your_question"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold" />
 

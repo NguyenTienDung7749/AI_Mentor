@@ -21,7 +21,7 @@ public final class AiResponseParser {
             throw new IllegalArgumentException("Empty AI response");
         }
 
-        if (looksLikeJson(clean)) {
+        if (looksLikeJsonCandidate(clean)) {
             try {
                 StructuredAnswer data = GSON.fromJson(clean, StructuredAnswer.class);
                 if (data == null || isBlank(data.directAnswer)) {
@@ -63,8 +63,10 @@ public final class AiResponseParser {
         }
     }
 
-    private static boolean looksLikeJson(String text) {
-        return text.startsWith("{") && text.endsWith("}");
+    private static boolean looksLikeJsonCandidate(String text) {
+        // A response beginning or ending like JSON must never silently become
+        // a plain-text answer when the object is malformed or truncated.
+        return text.startsWith("{") || text.endsWith("}");
     }
 
     private static String stripMarkdownFence(String rawText) {

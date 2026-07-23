@@ -30,6 +30,7 @@
     <string name="ask_hint">Type your academic question here…</string>
     <string name="ask_button">Ask AI Mentor</string>
     <string name="preparing_answer">Preparing your answer…</string>
+    <string name="offline_fallback_notice">Online AI was unavailable, so the app prepared offline guidance.</string>
     <string name="subject">Subject</string>
 
     <!-- Library -->
@@ -50,6 +51,21 @@
     <string name="logout">Log out</string>
 
     <!-- Answer -->
+    <string name="answer_title">Answer</string>
+    <string name="your_question">Your question</string>
+    <string name="answer_source_online">AI online</string>
+    <string name="answer_source_online_model">AI online • %1$s</string>
+    <string name="answer_source_offline">Offline guidance • Local Study Mentor</string>
+    <string name="answer_source_offline_fallback">Offline fallback • online AI unavailable</string>
+    <string name="answer_source_cached">Cached answer</string>
+    <string name="answer_source_cached_model">Cached answer • originally %1$s</string>
+    <string name="answer_source_saved">Saved answer</string>
+    <string name="answer_response_time_suffix"> • %1$.1f s</string>
+    <string name="source_short_online">online AI</string>
+    <string name="source_short_offline">offline</string>
+    <string name="source_short_fallback">offline fallback</string>
+    <string name="source_short_cached">cached</string>
+    <string name="source_short_saved">saved</string>
     <string name="bookmark">Bookmark</string>
     <string name="bookmarked">Bookmarked</string>
     <string name="mark_reviewed">Mark as reviewed</string>

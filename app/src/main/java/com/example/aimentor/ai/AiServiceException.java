@@ -7,6 +7,7 @@ public class AiServiceException extends RuntimeException {
         CONFIGURATION,
         NETWORK,
         HTTP,
+        INCOMPLETE_RESPONSE,
         INVALID_RESPONSE
     }
 
@@ -36,6 +37,11 @@ public class AiServiceException extends RuntimeException {
     public static AiServiceException invalidResponse() {
         return new AiServiceException(Kind.INVALID_RESPONSE, 0,
                 "The AI service returned an invalid response.", null);
+    }
+
+    public static AiServiceException incompleteResponse() {
+        return new AiServiceException(Kind.INCOMPLETE_RESPONSE, 0,
+                "The AI service could not complete the answer within the token limit.", null);
     }
 
     public Kind getKind() {

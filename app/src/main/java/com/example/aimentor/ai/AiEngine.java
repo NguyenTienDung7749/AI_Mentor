@@ -5,9 +5,9 @@ import java.util.List;
 /**
  * Strategy interface for answer / quiz generation.
  *
- * {@link AiEngineFactory} selects {@link RemoteAiEngine} when a local demo key
- * is configured and otherwise selects {@link LocalAiEngine}. Callers depend
- * only on this interface.
+ * {@link AiEngineFactory} selects a remote engine with offline fallback when a
+ * local demo key is configured and otherwise selects {@link LocalAiEngine}.
+ * Callers depend only on this interface.
  */
 public interface AiEngine {
 

@@ -10,6 +10,7 @@ import androidx.annotation.WorkerThread;
 import com.example.aimentor.ai.AiAnswer;
 import com.example.aimentor.ai.AiEngine;
 import com.example.aimentor.ai.AiEngineFactory;
+import com.example.aimentor.ai.AnswerSource;
 import com.example.aimentor.ai.QuizQuestion;
 import com.example.aimentor.data.AppDatabase;
 import com.example.aimentor.data.Question;
@@ -66,12 +67,15 @@ public class StudyRepository {
         public final long questionId;
         public final boolean reused;
         public final boolean leveledUp;
-        AskResult(boolean success, String message, long questionId, boolean reused, boolean leveledUp) {
+        public final AnswerSource source;
+        AskResult(boolean success, String message, long questionId, boolean reused,
+                  boolean leveledUp, AnswerSource source) {
             this.success = success;
             this.message = message;
             this.questionId = questionId;
             this.reused = reused;
             this.leveledUp = leveledUp;
+            this.source = source == null ? AnswerSource.LEGACY : source;
         }
     }
 
@@ -93,7 +97,7 @@ public class StudyRepository {
             } catch (RuntimeException ignored) {
                 result = new AskResult(false,
                         "Unable to prepare an answer. Please try again.",
-                        -1, false, false);
+                        -1, false, false, AnswerSource.LEGACY);
             }
             AskResult deliveredResult = result;
             mainHandler.post(() -> callback.onResult(deliveredResult));
@@ -104,11 +108,13 @@ public class StudyRepository {
     public AskResult ask(long userId, String questionText, String subjectHint) {
         ContentModerator.Result mod = ContentModerator.check(questionText);
         if (!mod.allowed) {
-            return new AskResult(false, mod.reason, -1, false, false);
+            return new AskResult(false, mod.reason, -1, false, false,
+                    AnswerSource.LEGACY);
         }
         User user = userDao.findById(userId);
         if (user == null) {
-            return new AskResult(false, "Please sign in again.", -1, false, false);
+            return new AskResult(false, "Please sign in again.", -1, false, false,
+                    AnswerSource.LEGACY);
         }
 
         String normalized = normalize(questionText);
@@ -118,27 +124,39 @@ public class StudyRepository {
         q.userId = userId;
         q.questionText = questionText.trim();
         boolean reused = false;
+        AnswerSource answerSource;
 
         if (cached != null) {
             // Reuse the earlier answer instead of regenerating (AI cost saving).
             q.subject = cached.subject;
             q.difficulty = cached.difficulty;
-            q.answerText = cached.answerText
-                    + "\n\n(Answer reused from a very similar earlier question to save AI cost.)";
+            q.answerText = cached.answerText;
             q.reused = true;
+            q.answerSource = AnswerSource.CACHE.name();
+            q.modelName = cached.modelName;
+            q.responseTimeMs = 0L;
             reused = true;
+            answerSource = AnswerSource.CACHE;
         } else {
+            long startedAt = System.nanoTime();
             AiAnswer answer = engine.answer(questionText,
                     user.educationLevel, user.explanationStyle, subjectHint);
+            long elapsedNanos = System.nanoTime() - startedAt;
             q.subject = answer.getSubject();
             q.difficulty = answer.getDifficulty();
             q.answerText = answer.toDisplayString();
+            answerSource = answer.getSource();
+            q.answerSource = answerSource.name();
+            q.modelName = answer.getModelName();
+            q.responseTimeMs = Math.max(0L, elapsedNanos / 1_000_000L);
         }
 
         long id = questionDao.insert(q);
         boolean leveledUp = addXp(user, Gamification.XP_ASK);
-        return new AskResult(true, reused ? "Reused a saved answer." : "Answer ready.",
-                id, reused, leveledUp);
+        String message = answerSource == AnswerSource.LOCAL_FALLBACK
+                ? "Online AI was unavailable. Offline guidance is ready."
+                : reused ? "Reused a saved answer." : "Answer ready.";
+        return new AskResult(true, message, id, reused, leveledUp, answerSource);
     }
 
     private Question findSimilar(long userId, String normalized) {

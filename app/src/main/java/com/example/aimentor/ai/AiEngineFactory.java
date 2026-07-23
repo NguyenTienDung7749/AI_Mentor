@@ -13,6 +13,8 @@ public final class AiEngineFactory {
         if (key.isEmpty()) {
             return new LocalAiEngine();
         }
-        return new RemoteAiEngine(BuildConfig.HCNSEC_BASE_URL, key);
+        return new FallbackAiEngine(
+                new RemoteAiEngine(BuildConfig.HCNSEC_BASE_URL, key),
+                new LocalAiEngine());
     }
 }

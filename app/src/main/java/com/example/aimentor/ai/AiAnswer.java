@@ -17,6 +17,8 @@ public class AiAnswer {
     private final List<String> commonMistakes = new ArrayList<>();
     private final List<String> followUps = new ArrayList<>();
     private boolean reusedFromCache = false;
+    private AnswerSource source = AnswerSource.LOCAL;
+    private String modelName = "";
 
     public String getSubject() { return subject; }
     public void setSubject(String subject) { this.subject = subject; }
@@ -37,6 +39,16 @@ public class AiAnswer {
 
     public boolean isReusedFromCache() { return reusedFromCache; }
     public void setReusedFromCache(boolean reusedFromCache) { this.reusedFromCache = reusedFromCache; }
+
+    public AnswerSource getSource() { return source; }
+    public void setSource(AnswerSource source) {
+        this.source = source == null ? AnswerSource.LEGACY : source;
+    }
+
+    public String getModelName() { return modelName; }
+    public void setModelName(String modelName) {
+        this.modelName = modelName == null ? "" : modelName.trim();
+    }
 
     /**
      * Renders the structured answer into a human readable block of text that is

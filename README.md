@@ -19,6 +19,7 @@ practise with auto-generated quizzes and track their progress through XP, levels
 | First-use setup (level, subjects, explanation style) | `activities/OnboardingActivity` |
 | Ask questions (text) | `Fragments/HomeFragment` → `AnswerActivity` |
 | AI answer generation (subject + difficulty, step-by-step, key concepts, common mistakes, follow-ups) | `ai/RemoteAiEngine`, `ai/LocalAiEngine`, `ai/AiAnswer` |
+| Resilient AI (bounded retry, token-limit recovery, offline fallback, answer provenance) | `ai/RemoteAiEngine`, `ai/FallbackAiEngine`, `data/Question` |
 | Real computed results for maths | `ai/MathEvaluator` |
 | Question history & personal library (search, bookmark, filter by subject, review suggestions) | `Fragments/CategoryFragment`, `adapters/QuestionAdapter` |
 | AI practice quizzes (MCQ) with instant feedback | `Fragments/QuizFragment`, `activities/QuizActivity`, `ai/LocalAiEngine#generateQuiz` |
@@ -70,17 +71,24 @@ HCNSEC_API_KEY=replace-with-a-local-demo-key
 ```
 
 `RemoteAiEngine` requests model `auto` and maps structured JSON into `AiAnswer`. The request
-runs through `StudyRepository`'s IO executor, so it never blocks Android's main thread. HTTP,
-network and invalid-response failures are sanitized and never expose the Authorization header.
+runs through `StudyRepository`'s IO executor, so it never blocks Android's main thread. The
+first request allows 1,200 completion tokens. If a reasoning model reports
+`finish_reason=length`, the app retries once with 2,400 tokens and never stores the partial
+answer. Temporary network, HTTP 408/429 and 5xx failures are also retried at most once. Only
+the final `content` is displayed; provider `reasoning_content` is never shown or persisted.
 
 When no key is configured, `AiEngineFactory` selects `LocalAiEngine`, a deterministic,
 rule-based study coach that computes arithmetic and returns structured offline guidance.
-Remote quiz generation and automatic remote-to-local fallback are separate follow-up batches;
-practice quizzes currently remain local.
+When a key is configured but the remote provider still fails after its bounded retry,
+`FallbackAiEngine` returns clearly labelled offline guidance instead of crashing. Saved
+questions record whether the answer came from online AI, local mode, offline fallback or the
+cache, together with the model name and response time. Practice quizzes currently remain local.
 
-For this assignment demo the local key is compiled into `BuildConfig`. It must never be
-committed, logged or shown in screenshots. A production application must keep the provider key
-on a backend/proxy because values compiled into an APK can be extracted.
+There is no API-key field in the app UI: the assignment developer configures the key at build
+time and students simply install the APK. For this assignment demo the local key is compiled
+into `BuildConfig`. It must never be committed, logged or shown in screenshots. A production
+application must keep the provider key on a backend/proxy because values compiled into an APK
+can be extracted.
 
 ## 5. Build & run
 
@@ -103,10 +111,9 @@ press **Run**. First launch: **Sign up → onboarding → Home**.
 
 ## 6. Testing
 
-`app/src/test/java/com/example/aimentor/StudyLogicTest.java` contains JVM unit tests for the
-pure-Java logic (math evaluation, subject detection, password strength, email validation,
-gamification, password hashing, content moderation and the answer/quiz engine). Run with
-`./gradlew test`.
+JVM tests under `app/src/test/java` cover the pure-Java study logic plus remote response
+parsing, authentication headers, bounded retry, token-limit recovery, timeout/error handling
+and offline fallback. Run them with `./gradlew test`.
 
 ## 7. Security notes
 
