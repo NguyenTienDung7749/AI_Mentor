@@ -3,7 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -34,7 +33,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:layout_marginBottom="24dp"
-            android:text="Ask. Learn. Level up."
+            android:text="@string/app_tagline"
             android:textColor="@color/text_secondary"
             android:textSize="15sp" />
 
@@ -82,6 +81,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:minHeight="48dp"
             android:padding="8dp"
             android:text="@string/no_account"
             android:textColor="@color/primary"

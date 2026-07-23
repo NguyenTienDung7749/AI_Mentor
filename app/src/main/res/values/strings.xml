@@ -126,4 +126,153 @@
     <string name="bookmarked">Bookmarked</string>
     <string name="mark_reviewed">Mark as reviewed</string>
     <string name="reviewed">Reviewed</string>
+    <!-- Batch 8: localized UI labels and accessibility text -->
+    <string name="app_tagline">Ask. Learn. Level up.</string>
+    <string name="app_logo_description">AI Study Mentor logo</string>
+    <string name="close_screen">Close screen</string>
+    <string name="done">Done</string>
+    <string name="menu_others">Others</string>
+    <string name="menu_account">Account</string>
+
+    <string name="subject_auto">Auto</string>
+    <string name="subject_all">All subjects</string>
+    <string name="subject_mathematics">Mathematics</string>
+    <string name="subject_science">Science</string>
+    <string name="subject_programming">Programming</string>
+    <string name="subject_history">History</string>
+    <string name="subject_languages">Languages</string>
+    <string name="subject_general">General</string>
+    <string name="level_middle_school">Middle School</string>
+    <string name="level_high_school">High School</string>
+    <string name="level_university">University</string>
+    <string name="style_short">Short</string>
+    <string name="style_detailed">Detailed</string>
+    <string name="style_step_by_step">Step-by-step</string>
+
+    <string-array name="subject_choices">
+        <item>@string/subject_auto</item>
+        <item>@string/subject_mathematics</item>
+        <item>@string/subject_science</item>
+        <item>@string/subject_programming</item>
+        <item>@string/subject_history</item>
+        <item>@string/subject_languages</item>
+        <item>@string/subject_general</item>
+    </string-array>
+    <string-array name="subject_filter_choices">
+        <item>@string/subject_all</item>
+        <item>@string/subject_mathematics</item>
+        <item>@string/subject_science</item>
+        <item>@string/subject_programming</item>
+        <item>@string/subject_history</item>
+        <item>@string/subject_languages</item>
+        <item>@string/subject_general</item>
+    </string-array>
+    <string-array name="education_level_choices">
+        <item>@string/level_middle_school</item>
+        <item>@string/level_high_school</item>
+        <item>@string/level_university</item>
+    </string-array>
+    <string-array name="explanation_style_choices">
+        <item>@string/style_short</item>
+        <item>@string/style_detailed</item>
+        <item>@string/style_step_by_step</item>
+    </string-array>
+
+    <string name="create_account_title">Create your account</string>
+    <string name="create_account_subtitle">Join AI Study Mentor for free</string>
+    <string name="password_requirement">Use at least 8 characters with letters and numbers.</string>
+    <string name="password_strength_strong">Strong password</string>
+    <string name="password_strength_medium">Medium strength password</string>
+    <string name="password_strength_weak">Weak password — %1$s</string>
+    <string name="passwords_do_not_match">Passwords do not match.</string>
+    <string name="account_created">Account created! Let’s set up your profile.</string>
+
+    <string name="ask_section_title">Ask a question</string>
+    <string name="default_student_name">there</string>
+    <string name="home_greeting">Hi, %1$s!</string>
+    <string name="level_summary">Level %1$d — %2$s</string>
+    <string name="level_summary_with_xp">Level %1$d — %2$s (%3$d XP)</string>
+    <string name="home_xp_progress">%1$d XP (%2$d to next level)</string>
+    <string name="home_stats">Questions asked: %1$d  •  Quiz accuracy: %2$d%%</string>
+    <string name="level_progress_description">Level %1$d progress: %2$d of %3$d XP</string>
+    <string name="level_up_toast">Level up! Keep learning.</string>
+    <string name="level_up_notification_title">Level up!</string>
+    <string name="level_up_notification_body">You reached level %1$d. Keep going!</string>
+    <string name="answer_error_default">Unable to prepare an answer. Please check your question and try again.</string>
+    <string name="home_greeting_initial">Welcome!</string>
+    <string name="home_level_initial">Level 1 — Beginner</string>
+    <string name="home_xp_initial">0 XP</string>
+    <string name="home_stats_initial">Questions asked: 0  •  Quiz accuracy: 0%</string>
+
+    <string name="library_title">Your Library</string>
+
+    <string name="practice_quizzes_title">Practice Quizzes</string>
+    <string name="practice_quiz_title">Practice quiz</string>
+    <string name="quiz_personalized">Personalized (from history)</string>
+    <string name="quiz_adaptive">Adaptive</string>
+    <string name="quiz_beginner">Beginner</string>
+    <string name="quiz_intermediate">Intermediate</string>
+    <string name="quiz_advanced">Advanced</string>
+    <string-array name="quiz_subject_choices">
+        <item>@string/quiz_personalized</item>
+        <item>@string/subject_mathematics</item>
+        <item>@string/subject_science</item>
+        <item>@string/subject_programming</item>
+        <item>@string/subject_history</item>
+        <item>@string/subject_languages</item>
+        <item>@string/subject_general</item>
+    </string-array>
+    <string-array name="quiz_difficulty_choices">
+        <item>@string/quiz_adaptive</item>
+        <item>@string/quiz_beginner</item>
+        <item>@string/quiz_intermediate</item>
+        <item>@string/quiz_advanced</item>
+    </string-array>
+    <string name="quiz_help">Choose Personalized to practise recent topics. Quizzes mix multiple-choice and true/false questions with explanations.</string>
+    <string name="quiz_stats">Quizzes completed: %1$d\nOverall accuracy: %2$d%%\nCorrect answers: %3$d / %4$d</string>
+    <string name="quiz_stats_initial">Quizzes completed: 0\nOverall accuracy: 0%\nCorrect answers: 0 / 0</string>
+    <string name="quiz_question_progress">Question %1$d of %2$d  •  %3$s  •  %4$s</string>
+    <string name="quiz_retry_progress">Retry %1$d of %2$d  •  %3$s  •  %4$s</string>
+    <string name="quiz_choose_answer">Please choose an answer.</string>
+    <string name="quiz_correct_feedback">Correct! %1$s</string>
+    <string name="quiz_incorrect_feedback">Not quite. %1$s</string>
+    <string name="quiz_error_default">Could not prepare a quiz. Check your connection and try again.</string>
+    <string name="retry_quiz_loading">Try again</string>
+    <string name="quiz_complete">Quiz complete</string>
+    <string name="quiz_score">You scored %1$d / %2$d</string>
+    <string name="quiz_xp_earned">XP earned: %1$d</string>
+    <plurals name="quiz_questions_to_retry">
+        <item quantity="one">Question to retry: %d</item>
+        <item quantity="other">Questions to retry: %d</item>
+    </plurals>
+    <plurals name="quiz_reviewed_mistakes">
+        <item quantity="one">You reviewed %d missed question.</item>
+        <item quantity="other">You reviewed %d missed questions.</item>
+    </plurals>
+
+    <string name="learning_preferences">Learning preferences</string>
+    <string name="student_placeholder">Student</string>
+    <string name="email_placeholder">email</string>
+    <string name="initial_level_summary">Level 1 — Beginner (0 XP)</string>
+    <string name="badges_empty">Badges: none yet — keep learning!</string>
+    <string name="badges_summary">Badges: %1$s</string>
+    <string name="preferences_saved">Preferences saved.</string>
+    <string name="reminder_sent">Reminder sent to your notifications.</string>
+    <string name="reminder_permission_needed">Enable notifications to receive reminders.</string>
+    <string name="reminder_title">Time to review!</string>
+    <string name="reminder_body">Revisit your bookmarked answers and try a quick practice quiz today.</string>
+
+    <string name="answer_not_found">Answer not found.</string>
+    <string name="answer_subject_difficulty">%1$s  |  %2$s</string>
+    <string name="bookmark_added">Bookmarked</string>
+    <string name="bookmark_removed">Removed bookmark</string>
+    <string name="review_awarded">Marked as reviewed (+2 XP)</string>
+    <string name="review_already_done">Already reviewed</string>
+    <string name="history_item_meta">%1$s  •  %2$s  •  %3$s</string>
+    <string name="bookmark_symbol" translatable="false">☆</string>
+    <string name="bookmarked_symbol" translatable="false">★</string>
+    <string name="bookmark_question_description">Bookmark “%1$s”</string>
+    <string name="remove_bookmark_description">Remove bookmark from “%1$s”</string>
+    <string name="open_saved_answer_description">Open saved answer for “%1$s”</string>
+
 </resources>

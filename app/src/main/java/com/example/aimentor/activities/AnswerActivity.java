@@ -70,7 +70,7 @@ public class AnswerActivity extends AppCompatActivity {
                 : studyRepository.getQuestion(
                         getIntent().getLongExtra(EXTRA_QUESTION_ID, -1));
         if (question == null) {
-            Toast.makeText(this, "Answer not found.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.answer_not_found, Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -82,7 +82,8 @@ public class AnswerActivity extends AppCompatActivity {
         btnBookmark = findViewById(R.id.btnBookmark);
         btnReviewed = findViewById(R.id.btnReviewed);
 
-        tvSubject.setText(question.subject + "  |  " + question.difficulty);
+        tvSubject.setText(getString(R.string.answer_subject_difficulty,
+                question.subject, question.difficulty));
         tvAnswerSource.setText(buildSourceLabel(question));
         tvQuestion.setText(question.questionText);
         tvAnswer.setText(cleanStoredAnswer(question.answerText));
@@ -97,7 +98,8 @@ public class AnswerActivity extends AppCompatActivity {
                 studyRepository.toggleBookmark(question.id);
                 question = studyRepository.getQuestion(question.id);
                 refreshBookmarkButton();
-                Toast.makeText(this, question.bookmarked ? "Bookmarked" : "Removed bookmark",
+                Toast.makeText(this, question.bookmarked
+                                ? R.string.bookmark_added : R.string.bookmark_removed,
                         Toast.LENGTH_SHORT).show();
             });
 
@@ -105,7 +107,8 @@ public class AnswerActivity extends AppCompatActivity {
                 boolean awarded = studyRepository.markReviewed(question.id);
                 question = studyRepository.getQuestion(question.id);
                 refreshReviewedButton();
-                Toast.makeText(this, awarded ? "Marked as reviewed (+2 XP)" : "Already reviewed",
+                Toast.makeText(this, awarded
+                                ? R.string.review_awarded : R.string.review_already_done,
                         Toast.LENGTH_SHORT).show();
             });
         }

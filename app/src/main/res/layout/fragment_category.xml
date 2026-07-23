@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg"
     android:padding="16dp">
 
     <TextView
+        android:id="@+id/tvLibraryHeading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Your Library"
+        android:text="@string/library_title"
         android:textColor="@color/text_primary"
         android:textSize="20sp"
         android:textStyle="bold" />
@@ -57,7 +57,6 @@
         android:layout_marginTop="8dp"
         android:background="@color/primary_light"
         android:padding="10dp"
-        android:text=""
         android:textColor="@color/text_primary"
         android:textSize="13sp"
         android:visibility="gone" />

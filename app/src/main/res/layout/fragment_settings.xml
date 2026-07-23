@@ -3,7 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -26,15 +25,15 @@
                 android:padding="16dp">
 
                 <TextView android:id="@+id/tvName" android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" android:text="Student"
+                    android:layout_height="wrap_content" android:text="@string/student_placeholder"
                     android:textColor="@color/text_primary" android:textSize="18sp"
                     android:textStyle="bold" />
                 <TextView android:id="@+id/tvEmail" android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" android:text="email"
+                    android:layout_height="wrap_content" android:text="@string/email_placeholder"
                     android:textColor="@color/text_secondary" android:textSize="14sp" />
                 <TextView android:id="@+id/tvLevelInfo" android:layout_width="wrap_content"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                    android:text="Level 1 - Beginner (0 XP)"
+                    android:text="@string/initial_level_summary"
                     android:textColor="@color/primary" android:textStyle="bold" />
                 <ProgressBar
                     android:id="@+id/progressLevel"
@@ -49,7 +48,7 @@
                     android:textColor="@color/text_secondary" android:textSize="12sp" />
                 <TextView android:id="@+id/tvBadges" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                    android:text="Badges: none yet"
+                    android:text="@string/badges_empty"
                     android:textColor="@color/text_secondary" android:textSize="13sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -136,10 +135,11 @@
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
+            android:id="@+id/tvPreferencesHeading"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="Learning preferences"
+            android:text="@string/learning_preferences"
             android:textColor="@color/text_primary"
             android:textSize="16sp"
             android:textStyle="bold" />
@@ -154,15 +154,15 @@
             android:layout_marginTop="8dp" android:text="@string/subjects_interest"
             android:textColor="@color/text_secondary" />
         <CheckBox android:id="@+id/cbMath" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="Mathematics" />
+            android:layout_height="wrap_content" android:text="@string/subject_mathematics" />
         <CheckBox android:id="@+id/cbScience" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="Science" />
+            android:layout_height="wrap_content" android:text="@string/subject_science" />
         <CheckBox android:id="@+id/cbProgramming" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="Programming" />
+            android:layout_height="wrap_content" android:text="@string/subject_programming" />
         <CheckBox android:id="@+id/cbHistory" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="History" />
+            android:layout_height="wrap_content" android:text="@string/subject_history" />
         <CheckBox android:id="@+id/cbLanguages" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="Languages" />
+            android:layout_height="wrap_content" android:text="@string/subject_languages" />
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:text="@string/explanation_style"

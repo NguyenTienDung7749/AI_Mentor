@@ -3,7 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -17,7 +16,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Create your account"
+            android:text="@string/create_account_title"
             android:textColor="@color/primary"
             android:textSize="24sp"
             android:textStyle="bold" />
@@ -27,7 +26,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:layout_marginBottom="20dp"
-            android:text="Join AI Study Mentor for free"
+            android:text="@string/create_account_subtitle"
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
@@ -78,7 +77,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Use at least 8 characters with letters and numbers."
+            android:text="@string/password_requirement"
             android:textColor="@color/text_secondary"
             android:textSize="12sp" />
 
@@ -111,6 +110,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:minHeight="48dp"
             android:padding="8dp"
             android:text="@string/have_account"
             android:textColor="@color/primary"

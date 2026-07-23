@@ -3,7 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -15,7 +14,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/primary"
+            app:cardBackgroundColor="?attr/colorPrimaryContainer"
             app:cardCornerRadius="16dp"
             app:cardElevation="2dp">
 
@@ -29,8 +28,8 @@
                     android:id="@+id/tvGreeting"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Welcome!"
-                    android:textColor="@color/white"
+                    android:text="@string/home_greeting_initial"
+                    android:textColor="?attr/colorOnPrimaryContainer"
                     android:textSize="20sp"
                     android:textStyle="bold" />
 
@@ -39,8 +38,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Level 1 - Beginner"
-                    android:textColor="@color/white"
+                    android:text="@string/home_level_initial"
+                    android:textColor="?attr/colorOnPrimaryContainer"
                     android:textSize="14sp" />
 
                 <ProgressBar
@@ -56,8 +55,8 @@
                     android:id="@+id/tvXp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0 XP"
-                    android:textColor="@color/white"
+                    android:text="@string/home_xp_initial"
+                    android:textColor="?attr/colorOnPrimaryContainer"
                     android:textSize="13sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -67,7 +66,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Questions asked: 0   |   Quiz accuracy: 0%"
+            android:text="@string/home_stats_initial"
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
@@ -86,9 +85,10 @@
                 android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/tvAskHeading"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ask a question"
+                    android:text="@string/ask_section_title"
                     android:textColor="@color/text_primary"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -213,7 +213,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text=""
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
     </LinearLayout>

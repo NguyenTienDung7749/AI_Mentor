@@ -52,7 +52,7 @@ public class SignUpActivity extends AppCompatActivity {
 
     private void updateStrength(String password) {
         if (password.isEmpty()) {
-            tvStrength.setText(PasswordValidator.requirementMessage());
+            tvStrength.setText(R.string.password_requirement);
             tvStrength.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
             return;
         }
@@ -60,9 +60,19 @@ public class SignUpActivity extends AppCompatActivity {
         int colorRes;
         String label;
         switch (strength) {
-            case STRONG: label = "Strong password"; colorRes = R.color.success; break;
-            case MEDIUM: label = "Medium strength password"; colorRes = R.color.primary; break;
-            default: label = "Weak password - " + PasswordValidator.requirementMessage(); colorRes = R.color.error; break;
+            case STRONG:
+                label = getString(R.string.password_strength_strong);
+                colorRes = R.color.success;
+                break;
+            case MEDIUM:
+                label = getString(R.string.password_strength_medium);
+                colorRes = R.color.primary;
+                break;
+            default:
+                label = getString(R.string.password_strength_weak,
+                        PasswordValidator.requirementMessage());
+                colorRes = R.color.error;
+                break;
         }
         tvStrength.setText(label);
         tvStrength.setTextColor(ContextCompat.getColor(this, colorRes));
@@ -75,7 +85,8 @@ public class SignUpActivity extends AppCompatActivity {
         String confirm = valueOf(etConfirm);
 
         if (!password.equals(confirm)) {
-            Toast.makeText(this, "Passwords do not match.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.passwords_do_not_match,
+                    Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -85,7 +96,7 @@ public class SignUpActivity extends AppCompatActivity {
             return;
         }
         session.setCurrentUserId(result.userId);
-        Toast.makeText(this, "Account created! Let's set up your profile.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.account_created, Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(this, OnboardingActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);

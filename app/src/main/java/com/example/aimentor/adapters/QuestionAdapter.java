@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.aimentor.R;
@@ -32,9 +33,39 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionAdapter.VH> {
     }
 
     public void setItems(List<Question> newItems) {
+        List<Question> replacement = newItems == null
+                ? new ArrayList<>() : new ArrayList<>(newItems);
+        DiffUtil.DiffResult changes = DiffUtil.calculateDiff(
+                new DiffUtil.Callback() {
+                    @Override
+                    public int getOldListSize() {
+                        return items.size();
+                    }
+
+                    @Override
+                    public int getNewListSize() {
+                        return replacement.size();
+                    }
+
+                    @Override
+                    public boolean areItemsTheSame(int oldPosition, int newPosition) {
+                        return items.get(oldPosition).id == replacement.get(newPosition).id;
+                    }
+
+                    @Override
+                    public boolean areContentsTheSame(int oldPosition, int newPosition) {
+                        Question oldItem = items.get(oldPosition);
+                        Question newItem = replacement.get(newPosition);
+                        return oldItem.bookmarked == newItem.bookmarked
+                                && safe(oldItem.questionText).equals(safe(newItem.questionText))
+                                && safe(oldItem.subject).equals(safe(newItem.subject))
+                                && safe(oldItem.answerSource).equals(safe(newItem.answerSource))
+                                && oldItem.createdAt == newItem.createdAt;
+                    }
+                });
         items.clear();
-        if (newItems != null) items.addAll(newItems);
-        notifyDataSetChanged();
+        items.addAll(replacement);
+        changes.dispatchUpdatesTo(this);
     }
 
     @NonNull
@@ -52,8 +83,16 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionAdapter.VH> {
         CharSequence when = DateUtils.getRelativeTimeSpanString(
                 q.createdAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
         String source = sourceLabel(holder, q);
-        holder.tvMeta.setText(q.subject + "  \u2022  " + source + "  \u2022  " + when);
-        holder.tvBookmark.setText(q.bookmarked ? "\u2605" : "\u2606");
+        holder.tvMeta.setText(holder.itemView.getContext().getString(
+                R.string.history_item_meta, q.subject, source, when));
+        holder.tvBookmark.setText(q.bookmarked
+                ? R.string.bookmarked_symbol : R.string.bookmark_symbol);
+        holder.tvBookmark.setContentDescription(holder.itemView.getContext().getString(
+                q.bookmarked ? R.string.remove_bookmark_description
+                        : R.string.bookmark_question_description,
+                q.questionText));
+        holder.itemView.setContentDescription(holder.itemView.getContext().getString(
+                R.string.open_saved_answer_description, q.questionText));
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onOpen(q);
@@ -66,6 +105,10 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionAdapter.VH> {
     @Override
     public int getItemCount() {
         return items.size();
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value;
     }
 
     private String sourceLabel(VH holder, Question question) {

@@ -27,7 +27,10 @@ import com.google.android.material.navigation.NavigationView;
 public class MenuActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
-    private static final String[] TITLES = {"Home", "Library", "Quiz", "Settings"};
+    private static final int[] TITLE_RES = {
+            R.string.tab_home, R.string.tab_library,
+            R.string.tab_quiz, R.string.tab_settings
+    };
 
     private BottomNavigationView bottomNavigationView;
     private DrawerLayout drawerLayout;
@@ -54,7 +57,7 @@ public class MenuActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayShowTitleEnabled(true);
-            getSupportActionBar().setTitle(TITLES[0]);
+            getSupportActionBar().setTitle(TITLE_RES[0]);
         }
 
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -121,8 +124,9 @@ public class MenuActivity extends AppCompatActivity
                 else if (position == 3) menuId = R.id.Settings_menu;
                 else menuId = R.id.home_menu;
                 bottomNavigationView.getMenu().findItem(menuId).setChecked(true);
-                if (getSupportActionBar() != null && position >= 0 && position < TITLES.length) {
-                    getSupportActionBar().setTitle(TITLES[position]);
+                if (getSupportActionBar() != null
+                        && position >= 0 && position < TITLE_RES.length) {
+                    getSupportActionBar().setTitle(TITLE_RES[position]);
                 }
             }
         });

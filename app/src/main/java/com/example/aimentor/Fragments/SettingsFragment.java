@@ -20,6 +20,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
+import androidx.core.view.ViewCompat;
 
 import com.example.aimentor.R;
 import com.example.aimentor.activities.LoginActivity;
@@ -42,6 +43,13 @@ import java.util.Locale;
 import java.util.Set;
 
 public class SettingsFragment extends Fragment {
+
+    private static final String[] EDUCATION_VALUES = {
+            "Middle School", "High School", "University"
+    };
+    private static final String[] STYLE_VALUES = {
+            "Short", "Detailed", "Step-by-step"
+    };
 
     private UserRepository userRepository;
     private StudyRepository studyRepository;
@@ -91,13 +99,17 @@ public class SettingsFragment extends Fragment {
         cbHistory = view.findViewById(R.id.cbHistory);
         cbLanguages = view.findViewById(R.id.cbLanguages);
         switchTheme = view.findViewById(R.id.switchTheme);
+        ViewCompat.setAccessibilityHeading(
+                view.findViewById(R.id.tvPreferencesHeading), true);
         MaterialButton btnSavePrefs = view.findViewById(R.id.btnSavePrefs);
         MaterialButton btnRemind = view.findViewById(R.id.btnRemind);
         MaterialButton btnLogout = view.findViewById(R.id.btnLogout);
         MaterialButton btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
 
-        spLevel.setAdapter(makeAdapter(Arrays.asList("Middle School", "High School", "University")));
-        spStyle.setAdapter(makeAdapter(Arrays.asList("Short", "Detailed", "Step-by-step")));
+        spLevel.setAdapter(makeAdapter(Arrays.asList(
+                getResources().getStringArray(R.array.education_level_choices))));
+        spStyle.setAdapter(makeAdapter(Arrays.asList(
+                getResources().getStringArray(R.array.explanation_style_choices))));
 
         switchTheme.setChecked(session.isDarkTheme());
         switchTheme.setOnCheckedChangeListener((b, checked) -> {
@@ -132,15 +144,20 @@ public class SettingsFragment extends Fragment {
         tvEmail.setText(user.email);
 
         StudyRepository.Progress p = studyRepository.getProgress(user.id);
-        tvLevelInfo.setText("Level " + p.level + " - " + p.levelTitle + " (" + p.xp + " XP)");
+        tvLevelInfo.setText(getString(R.string.level_summary_with_xp,
+                p.level, p.levelTitle, p.xp));
         progressLevel.setMax(com.example.aimentor.util.Gamification.XP_PER_LEVEL);
         progressLevel.setProgress(p.xpIntoLevel);
+        progressLevel.setContentDescription(getString(
+                R.string.level_progress_description, p.level, p.xpIntoLevel,
+                com.example.aimentor.util.Gamification.XP_PER_LEVEL));
         tvXpProgress.setText(getString(R.string.xp_progress,
                 p.xpIntoLevel, com.example.aimentor.util.Gamification.XP_PER_LEVEL,
                 p.xpToNext));
         tvBadges.setText(p.badges.isEmpty()
-                ? "Badges: none yet - keep learning!"
-                : "Badges: " + android.text.TextUtils.join(", ", p.badges));
+                ? getString(R.string.badges_empty)
+                : getString(R.string.badges_summary,
+                        android.text.TextUtils.join(", ", p.badges)));
         String savedQuestions = getResources().getQuantityString(
                 R.plurals.saved_question_count, p.totalQuestions, p.totalQuestions);
         String quizAttempts = getResources().getQuantityString(
@@ -153,8 +170,8 @@ public class SettingsFragment extends Fragment {
         bindSubjectBreakdown(p);
         bindWeeklyActivity(p);
 
-        selectSpinner(spLevel, user.educationLevel);
-        selectSpinner(spStyle, user.explanationStyle);
+        selectSpinner(spLevel, EDUCATION_VALUES, user.educationLevel);
+        selectSpinner(spStyle, STYLE_VALUES, user.explanationStyle);
 
         String subjects = user.subjects == null ? "" : user.subjects;
         cbMath.setChecked(subjects.contains("Mathematics"));
@@ -250,10 +267,10 @@ public class SettingsFragment extends Fragment {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    private void selectSpinner(Spinner spinner, String value) {
+    private void selectSpinner(Spinner spinner, String[] values, String value) {
         if (value == null) return;
-        for (int i = 0; i < spinner.getCount(); i++) {
-            if (value.equals(spinner.getItemAtPosition(i))) {
+        for (int i = 0; i < values.length; i++) {
+            if (value.equals(values[i])) {
                 spinner.setSelection(i);
                 return;
             }
@@ -269,19 +286,20 @@ public class SettingsFragment extends Fragment {
         if (cbLanguages.isChecked()) subjects.add("Languages");
 
         userRepository.updatePreferences(session.getCurrentUserId(),
-                (String) spLevel.getSelectedItem(),
+                EDUCATION_VALUES[spLevel.getSelectedItemPosition()],
                 android.text.TextUtils.join(",", subjects),
-                (String) spStyle.getSelectedItem());
-        Toast.makeText(requireContext(), "Preferences saved.", Toast.LENGTH_SHORT).show();
+                STYLE_VALUES[spStyle.getSelectedItemPosition()]);
+        Toast.makeText(requireContext(), R.string.preferences_saved,
+                Toast.LENGTH_SHORT).show();
     }
 
     private void sendReminder() {
         boolean posted = NotificationHelper.notify(requireContext(),
-                "Time to review!",
-                "Revisit your bookmarked answers and try a quick practice quiz today.");
+                getString(R.string.reminder_title),
+                getString(R.string.reminder_body));
         Toast.makeText(requireContext(),
-                posted ? "Reminder sent to your notifications."
-                        : "Enable notifications to receive reminders.",
+                posted ? R.string.reminder_sent
+                        : R.string.reminder_permission_needed,
                 Toast.LENGTH_SHORT).show();
     }
 

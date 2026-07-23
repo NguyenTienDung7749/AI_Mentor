@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="primary">#9FA8DA</color>
+    <color name="primary_dark">#1A237E</color>
     <color name="primary_light">#3949AB</color>
     <color name="bg">#101223</color>
     <color name="surface">#1C1E33</color>
     <color name="text_primary">#ECECF5</color>
     <color name="text_secondary">#A6A9BD</color>
+    <color name="success">#81C784</color>
+    <color name="error">#EF9A9A</color>
+    <color name="star">#FFD54F</color>
 </resources>

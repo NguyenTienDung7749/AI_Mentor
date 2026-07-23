@@ -3,8 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/bg">
+    android:orientation="vertical">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
@@ -13,7 +12,8 @@
         android:background="@color/surface"
         android:elevation="4dp"
         app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"
-        app:title="Practice quiz"
+        app:navigationContentDescription="@string/close_screen"
+        app:title="@string/practice_quiz_title"
         app:titleTextColor="@color/text_primary" />
 
     <TextView
@@ -21,7 +21,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp"
-        android:text="Question 1"
+        android:text="@string/quiz_loading"
         android:textColor="@color/text_secondary"
         android:textStyle="bold" />
 
@@ -44,6 +44,32 @@
             android:layout_marginStart="10dp"
             android:text="@string/quiz_loading"
             android:textColor="@color/text_secondary" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/quizErrorState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvQuizError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/quiz_error_default"
+            android:textColor="@color/error" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRetryQuiz"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/retry_quiz_loading" />
     </LinearLayout>
 
     <ScrollView
@@ -73,7 +99,6 @@
                 android:id="@+id/tvQuestionPrompt"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text=""
                 android:textColor="@color/text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -100,7 +125,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:padding="12dp"
-                android:text=""
                 android:textSize="14sp"
                 android:visibility="gone" />
         </LinearLayout>

@@ -15,6 +15,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -28,11 +29,18 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
 public class CategoryFragment extends Fragment implements QuestionAdapter.Listener {
+
+    private static final String STATE_SEARCH = "library_search";
+    private static final String STATE_SUBJECT_POSITION = "library_subject_position";
+    private static final String STATE_BOOKMARKED = "library_bookmarked";
+    private static final String[] FILTER_SUBJECT_VALUES = {
+            "", "Mathematics", "Science", "Programming",
+            "History", "Languages", "General"
+    };
 
     private StudyRepository studyRepository;
     private SessionManager session;
@@ -65,6 +73,8 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         rvHistory = view.findViewById(R.id.rvHistory);
         tvEmpty = view.findViewById(R.id.tvEmpty);
         tvSuggest = view.findViewById(R.id.tvSuggest);
+        ViewCompat.setAccessibilityHeading(
+                view.findViewById(R.id.tvLibraryHeading), true);
 
         adapter = new QuestionAdapter(this);
         rvHistory.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -72,10 +82,20 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
 
         ArrayAdapter<String> filterAdapter = new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_item,
-                Arrays.asList("All subjects", "Mathematics", "Science", "Programming",
-                        "History", "Languages", "General"));
+                getResources().getStringArray(R.array.subject_filter_choices));
         filterAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spSubjectFilter.setAdapter(filterAdapter);
+
+        if (savedInstanceState != null) {
+            String search = savedInstanceState.getString(STATE_SEARCH, "");
+            etSearch.setText(search);
+            etSearch.setSelection(search.length());
+            int position = savedInstanceState.getInt(STATE_SUBJECT_POSITION, 0);
+            spSubjectFilter.setSelection(Math.max(0,
+                    Math.min(position, FILTER_SUBJECT_VALUES.length - 1)));
+            switchBookmarked.setChecked(
+                    savedInstanceState.getBoolean(STATE_BOOKMARKED, false));
+        }
 
         etSearch.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
@@ -99,7 +119,9 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         long userId = session.getCurrentUserId();
         String query = etSearch.getText() == null ? "" : etSearch.getText().toString().trim();
         boolean bookmarkedOnly = switchBookmarked.isChecked();
-        String subjectFilter = (String) spSubjectFilter.getSelectedItem();
+        int subjectPosition = spSubjectFilter.getSelectedItemPosition();
+        String subjectFilter = FILTER_SUBJECT_VALUES[Math.max(0,
+                Math.min(subjectPosition, FILTER_SUBJECT_VALUES.length - 1))];
 
         List<Question> base;
         if (bookmarkedOnly) {
@@ -115,8 +137,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
             if (bookmarkedOnly && !query.isEmpty() && !matchesQuery(q, query)) {
                 continue;
             }
-            if (subjectFilter != null && !subjectFilter.equals("All subjects")
-                    && !subjectFilter.equals(q.subject)) {
+            if (!subjectFilter.isEmpty() && !subjectFilter.equals(q.subject)) {
                 continue;
             }
             filtered.add(q);
@@ -125,7 +146,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         adapter.setItems(filtered);
         boolean empty = filtered.isEmpty();
         boolean filtering = bookmarkedOnly || !query.isEmpty()
-                || (subjectFilter != null && !subjectFilter.equals("All subjects"));
+                || !subjectFilter.isEmpty();
         tvEmpty.setText(filtering
                 ? R.string.empty_filtered_history : R.string.empty_history);
         tvEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
@@ -138,6 +159,16 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         } else {
             tvSuggest.setVisibility(View.GONE);
         }
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(STATE_SEARCH, etSearch.getText() == null
+                ? "" : etSearch.getText().toString());
+        outState.putInt(STATE_SUBJECT_POSITION,
+                spSubjectFilter.getSelectedItemPosition());
+        outState.putBoolean(STATE_BOOKMARKED, switchBookmarked.isChecked());
     }
 
     private boolean matchesQuery(Question question, String query) {

@@ -49,6 +49,8 @@ public class QuizActivity extends AppCompatActivity {
     private ArrayList<QuizQuestion> wrongQuestions = new ArrayList<>();
     private String subject;
     private String difficulty;
+    private String requestedSubject;
+    private String requestedDifficulty;
 
     private int index;
     private int correctCount;
@@ -59,11 +61,11 @@ public class QuizActivity extends AppCompatActivity {
     private boolean resultRecorded;
     private boolean lastAnswerCorrect;
 
-    private TextView tvProgress, tvQuestionPrompt, tvFeedback, tvQuizType;
+    private TextView tvProgress, tvQuestionPrompt, tvFeedback, tvQuizType, tvQuizError;
     private RadioGroup rgOptions;
     private RadioButton[] options;
-    private MaterialButton btnAction;
-    private View quizLoadingState, quizContent;
+    private MaterialButton btnAction, btnRetryQuiz;
+    private View quizLoadingState, quizContent, quizErrorState;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -77,14 +79,23 @@ public class QuizActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
         btnAction.setOnClickListener(v -> onAction());
+        btnRetryQuiz.setOnClickListener(v -> loadQuiz());
 
         if (savedInstanceState != null && restoreState(savedInstanceState)) {
             showLoadedQuiz();
             return;
         }
 
-        String requestedSubject = getIntent().getStringExtra(EXTRA_SUBJECT);
-        String requestedDifficulty = getIntent().getStringExtra(EXTRA_DIFFICULTY);
+        requestedSubject = getIntent().getStringExtra(EXTRA_SUBJECT);
+        requestedDifficulty = getIntent().getStringExtra(EXTRA_DIFFICULTY);
+        loadQuiz();
+    }
+
+    private void loadQuiz() {
+        quizLoadingState.setVisibility(View.VISIBLE);
+        quizErrorState.setVisibility(View.GONE);
+        quizContent.setVisibility(View.GONE);
+        btnAction.setEnabled(false);
         studyRepository.generateQuizAsync(
                 session.getCurrentUserId(), requestedSubject,
                 requestedDifficulty, 5, this::handleQuizLoaded);
@@ -95,20 +106,30 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestionPrompt = findViewById(R.id.tvQuestionPrompt);
         tvFeedback = findViewById(R.id.tvFeedback);
         tvQuizType = findViewById(R.id.tvQuizType);
+        tvQuizError = findViewById(R.id.tvQuizError);
         quizLoadingState = findViewById(R.id.quizLoadingState);
+        quizErrorState = findViewById(R.id.quizErrorState);
         quizContent = findViewById(R.id.quizContent);
         rgOptions = findViewById(R.id.rgOptions);
         options = new RadioButton[]{
                 findViewById(R.id.rbOpt0), findViewById(R.id.rbOpt1),
                 findViewById(R.id.rbOpt2), findViewById(R.id.rbOpt3)};
         btnAction = findViewById(R.id.btnAction);
+        btnRetryQuiz = findViewById(R.id.btnRetryQuiz);
+        tvFeedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        tvQuizError.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE);
     }
 
     private void handleQuizLoaded(StudyRepository.QuizLoadResult result) {
         if (isFinishing() || isDestroyed()) return;
         if (!result.success || result.questions.isEmpty()) {
-            Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
-            finish();
+            String message = result.message == null || result.message.trim().isEmpty()
+                    ? getString(R.string.quiz_error_default) : result.message;
+            quizLoadingState.setVisibility(View.GONE);
+            quizContent.setVisibility(View.GONE);
+            quizErrorState.setVisibility(View.VISIBLE);
+            tvQuizError.setText(message);
+            tvQuizError.announceForAccessibility(message);
             return;
         }
         subject = result.subject;
@@ -120,6 +141,7 @@ public class QuizActivity extends AppCompatActivity {
 
     private void showLoadedQuiz() {
         quizLoadingState.setVisibility(View.GONE);
+        quizErrorState.setVisibility(View.GONE);
         quizContent.setVisibility(View.VISIBLE);
         btnAction.setEnabled(true);
         showQuestion();
@@ -137,9 +159,9 @@ public class QuizActivity extends AppCompatActivity {
 
         answered = false;
         lastSelectedIndex = -1;
-        tvProgress.setText((retryRound ? "Retry " : "Question ")
-                + (index + 1) + " of " + questions.size()
-                + "  •  " + subject + "  •  " + difficulty);
+        tvProgress.setText(getString(retryRound
+                        ? R.string.quiz_retry_progress : R.string.quiz_question_progress,
+                index + 1, questions.size(), subject, difficulty));
         tvQuizType.setText(question.getType() == QuizQuestion.Type.TRUE_FALSE
                 ? R.string.quiz_true_false : R.string.quiz_multiple_choice);
         tvQuestionPrompt.setText(question.getPrompt());
@@ -178,7 +200,7 @@ public class QuizActivity extends AppCompatActivity {
         if (!answered) {
             int selected = selectedIndex();
             if (selected < 0) {
-                Toast.makeText(this, "Please choose an answer.",
+                Toast.makeText(this, R.string.quiz_choose_answer,
                         Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -210,8 +232,10 @@ public class QuizActivity extends AppCompatActivity {
         for (RadioButton option : options) option.setEnabled(false);
 
         tvFeedback.setVisibility(View.VISIBLE);
-        tvFeedback.setText((correct ? "Correct! " : "Not quite. ")
-                + question.getExplanation());
+        tvFeedback.setText(getString(correct
+                        ? R.string.quiz_correct_feedback
+                        : R.string.quiz_incorrect_feedback,
+                question.getExplanation()));
         tvFeedback.setTextColor(ContextCompat.getColor(this,
                 correct ? R.color.success : R.color.error));
         btnAction.setText(index == questions.size() - 1
@@ -222,9 +246,11 @@ public class QuizActivity extends AppCompatActivity {
         if (retryRound) {
             new AlertDialog.Builder(this)
                     .setTitle(R.string.quiz_review_complete)
-                    .setMessage("You reviewed " + questions.size() + " missed question(s).")
+                    .setMessage(getResources().getQuantityString(
+                            R.plurals.quiz_reviewed_mistakes,
+                            questions.size(), questions.size()))
                     .setCancelable(false)
-                    .setPositiveButton("Done", (dialog, which) -> finish())
+                    .setPositiveButton(R.string.done, (dialog, which) -> finish())
                     .show();
             return;
         }
@@ -234,27 +260,32 @@ public class QuizActivity extends AppCompatActivity {
             resultRecorded = true;
             awardedXp = result.awardedXp;
             if (result.leveledUp) {
-                NotificationHelper.notify(this, "Level up!",
-                        "You reached level " + result.newLevel + ". Keep going!");
+                NotificationHelper.notify(this,
+                        getString(R.string.level_up_notification_title),
+                        getString(R.string.level_up_notification_body, result.newLevel));
             }
         }
         showCompletionDialog();
     }
 
     private void showCompletionDialog() {
-        String message = "You scored " + correctCount + " / " + questions.size()
-                + "\nXP earned: " + awardedXp
-                + (wrongQuestions.isEmpty()
-                ? "" : "\nQuestions to retry: " + wrongQuestions.size());
+        String message = getString(R.string.quiz_score,
+                correctCount, questions.size())
+                + "\n" + getString(R.string.quiz_xp_earned, awardedXp);
+        if (!wrongQuestions.isEmpty()) {
+            message += "\n" + getResources().getQuantityString(
+                    R.plurals.quiz_questions_to_retry,
+                    wrongQuestions.size(), wrongQuestions.size());
+        }
         AlertDialog.Builder dialog = new AlertDialog.Builder(this)
-                .setTitle("Quiz complete")
+                .setTitle(R.string.quiz_complete)
                 .setMessage(message)
                 .setCancelable(false);
         if (wrongQuestions.isEmpty()) {
-            dialog.setPositiveButton("Done", (d, w) -> finish());
+            dialog.setPositiveButton(R.string.done, (d, w) -> finish());
         } else {
             dialog.setPositiveButton(R.string.retry_mistakes, (d, w) -> startRetryRound())
-                    .setNegativeButton("Done", (d, w) -> finish());
+                    .setNegativeButton(R.string.done, (d, w) -> finish());
         }
         dialog.show();
     }

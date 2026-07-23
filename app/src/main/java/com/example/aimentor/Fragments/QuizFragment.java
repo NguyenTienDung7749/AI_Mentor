@@ -12,6 +12,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.core.view.ViewCompat;
 
 import com.example.aimentor.R;
 import com.example.aimentor.activities.QuizActivity;
@@ -19,9 +20,15 @@ import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
 
-import java.util.Arrays;
-
 public class QuizFragment extends Fragment {
+
+    private static final String[] QUIZ_SUBJECT_VALUES = {
+            "Personalized (from history)", "Mathematics", "Science",
+            "Programming", "History", "Languages", "General"
+    };
+    private static final String[] QUIZ_DIFFICULTY_VALUES = {
+            "Adaptive", "Beginner", "Intermediate", "Advanced"
+    };
 
     private StudyRepository studyRepository;
     private SessionManager session;
@@ -46,27 +53,35 @@ public class QuizFragment extends Fragment {
         spQuizSubject = view.findViewById(R.id.spQuizSubject);
         spQuizDifficulty = view.findViewById(R.id.spQuizDifficulty);
         tvQuizStats = view.findViewById(R.id.tvQuizStats);
+        ViewCompat.setAccessibilityHeading(
+                view.findViewById(R.id.tvQuizHeading), true);
         MaterialButton btnStartQuiz = view.findViewById(R.id.btnStartQuiz);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_item,
-                Arrays.asList("Personalized (from history)", "Mathematics", "Science", "Programming",
-                        "History", "Languages", "General"));
+                getResources().getStringArray(R.array.quiz_subject_choices));
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spQuizSubject.setAdapter(adapter);
 
         ArrayAdapter<String> difficultyAdapter = new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_item,
-                Arrays.asList("Adaptive", "Beginner", "Intermediate", "Advanced"));
+                getResources().getStringArray(R.array.quiz_difficulty_choices));
         difficultyAdapter.setDropDownViewResource(
                 android.R.layout.simple_spinner_dropdown_item);
         spQuizDifficulty.setAdapter(difficultyAdapter);
 
         btnStartQuiz.setOnClickListener(v -> {
             Intent intent = new Intent(requireContext(), QuizActivity.class);
-            intent.putExtra(QuizActivity.EXTRA_SUBJECT, (String) spQuizSubject.getSelectedItem());
+            int subjectPosition = Math.max(0, Math.min(
+                    spQuizSubject.getSelectedItemPosition(),
+                    QUIZ_SUBJECT_VALUES.length - 1));
+            int difficultyPosition = Math.max(0, Math.min(
+                    spQuizDifficulty.getSelectedItemPosition(),
+                    QUIZ_DIFFICULTY_VALUES.length - 1));
+            intent.putExtra(QuizActivity.EXTRA_SUBJECT,
+                    QUIZ_SUBJECT_VALUES[subjectPosition]);
             intent.putExtra(QuizActivity.EXTRA_DIFFICULTY,
-                    (String) spQuizDifficulty.getSelectedItem());
+                    QUIZ_DIFFICULTY_VALUES[difficultyPosition]);
             startActivity(intent);
         });
     }
@@ -75,8 +90,8 @@ public class QuizFragment extends Fragment {
     public void onResume() {
         super.onResume();
         StudyRepository.Progress p = studyRepository.getProgress(session.getCurrentUserId());
-        tvQuizStats.setText("Quizzes completed: " + p.quizzesCompleted
-                + "\nOverall accuracy: " + p.accuracyPercent + "%"
-                + "\nCorrect answers: " + p.totalCorrect + " / " + p.totalAnswered);
+        tvQuizStats.setText(getString(R.string.quiz_stats,
+                p.quizzesCompleted, p.accuracyPercent,
+                p.totalCorrect, p.totalAnswered));
     }
 }
