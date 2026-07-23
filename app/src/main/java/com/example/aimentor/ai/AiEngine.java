@@ -5,11 +5,9 @@ import java.util.List;
 /**
  * Strategy interface for answer / quiz generation.
  *
- * The project ships with {@link LocalAiEngine}, a fully offline rule based
- * implementation, so the application is functional without any paid API key
- * or backend. A production build can supply a remote implementation
- * (e.g. Google Gemini or OpenAI) that reads its key from local.properties /
- * BuildConfig without changing any caller — no secret is committed to the repo.
+ * {@link AiEngineFactory} selects {@link RemoteAiEngine} when a local demo key
+ * is configured and otherwise selects {@link LocalAiEngine}. Callers depend
+ * only on this interface.
  */
 public interface AiEngine {
 

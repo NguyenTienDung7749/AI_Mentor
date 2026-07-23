@@ -18,7 +18,7 @@ practise with auto-generated quizzes and track their progress through XP, levels
 | Register with email + secure login | `activities/LoginActivity`, `activities/SignUpActivity`, `repo/UserRepository` |
 | First-use setup (level, subjects, explanation style) | `activities/OnboardingActivity` |
 | Ask questions (text) | `Fragments/HomeFragment` → `AnswerActivity` |
-| AI answer generation (subject + difficulty, step-by-step, key concepts, common mistakes, follow-ups) | `ai/LocalAiEngine`, `ai/AiAnswer` |
+| AI answer generation (subject + difficulty, step-by-step, key concepts, common mistakes, follow-ups) | `ai/RemoteAiEngine`, `ai/LocalAiEngine`, `ai/AiAnswer` |
 | Real computed results for maths | `ai/MathEvaluator` |
 | Question history & personal library (search, bookmark, filter by subject, review suggestions) | `Fragments/CategoryFragment`, `adapters/QuestionAdapter` |
 | AI practice quizzes (MCQ) with instant feedback | `Fragments/QuizFragment`, `activities/QuizActivity`, `ai/LocalAiEngine#generateQuiz` |
@@ -60,17 +60,27 @@ app/src/main/java/com/example/aimentor/
                                 #   NotificationHelper
 ```
 
-## 4. The offline AI engine (no API key required)
+## 4. AI engine configuration
 
-The app is fully functional **without any paid API key or backend**. `LocalAiEngine`
-(a deterministic, rule-based study coach) detects the subject and difficulty, computes real
-answers for arithmetic, and returns a structured explanation (steps, key concepts, common
-mistakes, follow-up practice) tailored to the student's level and preferred style. This keeps
-the MVP within the project's limited budget and guarantees offline availability.
+Text answers use the OpenAI-compatible HCNSEC chat-completions endpoint when
+`HCNSEC_API_KEY` is present in the gitignored `local.properties` file:
 
-Answer generation is behind the `AiEngine` interface, so a production build can add a remote
-provider (e.g. Google Gemini or OpenAI) **without changing any caller**. A real key would be
-read from `local.properties` / `BuildConfig` and **must never be committed** to the repository.
+```properties
+HCNSEC_API_KEY=replace-with-a-local-demo-key
+```
+
+`RemoteAiEngine` requests model `auto` and maps structured JSON into `AiAnswer`. The request
+runs through `StudyRepository`'s IO executor, so it never blocks Android's main thread. HTTP,
+network and invalid-response failures are sanitized and never expose the Authorization header.
+
+When no key is configured, `AiEngineFactory` selects `LocalAiEngine`, a deterministic,
+rule-based study coach that computes arithmetic and returns structured offline guidance.
+Remote quiz generation and automatic remote-to-local fallback are separate follow-up batches;
+practice quizzes currently remain local.
+
+For this assignment demo the local key is compiled into `BuildConfig`. It must never be
+committed, logged or shown in screenshots. A production application must keep the provider key
+on a backend/proxy because values compiled into an APK can be extracted.
 
 ## 5. Build & run
 

@@ -9,7 +9,7 @@ import androidx.annotation.WorkerThread;
 
 import com.example.aimentor.ai.AiAnswer;
 import com.example.aimentor.ai.AiEngine;
-import com.example.aimentor.ai.LocalAiEngine;
+import com.example.aimentor.ai.AiEngineFactory;
 import com.example.aimentor.ai.QuizQuestion;
 import com.example.aimentor.data.AppDatabase;
 import com.example.aimentor.data.Question;
@@ -32,7 +32,8 @@ import java.util.concurrent.Executors;
 /**
  * Core study logic: asking questions (with a similar-question cache to save AI
  * cost), generating practice quizzes, recording results, awarding XP and
- * computing progress statistics. All data is local (offline first).
+ * computing progress statistics. Persisted study data remains local, while the
+ * answer engine is selected by {@link AiEngineFactory}.
  */
 public class StudyRepository {
 
@@ -49,7 +50,7 @@ public class StudyRepository {
         this.userDao = db.userDao();
         this.questionDao = db.questionDao();
         this.quizDao = db.quizAttemptDao();
-        this.engine = new LocalAiEngine();
+        this.engine = AiEngineFactory.create();
         this.mainHandler = new Handler(Looper.getMainLooper());
     }
 

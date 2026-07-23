@@ -2,6 +2,13 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+def hcnsecApiKey = localProperties.getProperty("HCNSEC_API_KEY", "")
+
 android {
     namespace 'com.example.aimentor'
     compileSdk 36
@@ -14,6 +21,8 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField "String", "HCNSEC_API_KEY", "\"${hcnsecApiKey}\""
+        buildConfigField "String", "HCNSEC_BASE_URL", "\"https://api.hcnsec.cn/v1/\""
         vectorDrawables {
             useSupportLibrary true
         }
@@ -29,6 +38,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+    buildFeatures {
+        buildConfig true
+    }
 }
 
 dependencies {
@@ -42,8 +54,13 @@ dependencies {
     implementation libs.viewpager2
     implementation libs.swiperefreshlayout
     implementation libs.room.runtime
+    implementation libs.retrofit
+    implementation libs.retrofit.converter.gson
+    implementation libs.okhttp
+    implementation libs.gson
     annotationProcessor libs.room.compiler
     testImplementation libs.junit
+    testImplementation libs.mockwebserver
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
 }
