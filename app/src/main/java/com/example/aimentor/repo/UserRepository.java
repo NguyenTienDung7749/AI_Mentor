@@ -18,7 +18,15 @@ public class UserRepository {
     private final UserDao userDao;
 
     public UserRepository(Context context) {
-        this.database = AppDatabase.getInstance(context);
+        this(AppDatabase.getInstance(context));
+    }
+
+    /**
+     * Package-private injection seam for isolated Room instrumentation tests.
+     * It never replaces the production singleton or the student's real data.
+     */
+    UserRepository(AppDatabase database) {
+        this.database = database;
         this.userDao = database.userDao();
     }
 

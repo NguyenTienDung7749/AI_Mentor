@@ -50,12 +50,20 @@ public class StudyRepository {
     private final Handler mainHandler;
 
     public StudyRepository(Context context) {
-        AppDatabase db = AppDatabase.getInstance(context);
+        this(AppDatabase.getInstance(context), AiEngineFactory.create(),
+                new Handler(Looper.getMainLooper()));
+    }
+
+    /**
+     * Package-private injection seam used by instrumented tests with an
+     * in-memory Room database. Production callers continue to use Context.
+     */
+    StudyRepository(AppDatabase db, AiEngine engine, Handler mainHandler) {
         this.userDao = db.userDao();
         this.questionDao = db.questionDao();
         this.quizDao = db.quizAttemptDao();
-        this.engine = AiEngineFactory.create();
-        this.mainHandler = new Handler(Looper.getMainLooper());
+        this.engine = engine;
+        this.mainHandler = mainHandler;
     }
 
     public AiEngine getEngine() {

@@ -81,6 +81,44 @@ public class RemoteAiEngineTest {
     }
 
     @Test
+    public void answer_http400_isNotRetried() {
+        server.enqueue(jsonResponse(400, "{\"error\":{\"message\":\"bad request\"}}"));
+        RemoteAiEngine engine = engine(1_000, 1_000);
+
+        AiServiceException error = expectFailure(engine);
+
+        assertEquals(400, error.getHttpStatus());
+        assertTrue(!error.isRetryable());
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test
+    public void answer_http403_isNotRetried() {
+        server.enqueue(jsonResponse(403, "{\"error\":{\"message\":\"forbidden\"}}"));
+        RemoteAiEngine engine = engine(1_000, 1_000);
+
+        AiServiceException error = expectFailure(engine);
+
+        assertEquals(403, error.getHttpStatus());
+        assertTrue(!error.isRetryable());
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test
+    public void answer_http408_triesAlternateModelOnce() {
+        server.enqueue(jsonResponse(408, "{\"error\":{\"message\":\"timeout\"}}"));
+        server.enqueue(jsonResponse(200,
+                completionBody(structuredContent("Alternate recovered"))));
+        RemoteAiEngine engine = engine(1_000, 1_000);
+
+        AiAnswer answer = engine.answer(
+                "Question", "High School", "Detailed", "Auto");
+
+        assertEquals("Alternate recovered", answer.getDirectAnswer());
+        assertEquals(2, server.getRequestCount());
+    }
+
+    @Test
     public void answer_http429_retriesOnceAndRecovers() {
         server.enqueue(jsonResponse(429, "{\"error\":{\"message\":\"busy\"}}"));
         server.enqueue(jsonResponse(200,
@@ -116,6 +154,20 @@ public class RemoteAiEngineTest {
         AiServiceException error = expectFailure(engine);
 
         assertEquals(AiServiceException.Kind.INVALID_RESPONSE, error.getKind());
+        assertEquals(2, server.getRequestCount());
+    }
+
+    @Test
+    public void answer_emptyContent_triesAlternateModelOnce() {
+        server.enqueue(jsonResponse(200, completionBody("")));
+        server.enqueue(jsonResponse(200,
+                completionBody(structuredContent("Valid alternate answer"))));
+        RemoteAiEngine engine = engine(1_000, 1_000);
+
+        AiAnswer answer = engine.answer(
+                "Question", "High School", "Detailed", "Auto");
+
+        assertEquals("Valid alternate answer", answer.getDirectAnswer());
         assertEquals(2, server.getRequestCount());
     }
 
@@ -163,10 +215,10 @@ public class RemoteAiEngineTest {
     @Test
     public void answer_timeout_usesRemainingDeadlineForAlternateModel() {
         server.enqueue(jsonResponse(200, completionBody("Late answer"))
-                .setBodyDelay(250, TimeUnit.MILLISECONDS));
+                .setBodyDelay(700, TimeUnit.MILLISECONDS));
         server.enqueue(jsonResponse(200, completionBody("Also late"))
-                .setBodyDelay(250, TimeUnit.MILLISECONDS));
-        RemoteAiEngine engine = engine(1_000, 50);
+                .setBodyDelay(700, TimeUnit.MILLISECONDS));
+        RemoteAiEngine engine = engine(1_000, 600);
 
         AiServiceException error = expectFailure(engine);
 
