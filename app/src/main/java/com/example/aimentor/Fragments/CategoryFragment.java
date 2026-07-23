@@ -30,6 +30,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 public class CategoryFragment extends Fragment implements QuestionAdapter.Listener {
 
@@ -111,8 +112,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
 
         List<Question> filtered = new ArrayList<>();
         for (Question q : base) {
-            if (bookmarkedOnly && !query.isEmpty()
-                    && !q.questionText.toLowerCase().contains(query.toLowerCase())) {
+            if (bookmarkedOnly && !query.isEmpty() && !matchesQuery(q, query)) {
                 continue;
             }
             if (subjectFilter != null && !subjectFilter.equals("All subjects")
@@ -124,17 +124,30 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
 
         adapter.setItems(filtered);
         boolean empty = filtered.isEmpty();
+        boolean filtering = bookmarkedOnly || !query.isEmpty()
+                || (subjectFilter != null && !subjectFilter.equals("All subjects"));
+        tvEmpty.setText(filtering
+                ? R.string.empty_filtered_history : R.string.empty_history);
         tvEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
         rvHistory.setVisibility(empty ? View.GONE : View.VISIBLE);
 
         StudyRepository.Progress p = studyRepository.getProgress(userId);
         if (p.totalQuestions >= 3 && !"-".equals(p.topSubject)) {
             tvSuggest.setVisibility(View.VISIBLE);
-            tvSuggest.setText("Suggested review: you often ask about " + p.topSubject
-                    + ". Revisit those answers to reinforce your learning.");
+            tvSuggest.setText(getString(R.string.suggested_review, p.topSubject));
         } else {
             tvSuggest.setVisibility(View.GONE);
         }
+    }
+
+    private boolean matchesQuery(Question question, String query) {
+        String normalizedQuery = query.toLowerCase(Locale.ROOT);
+        String questionText = question.questionText == null
+                ? "" : question.questionText.toLowerCase(Locale.ROOT);
+        String answerText = question.answerText == null
+                ? "" : question.answerText.toLowerCase(Locale.ROOT);
+        return questionText.contains(normalizedQuery)
+                || answerText.contains(normalizedQuery);
     }
 
     @Override

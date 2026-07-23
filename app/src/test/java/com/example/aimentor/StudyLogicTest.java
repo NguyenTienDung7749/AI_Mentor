@@ -57,10 +57,26 @@ public class StudyLogicTest {
     @Test
     public void gamification_levelsAndBadges() {
         assertEquals(1, Gamification.levelForXp(0));
+        assertEquals(1, Gamification.levelForXp(-10));
+        assertEquals(1, Gamification.levelForXp(99));
+        assertEquals(2, Gamification.levelForXp(100));
         assertEquals(3, Gamification.levelForXp(250));
+        assertEquals(50, Gamification.xpIntoLevel(250));
+        assertEquals(50, Gamification.xpToNextLevel(250));
         List<String> badges = Gamification.earnedBadges(10, 5, 26, 5);
         assertTrue(badges.contains("Curious Mind (10 questions)"));
+        assertTrue(badges.contains("Quiz Enthusiast (5 quizzes)"));
+        assertTrue(badges.contains("Sharp Shooter (25 correct)"));
         assertTrue(badges.contains("Level 5 Reached"));
+    }
+
+    @Test
+    public void progressAccuracy_handlesEmptyAndInvalidTotals() {
+        assertEquals(0, Gamification.accuracyPercent(0, 0));
+        assertEquals(0, Gamification.accuracyPercent(5, -1));
+        assertEquals(0, Gamification.accuracyPercent(-2, 10));
+        assertEquals(70, Gamification.accuracyPercent(7, 10));
+        assertEquals(100, Gamification.accuracyPercent(12, 10));
     }
 
     @Test

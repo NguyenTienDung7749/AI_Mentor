@@ -25,6 +25,7 @@ import com.example.aimentor.util.ContentModerator;
 import com.example.aimentor.util.Gamification;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -160,7 +161,18 @@ public class StudyRepository {
 
     public List<Question> search(long userId, String query) {
         if (query == null || query.trim().isEmpty()) return getHistory(userId);
-        return normalizeSubjects(questionDao.search(userId, query.trim()));
+        String needle = query.trim().toLowerCase(Locale.ROOT);
+        List<Question> matches = new ArrayList<>();
+        for (Question question : getHistory(userId)) {
+            String questionText = question.questionText == null
+                    ? "" : question.questionText.toLowerCase(Locale.ROOT);
+            String answerText = question.answerText == null
+                    ? "" : question.answerText.toLowerCase(Locale.ROOT);
+            if (questionText.contains(needle) || answerText.contains(needle)) {
+                matches.add(question);
+            }
+        }
+        return matches;
     }
 
     public List<Question> getBookmarked(long userId) {
@@ -334,15 +346,17 @@ public class StudyRepository {
     }
 
     public QuizResult recordQuiz(long userId, String subject, int correct, int total) {
+        int safeTotal = Math.max(0, total);
+        int safeCorrect = Math.max(0, Math.min(correct, safeTotal));
         QuizAttempt attempt = new QuizAttempt();
         attempt.userId = userId;
         attempt.subject = SubjectClassifier.normalize(subject);
-        attempt.correct = correct;
-        attempt.total = total;
+        attempt.correct = safeCorrect;
+        attempt.total = safeTotal;
         quizDao.insert(attempt);
 
         User user = userDao.findById(userId);
-        int awarded = correct * Gamification.XP_QUIZ_CORRECT;
+        int awarded = safeCorrect * Gamification.XP_QUIZ_CORRECT;
         boolean leveledUp = false;
         if (user != null) leveledUp = addXp(user, awarded);
         int newLevel = user != null ? Gamification.levelForXp(user.xp) : 1;
@@ -371,10 +385,23 @@ public class StudyRepository {
         public String levelTitle = "Beginner";
         public int xpIntoLevel;
         public int xpToNext;
+        public int activityCountLast7Days;
+        public int activeDaysLast7Days;
         public String topSubject = "-";
         public final Map<String, Integer> subjectCounts = new LinkedHashMap<>();
+        public final Map<String, Integer> subjectQuizCounts = new LinkedHashMap<>();
+        public final List<DailyActivity> last7Days = new ArrayList<>();
         public final List<String> badges = new ArrayList<>();
         public final List<String> insights = new ArrayList<>();
+    }
+
+    public static class DailyActivity {
+        public final long dayStart;
+        public int count;
+
+        DailyActivity(long dayStart) {
+            this.dayStart = dayStart;
+        }
     }
 
     public Progress getProgress(long userId) {
@@ -387,7 +414,7 @@ public class StudyRepository {
         p.xpIntoLevel = Gamification.xpIntoLevel(xp);
         p.xpToNext = Gamification.xpToNextLevel(xp);
 
-        List<Question> all = questionDao.getForUser(userId);
+        List<Question> all = normalizeSubjects(questionDao.getForUser(userId));
         p.totalQuestions = all.size();
         int topCount = 0;
         for (Question q : all) {
@@ -401,11 +428,19 @@ public class StudyRepository {
             }
         }
 
-        p.quizzesCompleted = quizDao.countForUser(userId);
-        p.totalCorrect = quizDao.totalCorrect(userId);
-        p.totalAnswered = quizDao.totalAnswered(userId);
-        p.accuracyPercent = p.totalAnswered > 0
-                ? Math.round((p.totalCorrect * 100f) / p.totalAnswered) : 0;
+        List<QuizAttempt> attempts = quizDao.getForUser(userId);
+        p.quizzesCompleted = attempts.size();
+        for (QuizAttempt attempt : attempts) {
+            p.totalCorrect += Math.max(0, Math.min(attempt.correct, attempt.total));
+            p.totalAnswered += Math.max(0, attempt.total);
+            String subject = SubjectClassifier.normalize(attempt.subject);
+            int count = (p.subjectQuizCounts.containsKey(subject)
+                    ? p.subjectQuizCounts.get(subject) : 0) + 1;
+            p.subjectQuizCounts.put(subject, count);
+        }
+        p.accuracyPercent =
+                Gamification.accuracyPercent(p.totalCorrect, p.totalAnswered);
+        buildWeeklyActivity(p, all, attempts);
 
         p.badges.addAll(Gamification.earnedBadges(
                 p.totalQuestions, p.quizzesCompleted, p.totalCorrect, p.level));
@@ -415,11 +450,16 @@ public class StudyRepository {
     }
 
     private List<Question> normalizeSubjects(List<Question> questions) {
-        if (questions == null) return new ArrayList<>();
+        List<Question> visible = new ArrayList<>();
+        if (questions == null) return visible;
         for (Question question : questions) {
-            normalizeSubject(question);
+            if (question != null
+                    && !AnswerSource.LOCAL_FALLBACK.name()
+                    .equalsIgnoreCase(question.answerSource)) {
+                visible.add(normalizeSubject(question));
+            }
         }
-        return questions;
+        return visible;
     }
 
     private Question normalizeSubject(Question question) {
@@ -427,6 +467,44 @@ public class StudyRepository {
             question.subject = SubjectClassifier.normalize(question.subject);
         }
         return question;
+    }
+
+    private void buildWeeklyActivity(Progress progress, List<Question> questions,
+                                     List<QuizAttempt> attempts) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        calendar.add(Calendar.DAY_OF_YEAR, -6);
+
+        for (int day = 0; day < 7; day++) {
+            progress.last7Days.add(new DailyActivity(calendar.getTimeInMillis()));
+            calendar.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        for (Question question : questions) {
+            addActivity(progress, question.createdAt);
+        }
+        for (QuizAttempt attempt : attempts) {
+            addActivity(progress, attempt.createdAt);
+        }
+        for (DailyActivity day : progress.last7Days) {
+            progress.activityCountLast7Days += day.count;
+            if (day.count > 0) progress.activeDaysLast7Days++;
+        }
+    }
+
+    private void addActivity(Progress progress, long timestamp) {
+        for (int index = 0; index < progress.last7Days.size(); index++) {
+            DailyActivity day = progress.last7Days.get(index);
+            long nextDayStart = index + 1 < progress.last7Days.size()
+                    ? progress.last7Days.get(index + 1).dayStart
+                    : day.dayStart + 24L * 60L * 60L * 1000L;
+            if (timestamp >= day.dayStart && timestamp < nextDayStart) {
+                day.count++;
+                return;
+            }
+        }
     }
 
     private void buildInsights(Progress p) {

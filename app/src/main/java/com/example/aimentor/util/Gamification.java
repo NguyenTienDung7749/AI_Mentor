@@ -32,6 +32,13 @@ public final class Gamification {
         return XP_PER_LEVEL - xpIntoLevel(xp);
     }
 
+    /** Stable percentage for progress UI, including empty or malformed totals. */
+    public static int accuracyPercent(int correct, int total) {
+        if (total <= 0) return 0;
+        int safeCorrect = Math.max(0, Math.min(correct, total));
+        return Math.round((safeCorrect * 100f) / total);
+    }
+
     public static String titleForLevel(int level) {
         if (level >= 15) return "Scholar";
         if (level >= 10) return "Expert Learner";

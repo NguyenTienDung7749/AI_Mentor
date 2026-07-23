@@ -44,6 +44,8 @@
     <string name="search_hint">Search your questions…</string>
     <string name="bookmarked_only">Bookmarked only</string>
     <string name="empty_history">No questions yet. Ask your first question on the Home tab!</string>
+    <string name="empty_filtered_history">No saved answers match the current search or filters.</string>
+    <string name="suggested_review">Suggested review: you often ask about %1$s. Revisit those answers to reinforce your learning.</string>
 
     <!-- Quiz -->
     <string name="start_quiz">Start quiz</string>
@@ -62,6 +64,41 @@
     <string name="dark_theme">Dark theme</string>
     <string name="send_reminder">Send me a review reminder</string>
     <string name="logout">Log out</string>
+    <string name="learning_progress">Learning progress</string>
+    <string name="progress_summary">%1$s  •  %2$s\n%3$d / %4$d quiz answers correct  •  %5$d%% accuracy\n%6$s</string>
+    <string name="xp_progress">%1$d / %2$d XP in this level • %3$d XP to next</string>
+    <string name="subject_activity">Activity by subject</string>
+    <string name="subject_activity_empty">No subject activity yet.</string>
+    <string name="weekly_activity">Last 7 days</string>
+    <string name="weekly_activity_summary">%1$s across %2$s</string>
+    <string name="weekly_activity_empty">No saved questions or completed quizzes in the last 7 days.</string>
+    <string name="activity_count">%1$d</string>
+    <string name="daily_activity_description">%1$s: %2$d learning activities</string>
+    <string name="subject_question_quiz_count">%1$s: %2$s, %3$s</string>
+    <plurals name="saved_question_count">
+        <item quantity="one">%d saved question</item>
+        <item quantity="other">%d saved questions</item>
+    </plurals>
+    <plurals name="question_count">
+        <item quantity="one">%d question</item>
+        <item quantity="other">%d questions</item>
+    </plurals>
+    <plurals name="quiz_attempt_count">
+        <item quantity="one">%d quiz attempt</item>
+        <item quantity="other">%d quiz attempts</item>
+    </plurals>
+    <plurals name="bookmark_count">
+        <item quantity="one">%d bookmark</item>
+        <item quantity="other">%d bookmarks</item>
+    </plurals>
+    <plurals name="learning_activity_count">
+        <item quantity="one">%d activity</item>
+        <item quantity="other">%d activities</item>
+    </plurals>
+    <plurals name="active_day_count">
+        <item quantity="one">%d active day</item>
+        <item quantity="other">%d active days</item>
+    </plurals>
 
     <!-- Answer -->
     <string name="answer_title">Answer</string>
