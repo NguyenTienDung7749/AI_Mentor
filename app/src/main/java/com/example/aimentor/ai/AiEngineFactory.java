@@ -8,14 +8,13 @@ public final class AiEngineFactory {
     private AiEngineFactory() { }
 
     public static AiEngine create() {
-        String key = BuildConfig.HCNSEC_API_KEY == null
-                ? "" : BuildConfig.HCNSEC_API_KEY.trim();
+        String key = BuildConfig.GROQ_API_KEY == null
+                ? "" : BuildConfig.GROQ_API_KEY.trim();
         if (key.isEmpty()) {
             return new LocalAiEngine();
         }
         return new FallbackAiEngine(
-                new RemoteAiEngine(BuildConfig.HCNSEC_BASE_URL, key,
-                        BuildConfig.HCNSEC_MODEL),
+                new RemoteAiEngine(BuildConfig.GROQ_BASE_URL, key),
                 new LocalAiEngine());
     }
 }

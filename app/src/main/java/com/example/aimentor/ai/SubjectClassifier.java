@@ -48,6 +48,17 @@ public final class SubjectClassifier {
 
     private SubjectClassifier() { }
 
+    /** Restricts provider output to the subject categories supported by the app. */
+    public static String normalize(String subject) {
+        if (subject == null) return GENERAL;
+        for (String allowed : SUBJECTS) {
+            if (allowed.equalsIgnoreCase(subject.trim())) {
+                return allowed;
+            }
+        }
+        return GENERAL;
+    }
+
     public static String classify(String text) {
         if (text == null || text.trim().isEmpty()) return GENERAL;
         String t = text.toLowerCase(Locale.ROOT);

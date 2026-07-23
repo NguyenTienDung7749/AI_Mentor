@@ -17,6 +17,11 @@ public interface AiEngine {
     /** Generate a set of practice questions for a subject. */
     List<QuizQuestion> generateQuiz(String subject, int count);
 
+    /** Generate a quiz using optional difficulty and study-history context. */
+    default List<QuizQuestion> generateQuiz(QuizGenerationConfig config) {
+        return generateQuiz(config.getSubject(), config.getCount());
+    }
+
     /** Human readable engine name (shown in the UI / reports). */
     String name();
 }

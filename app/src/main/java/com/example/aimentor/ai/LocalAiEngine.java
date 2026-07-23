@@ -257,7 +257,7 @@ public class LocalAiEngine implements AiEngine {
     @Override
     public List<QuizQuestion> generateQuiz(String subject, int count) {
         if (count <= 0) count = 5;
-        String subj = (subject == null || subject.isEmpty()) ? SubjectClassifier.GENERAL : subject;
+        String subj = SubjectClassifier.normalize(subject);
 
         List<QuizQuestion> bank = new ArrayList<>(bankFor(subj));
 
@@ -272,6 +272,20 @@ public class LocalAiEngine implements AiEngine {
             return new ArrayList<>(bank.subList(0, count));
         }
         return bank;
+    }
+
+    @Override
+    public List<QuizQuestion> generateQuiz(QuizGenerationConfig config) {
+        List<QuizQuestion> generated =
+                generateQuiz(config.getSubject(), config.getCount());
+        List<QuizQuestion> adapted = new ArrayList<>();
+        for (QuizQuestion question : generated) {
+            adapted.add(new QuizQuestion(
+                    question.getPrompt(), new ArrayList<>(question.getOptions()),
+                    question.getCorrectIndex(), question.getExplanation(),
+                    config.getSubject(), config.getDifficulty(), question.getType()));
+        }
+        return adapted;
     }
 
     private QuizQuestion generateArithmetic(Random rnd) {
@@ -307,6 +321,9 @@ public class LocalAiEngine implements AiEngine {
                 list.add(new QuizQuestion("What is 25% of 200?",
                         Arrays.asList("25", "40", "50", "75"), 2,
                         "25% = 0.25, and 0.25 x 200 = 50.", subject));
+                list.add(trueFalse("A triangle's interior angles add up to 180 degrees.",
+                        true, "In Euclidean geometry, the three interior angles total 180 degrees.",
+                        subject, "Beginner"));
                 break;
             case SubjectClassifier.SCIENCE:
                 list.add(new QuizQuestion("What is the chemical symbol for water?",
@@ -318,6 +335,12 @@ public class LocalAiEngine implements AiEngine {
                 list.add(new QuizQuestion("The powerhouse of the cell is the...",
                         Arrays.asList("Nucleus", "Ribosome", "Mitochondria", "Membrane"), 2,
                         "Mitochondria produce most of the cell's energy (ATP).", subject));
+                list.add(trueFalse("Sound can travel through a vacuum.",
+                        false, "Sound needs particles in a medium, so it cannot travel through a vacuum.",
+                        subject, "Intermediate"));
+                list.add(new QuizQuestion("Which particle has a negative electric charge?",
+                        Arrays.asList("Proton", "Neutron", "Electron", "Photon"), 2,
+                        "Electrons carry negative electric charge.", subject));
                 break;
             case SubjectClassifier.PROGRAMMING:
                 list.add(new QuizQuestion("Which data structure works First-In-First-Out (FIFO)?",
@@ -330,6 +353,11 @@ public class LocalAiEngine implements AiEngine {
                 list.add(new QuizQuestion("In Java, which keyword creates a new object?",
                         Arrays.asList("class", "void", "new", "static"), 2,
                         "The 'new' keyword allocates and instantiates an object.", subject));
+                list.add(trueFalse("An array index normally starts at zero in Java.",
+                        true, "Java arrays use zero-based indexing.", subject, "Beginner"));
+                list.add(new QuizQuestion("Which SQL command reads rows from a table?",
+                        Arrays.asList("SELECT", "UPDATE", "DELETE", "DROP"), 0,
+                        "SELECT retrieves rows without changing them.", subject));
                 break;
             case SubjectClassifier.HISTORY:
                 list.add(new QuizQuestion("In which year did World War II end?",
@@ -338,6 +366,16 @@ public class LocalAiEngine implements AiEngine {
                 list.add(new QuizQuestion("Ancient pyramids of Giza were built in...",
                         Arrays.asList("Greece", "Egypt", "Rome", "China"), 1,
                         "The Giza pyramids are in Egypt.", subject));
+                list.add(trueFalse("The Industrial Revolution began in Britain.",
+                        true, "Britain industrialised first during the late 18th century.",
+                        subject, "Intermediate"));
+                list.add(new QuizQuestion("The Renaissance began in which country?",
+                        Arrays.asList("Italy", "Spain", "Germany", "Norway"), 0,
+                        "The Renaissance began in Italian city-states before spreading.", subject));
+                list.add(new QuizQuestion("Which event began in 1789?",
+                        Arrays.asList("French Revolution", "American Civil War",
+                                "World War I", "Russian Revolution"), 0,
+                        "The French Revolution began in 1789.", subject));
                 break;
             case SubjectClassifier.LANGUAGES:
                 list.add(new QuizQuestion("Choose the correct sentence:",
@@ -347,6 +385,14 @@ public class LocalAiEngine implements AiEngine {
                 list.add(new QuizQuestion("What is a synonym of 'happy'?",
                         Arrays.asList("Sad", "Joyful", "Angry", "Tired"), 1,
                         "'Joyful' means the same as 'happy'.", subject));
+                list.add(trueFalse("An adjective describes a noun.",
+                        true, "Adjectives add information about nouns.", subject, "Beginner"));
+                list.add(new QuizQuestion("Choose the past tense of 'go':",
+                        Arrays.asList("Goed", "Gone", "Went", "Going"), 2,
+                        "'Went' is the simple past form of 'go'.", subject));
+                list.add(new QuizQuestion("Which word is an adverb?",
+                        Arrays.asList("Quick", "Quickly", "Quicker", "Quickness"), 1,
+                        "'Quickly' describes how an action happens.", subject));
                 break;
             default:
                 list.add(new QuizQuestion("Good problem solving usually starts by...",
@@ -357,8 +403,27 @@ public class LocalAiEngine implements AiEngine {
                         Arrays.asList("Forget faster", "Reinforce learning",
                                 "Waste time", "Lower your score"), 1,
                         "Spaced review reinforces memory and understanding.", subject));
+                list.add(trueFalse("Checking evidence improves the reliability of an answer.",
+                        true, "Evidence helps verify whether a claim is well supported.",
+                        subject, "Beginner"));
+                list.add(new QuizQuestion("Which action best supports focused study?",
+                        Arrays.asList("Set a clear goal", "Keep every notification on",
+                                "Skip all breaks", "Multitask constantly"), 0,
+                        "A clear goal directs attention and makes progress measurable.", subject));
+                list.add(new QuizQuestion("A useful summary should primarily...",
+                        Arrays.asList("Repeat every word", "Capture the main ideas",
+                                "Add unrelated details", "Avoid conclusions"), 1,
+                        "A summary condenses the most important ideas.", subject));
                 break;
         }
         return list;
+    }
+
+    private QuizQuestion trueFalse(String prompt, boolean answer,
+                                   String explanation, String subject,
+                                   String difficulty) {
+        return new QuizQuestion(prompt, Arrays.asList("True", "False"),
+                answer ? 0 : 1, explanation, subject, difficulty,
+                QuizQuestion.Type.TRUE_FALSE);
     }
 }

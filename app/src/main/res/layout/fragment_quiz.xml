@@ -51,6 +51,19 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/quiz_difficulty"
+            android:textColor="@color/text_secondary" />
+
+        <Spinner
+            android:id="@+id/spQuizDifficulty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStartQuiz"
             android:layout_width="match_parent"
@@ -64,7 +77,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Each quiz has 5 AI-generated questions with instant feedback. Earn 5 XP per correct answer."
+            android:text="Choose Personalized to practise recent topics. Quizzes mix multiple-choice and true/false questions with explanations."
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
     </LinearLayout>

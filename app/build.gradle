@@ -7,8 +7,7 @@ def localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localPropertiesFile.withInputStream { localProperties.load(it) }
 }
-def hcnsecApiKey = localProperties.getProperty("HCNSEC_API_KEY", "")
-def hcnsecModel = localProperties.getProperty("HCNSEC_MODEL", "DeepSeek-V4-Flash")
+def groqApiKey = localProperties.getProperty("GROQ_API_KEY", "")
 
 android {
     namespace 'com.example.aimentor'
@@ -22,9 +21,8 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField "String", "HCNSEC_API_KEY", "\"${hcnsecApiKey}\""
-        buildConfigField "String", "HCNSEC_BASE_URL", "\"https://api.hcnsec.cn/v1/\""
-        buildConfigField "String", "HCNSEC_MODEL", "\"${hcnsecModel}\""
+        buildConfigField "String", "GROQ_API_KEY", "\"${groqApiKey}\""
+        buildConfigField "String", "GROQ_BASE_URL", "\"https://api.groq.com/\""
         vectorDrawables {
             useSupportLibrary true
         }
@@ -61,6 +59,7 @@ dependencies {
     implementation libs.okhttp
     implementation libs.okhttp.dnsoverhttps
     implementation libs.gson
+    implementation libs.mlkit.text.recognition
     annotationProcessor libs.room.compiler
     testImplementation libs.junit
     testImplementation libs.mockwebserver

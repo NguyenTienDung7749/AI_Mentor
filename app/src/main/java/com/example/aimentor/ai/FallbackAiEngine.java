@@ -85,6 +85,19 @@ public class FallbackAiEngine implements AiEngine {
     }
 
     @Override
+    public List<QuizQuestion> generateQuiz(QuizGenerationConfig config) {
+        try {
+            List<QuizQuestion> remoteQuiz = remoteEngine.generateQuiz(config);
+            if (remoteQuiz != null && !remoteQuiz.isEmpty()) {
+                return remoteQuiz;
+            }
+        } catch (RuntimeException ignored) {
+            // Preserve a usable quiz when the provider is unavailable or malformed.
+        }
+        return localEngine.generateQuiz(config);
+    }
+
+    @Override
     public String name() {
         return remoteEngine.name() + " + offline fallback";
     }

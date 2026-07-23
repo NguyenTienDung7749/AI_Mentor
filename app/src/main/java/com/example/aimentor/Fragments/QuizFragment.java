@@ -25,7 +25,7 @@ public class QuizFragment extends Fragment {
 
     private StudyRepository studyRepository;
     private SessionManager session;
-    private Spinner spQuizSubject;
+    private Spinner spQuizSubject, spQuizDifficulty;
     private TextView tvQuizStats;
 
     public QuizFragment() { }
@@ -44,19 +44,29 @@ public class QuizFragment extends Fragment {
         session = new SessionManager(requireContext());
 
         spQuizSubject = view.findViewById(R.id.spQuizSubject);
+        spQuizDifficulty = view.findViewById(R.id.spQuizDifficulty);
         tvQuizStats = view.findViewById(R.id.tvQuizStats);
         MaterialButton btnStartQuiz = view.findViewById(R.id.btnStartQuiz);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_item,
-                Arrays.asList("Mathematics", "Science", "Programming",
+                Arrays.asList("Personalized (from history)", "Mathematics", "Science", "Programming",
                         "History", "Languages", "General"));
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spQuizSubject.setAdapter(adapter);
 
+        ArrayAdapter<String> difficultyAdapter = new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_item,
+                Arrays.asList("Adaptive", "Beginner", "Intermediate", "Advanced"));
+        difficultyAdapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item);
+        spQuizDifficulty.setAdapter(difficultyAdapter);
+
         btnStartQuiz.setOnClickListener(v -> {
             Intent intent = new Intent(requireContext(), QuizActivity.class);
             intent.putExtra(QuizActivity.EXTRA_SUBJECT, (String) spQuizSubject.getSelectedItem());
+            intent.putExtra(QuizActivity.EXTRA_DIFFICULTY,
+                    (String) spQuizDifficulty.getSelectedItem());
             startActivity(intent);
         });
     }

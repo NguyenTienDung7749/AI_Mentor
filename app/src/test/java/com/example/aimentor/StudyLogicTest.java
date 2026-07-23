@@ -86,12 +86,19 @@ public class StudyLogicTest {
         assertTrue(a.getDirectAnswer().contains("14"));
         assertFalse(a.getSteps().isEmpty());
 
-        List<QuizQuestion> quiz = engine.generateQuiz(SubjectClassifier.SCIENCE, 3);
-        assertEquals(3, quiz.size());
+        List<QuizQuestion> quiz = engine.generateQuiz(SubjectClassifier.SCIENCE, 5);
+        assertEquals(5, quiz.size());
+        boolean hasMultipleChoice = false;
+        boolean hasTrueFalse = false;
         for (QuizQuestion q : quiz) {
             assertTrue(q.getCorrectIndex() >= 0);
             assertTrue(q.getCorrectIndex() < q.getOptions().size());
             assertFalse(q.getPrompt().isEmpty());
+            assertFalse(q.getExplanation().isEmpty());
+            hasMultipleChoice |= q.getType() == QuizQuestion.Type.MULTIPLE_CHOICE;
+            hasTrueFalse |= q.getType() == QuizQuestion.Type.TRUE_FALSE;
         }
+        assertTrue(hasMultipleChoice);
+        assertTrue(hasTrueFalse);
     }
 }

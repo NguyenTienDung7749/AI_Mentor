@@ -1,6 +1,7 @@
 package com.example.aimentor.activities;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -19,26 +20,50 @@ import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
 
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
-/** Runs a practice quiz with instant feedback and records the result. */
+/** Runs a personalized mixed-format quiz and records the first-attempt result once. */
 public class QuizActivity extends AppCompatActivity {
 
     public static final String EXTRA_SUBJECT = "subject";
+    public static final String EXTRA_DIFFICULTY = "difficulty";
+
+    private static final String STATE_QUESTIONS = "questions";
+    private static final String STATE_WRONG = "wrong_questions";
+    private static final String STATE_SUBJECT = "resolved_subject";
+    private static final String STATE_DIFFICULTY = "resolved_difficulty";
+    private static final String STATE_INDEX = "index";
+    private static final String STATE_CORRECT = "correct";
+    private static final String STATE_ANSWERED = "answered";
+    private static final String STATE_RETRY = "retry_round";
+    private static final String STATE_RECORDED = "result_recorded";
+    private static final String STATE_AWARDED_XP = "awarded_xp";
+    private static final String STATE_SELECTED = "selected_index";
+    private static final String STATE_LAST_CORRECT = "last_correct";
 
     private StudyRepository studyRepository;
     private SessionManager session;
-    private List<QuizQuestion> questions;
+    private ArrayList<QuizQuestion> questions = new ArrayList<>();
+    private ArrayList<QuizQuestion> wrongQuestions = new ArrayList<>();
     private String subject;
+    private String difficulty;
 
-    private int index = 0;
-    private int correctCount = 0;
-    private boolean answered = false;
+    private int index;
+    private int correctCount;
+    private int awardedXp;
+    private int lastSelectedIndex = -1;
+    private boolean answered;
+    private boolean retryRound;
+    private boolean resultRecorded;
+    private boolean lastAnswerCorrect;
 
-    private TextView tvProgress, tvQuestionPrompt, tvFeedback;
+    private TextView tvProgress, tvQuestionPrompt, tvFeedback, tvQuizType;
     private RadioGroup rgOptions;
     private RadioButton[] options;
     private MaterialButton btnAction;
+    private View quizLoadingState, quizContent;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -47,51 +72,97 @@ public class QuizActivity extends AppCompatActivity {
 
         studyRepository = new StudyRepository(this);
         session = new SessionManager(this);
-
-        subject = getIntent().getStringExtra(EXTRA_SUBJECT);
-        if (subject == null) subject = "General";
-
-        questions = studyRepository.generateQuiz(subject, 5);
-        if (questions == null || questions.isEmpty()) {
-            Toast.makeText(this, "Could not generate a quiz.", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
+        bindViews();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+        btnAction.setOnClickListener(v -> onAction());
 
+        if (savedInstanceState != null && restoreState(savedInstanceState)) {
+            showLoadedQuiz();
+            return;
+        }
+
+        String requestedSubject = getIntent().getStringExtra(EXTRA_SUBJECT);
+        String requestedDifficulty = getIntent().getStringExtra(EXTRA_DIFFICULTY);
+        studyRepository.generateQuizAsync(
+                session.getCurrentUserId(), requestedSubject,
+                requestedDifficulty, 5, this::handleQuizLoaded);
+    }
+
+    private void bindViews() {
         tvProgress = findViewById(R.id.tvProgress);
         tvQuestionPrompt = findViewById(R.id.tvQuestionPrompt);
         tvFeedback = findViewById(R.id.tvFeedback);
+        tvQuizType = findViewById(R.id.tvQuizType);
+        quizLoadingState = findViewById(R.id.quizLoadingState);
+        quizContent = findViewById(R.id.quizContent);
         rgOptions = findViewById(R.id.rgOptions);
         options = new RadioButton[]{
                 findViewById(R.id.rbOpt0), findViewById(R.id.rbOpt1),
                 findViewById(R.id.rbOpt2), findViewById(R.id.rbOpt3)};
         btnAction = findViewById(R.id.btnAction);
+    }
 
-        btnAction.setOnClickListener(v -> onAction());
+    private void handleQuizLoaded(StudyRepository.QuizLoadResult result) {
+        if (isFinishing() || isDestroyed()) return;
+        if (!result.success || result.questions.isEmpty()) {
+            Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        subject = result.subject;
+        difficulty = result.difficulty;
+        questions = new ArrayList<>(result.questions);
+        showLoadedQuiz();
+        Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
+    }
+
+    private void showLoadedQuiz() {
+        quizLoadingState.setVisibility(View.GONE);
+        quizContent.setVisibility(View.VISIBLE);
+        btnAction.setEnabled(true);
         showQuestion();
     }
 
     private void showQuestion() {
+        if (questions.isEmpty() || index < 0 || index >= questions.size()) {
+            finish();
+            return;
+        }
+        QuizQuestion question = questions.get(index);
+        boolean restoreAnswered = answered;
+        int restoredSelection = lastSelectedIndex;
+        boolean restoredCorrect = lastAnswerCorrect;
+
         answered = false;
-        QuizQuestion q = questions.get(index);
-        tvProgress.setText("Question " + (index + 1) + " of " + questions.size());
-        tvQuestionPrompt.setText(q.getPrompt());
+        lastSelectedIndex = -1;
+        tvProgress.setText((retryRound ? "Retry " : "Question ")
+                + (index + 1) + " of " + questions.size()
+                + "  •  " + subject + "  •  " + difficulty);
+        tvQuizType.setText(question.getType() == QuizQuestion.Type.TRUE_FALSE
+                ? R.string.quiz_true_false : R.string.quiz_multiple_choice);
+        tvQuestionPrompt.setText(question.getPrompt());
         rgOptions.clearCheck();
-        List<String> opts = q.getOptions();
+
+        List<String> questionOptions = question.getOptions();
         for (int i = 0; i < options.length; i++) {
-            if (i < opts.size()) {
-                options[i].setVisibility(RadioButton.VISIBLE);
-                options[i].setText(opts.get(i));
+            if (i < questionOptions.size()) {
+                options[i].setVisibility(View.VISIBLE);
+                options[i].setText(questionOptions.get(i));
                 options[i].setEnabled(true);
             } else {
-                options[i].setVisibility(RadioButton.GONE);
+                options[i].setVisibility(View.GONE);
             }
         }
-        tvFeedback.setVisibility(TextView.GONE);
+        tvFeedback.setVisibility(View.GONE);
         btnAction.setText(R.string.check_answer);
+
+        if (restoreAnswered && restoredSelection >= 0
+                && restoredSelection < questionOptions.size()) {
+            options[restoredSelection].setChecked(true);
+            renderAnsweredState(question, restoredSelection, restoredCorrect);
+        }
     }
 
     private int selectedIndex() {
@@ -103,52 +174,141 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void onAction() {
+        if (questions.isEmpty()) return;
         if (!answered) {
             int selected = selectedIndex();
             if (selected < 0) {
-                Toast.makeText(this, "Please choose an answer.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Please choose an answer.",
+                        Toast.LENGTH_SHORT).show();
                 return;
             }
-            QuizQuestion q = questions.get(index);
-            answered = true;
-            for (RadioButton rb : options) rb.setEnabled(false);
-
-            boolean correct = q.isCorrect(selected);
-            if (correct) correctCount++;
-            tvFeedback.setVisibility(TextView.VISIBLE);
-            tvFeedback.setText((correct ? "Correct! " : "Not quite. ") + q.getExplanation());
-            tvFeedback.setTextColor(ContextCompat.getColor(this,
-                    correct ? R.color.success : R.color.error));
-
-            btnAction.setText(index == questions.size() - 1
-                    ? R.string.finish_quiz : R.string.next_question);
-        } else {
-            if (index < questions.size() - 1) {
-                index++;
-                showQuestion();
-            } else {
-                finishQuiz();
+            QuizQuestion question = questions.get(index);
+            boolean correct = question.isCorrect(selected);
+            if (correct) {
+                correctCount++;
+            } else if (!retryRound && !wrongQuestions.contains(question)) {
+                wrongQuestions.add(question);
             }
+            renderAnsweredState(question, selected, correct);
+            return;
+        }
+
+        if (index < questions.size() - 1) {
+            index++;
+            answered = false;
+            lastSelectedIndex = -1;
+            showQuestion();
+        } else {
+            finishQuiz();
         }
     }
 
+    private void renderAnsweredState(QuizQuestion question, int selected, boolean correct) {
+        answered = true;
+        lastSelectedIndex = selected;
+        lastAnswerCorrect = correct;
+        for (RadioButton option : options) option.setEnabled(false);
+
+        tvFeedback.setVisibility(View.VISIBLE);
+        tvFeedback.setText((correct ? "Correct! " : "Not quite. ")
+                + question.getExplanation());
+        tvFeedback.setTextColor(ContextCompat.getColor(this,
+                correct ? R.color.success : R.color.error));
+        btnAction.setText(index == questions.size() - 1
+                ? R.string.finish_quiz : R.string.next_question);
+    }
+
     private void finishQuiz() {
-        int total = questions.size();
-        StudyRepository.QuizResult result =
-                studyRepository.recordQuiz(session.getCurrentUserId(), subject, correctCount, total);
-
-        if (result.leveledUp) {
-            NotificationHelper.notify(this, "Level up!",
-                    "You reached level " + result.newLevel + ". Keep going!");
+        if (retryRound) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.quiz_review_complete)
+                    .setMessage("You reviewed " + questions.size() + " missed question(s).")
+                    .setCancelable(false)
+                    .setPositiveButton("Done", (dialog, which) -> finish())
+                    .show();
+            return;
         }
+        if (!resultRecorded) {
+            StudyRepository.QuizResult result = studyRepository.recordQuiz(
+                    session.getCurrentUserId(), subject, correctCount, questions.size());
+            resultRecorded = true;
+            awardedXp = result.awardedXp;
+            if (result.leveledUp) {
+                NotificationHelper.notify(this, "Level up!",
+                        "You reached level " + result.newLevel + ". Keep going!");
+            }
+        }
+        showCompletionDialog();
+    }
 
-        String message = "You scored " + correctCount + " / " + total
-                + "\nXP earned: " + result.awardedXp;
-        new AlertDialog.Builder(this)
+    private void showCompletionDialog() {
+        String message = "You scored " + correctCount + " / " + questions.size()
+                + "\nXP earned: " + awardedXp
+                + (wrongQuestions.isEmpty()
+                ? "" : "\nQuestions to retry: " + wrongQuestions.size());
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this)
                 .setTitle("Quiz complete")
                 .setMessage(message)
-                .setCancelable(false)
-                .setPositiveButton("Done", (d, w) -> finish())
-                .show();
+                .setCancelable(false);
+        if (wrongQuestions.isEmpty()) {
+            dialog.setPositiveButton("Done", (d, w) -> finish());
+        } else {
+            dialog.setPositiveButton(R.string.retry_mistakes, (d, w) -> startRetryRound())
+                    .setNegativeButton("Done", (d, w) -> finish());
+        }
+        dialog.show();
+    }
+
+    private void startRetryRound() {
+        questions = new ArrayList<>(wrongQuestions);
+        wrongQuestions.clear();
+        retryRound = true;
+        index = 0;
+        correctCount = 0;
+        answered = false;
+        lastSelectedIndex = -1;
+        showQuestion();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putSerializable(STATE_QUESTIONS, questions);
+        outState.putSerializable(STATE_WRONG, wrongQuestions);
+        outState.putString(STATE_SUBJECT, subject);
+        outState.putString(STATE_DIFFICULTY, difficulty);
+        outState.putInt(STATE_INDEX, index);
+        outState.putInt(STATE_CORRECT, correctCount);
+        outState.putBoolean(STATE_ANSWERED, answered);
+        outState.putBoolean(STATE_RETRY, retryRound);
+        outState.putBoolean(STATE_RECORDED, resultRecorded);
+        outState.putInt(STATE_AWARDED_XP, awardedXp);
+        outState.putInt(STATE_SELECTED, lastSelectedIndex);
+        outState.putBoolean(STATE_LAST_CORRECT, lastAnswerCorrect);
+    }
+
+    @SuppressWarnings({"unchecked", "deprecation"})
+    private boolean restoreState(Bundle state) {
+        Serializable savedQuestions = state.getSerializable(STATE_QUESTIONS);
+        if (!(savedQuestions instanceof ArrayList)
+                || ((ArrayList<?>) savedQuestions).isEmpty()) {
+            return false;
+        }
+        questions = (ArrayList<QuizQuestion>) savedQuestions;
+        Serializable savedWrong = state.getSerializable(STATE_WRONG);
+        if (savedWrong instanceof ArrayList) {
+            wrongQuestions = (ArrayList<QuizQuestion>) savedWrong;
+        }
+        subject = state.getString(STATE_SUBJECT, "General");
+        difficulty = state.getString(STATE_DIFFICULTY, "Intermediate");
+        index = Math.min(state.getInt(STATE_INDEX, 0), questions.size() - 1);
+        correctCount = state.getInt(STATE_CORRECT, 0);
+        answered = state.getBoolean(STATE_ANSWERED, false);
+        retryRound = state.getBoolean(STATE_RETRY, false);
+        resultRecorded = state.getBoolean(STATE_RECORDED, false);
+        awardedXp = state.getInt(STATE_AWARDED_XP, 0);
+        lastSelectedIndex = state.getInt(STATE_SELECTED, -1);
+        lastAnswerCorrect = state.getBoolean(STATE_LAST_CORRECT, false);
+        return true;
     }
 }

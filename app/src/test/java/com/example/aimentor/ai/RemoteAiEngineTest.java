@@ -13,6 +13,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.mockwebserver.MockResponse;
@@ -39,7 +41,11 @@ public class RemoteAiEngineTest {
         String content = "{\"subject\":\"Mathematics\","
                 + "\"difficulty\":\"Intermediate\","
                 + "\"directAnswer\":\"4\","
-                + "\"steps\":[\"Add 2 and 2\"]}";
+                + "\"simplified\":\"Two plus two is four\","
+                + "\"steps\":[\"Start with two\",\"Add two more\"],"
+                + "\"keyConcepts\":[\"Addition\"],"
+                + "\"commonMistakes\":[\"Do not concatenate the digits\"],"
+                + "\"followUps\":[\"What is 3 + 3?\"]}";
         server.enqueue(jsonResponse(200, completionBody(content)));
         RemoteAiEngine engine = engine(1_000, 1_000);
 
@@ -53,10 +59,10 @@ public class RemoteAiEngineTest {
         RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
         assertTrue(request != null);
         assertEquals("Bearer test-key", request.getHeader("Authorization"));
-        assertEquals("/v1/chat/completions", request.getPath());
+        assertEquals("/openai/v1/chat/completions", request.getPath());
         JsonObject requestBody = JsonParser.parseString(
                 request.getBody().readUtf8()).getAsJsonObject();
-        assertEquals("DeepSeek-V4-Flash", requestBody.get("model").getAsString());
+        assertEquals("llama-3.1-8b-instant", requestBody.get("model").getAsString());
         assertEquals(1200, requestBody.get("max_tokens").getAsInt());
         assertTrue(!requestBody.get("stream").getAsBoolean());
     }
@@ -78,7 +84,7 @@ public class RemoteAiEngineTest {
     public void answer_http429_retriesOnceAndRecovers() {
         server.enqueue(jsonResponse(429, "{\"error\":{\"message\":\"busy\"}}"));
         server.enqueue(jsonResponse(200,
-                completionBody("{\"directAnswer\":\"Recovered\"}")));
+                completionBody(structuredContent("Recovered"))));
         RemoteAiEngine engine = engine(1_000, 1_000);
 
         AiAnswer answer = engine.answer(
@@ -102,47 +108,39 @@ public class RemoteAiEngineTest {
     }
 
     @Test
-    public void answer_missingChoices_isRejected() {
+    public void answer_missingChoices_triesAlternateOnceThenRejects() {
+        server.enqueue(jsonResponse(200, "{\"model\":\"test\",\"choices\":[]}"));
         server.enqueue(jsonResponse(200, "{\"model\":\"test\",\"choices\":[]}"));
         RemoteAiEngine engine = engine(1_000, 1_000);
 
         AiServiceException error = expectFailure(engine);
 
         assertEquals(AiServiceException.Kind.INVALID_RESPONSE, error.getKind());
+        assertEquals(2, server.getRequestCount());
     }
 
     @Test
-    public void answer_tokenLimit_retriesWithExtendedBudgetAndRecovers() throws Exception {
+    public void answer_tokenLimit_isRejectedWithoutChangingModel() {
         server.enqueue(jsonResponse(200,
                 completionBodyWithFinish("{\"directAnswer\":\"partial", "length")));
-        server.enqueue(jsonResponse(200,
-                completionBody("{\"directAnswer\":\"Complete answer\"}")));
         RemoteAiEngine engine = engine(1_000, 1_000);
 
-        AiAnswer answer = engine.answer(
-                "Hard question", "University", "Detailed", "Auto");
+        AiServiceException error = expectFailure(engine);
 
-        assertEquals("Complete answer", answer.getDirectAnswer());
-        RecordedRequest first = server.takeRequest(1, TimeUnit.SECONDS);
-        RecordedRequest second = server.takeRequest(1, TimeUnit.SECONDS);
-        assertTrue(first != null);
-        assertTrue(second != null);
-        assertEquals(1200, maxTokens(first));
-        assertEquals(2400, maxTokens(second));
+        assertEquals(AiServiceException.Kind.INCOMPLETE_RESPONSE, error.getKind());
+        assertEquals(1, server.getRequestCount());
     }
 
     @Test
     public void answer_tokenLimitTwice_isRejectedWithoutSavingPartialContent() {
         server.enqueue(jsonResponse(200,
                 completionBodyWithFinish("{\"directAnswer\":\"partial one", "length")));
-        server.enqueue(jsonResponse(200,
-                completionBodyWithFinish("{\"directAnswer\":\"partial two", "length")));
         RemoteAiEngine engine = engine(1_000, 1_000);
 
         AiServiceException error = expectFailure(engine);
 
         assertEquals(AiServiceException.Kind.INCOMPLETE_RESPONSE, error.getKind());
-        assertEquals(2, server.getRequestCount());
+        assertEquals(1, server.getRequestCount());
     }
 
     @Test
@@ -153,28 +151,65 @@ public class RemoteAiEngineTest {
                 + "\"reasoning_content\":\"private reasoning only\"},"
                 + "\"finish_reason\":\"stop\"}]}";
         server.enqueue(jsonResponse(200, body));
+        server.enqueue(jsonResponse(200, body));
         RemoteAiEngine engine = engine(1_000, 1_000);
 
         AiServiceException error = expectFailure(engine);
 
         assertEquals(AiServiceException.Kind.INVALID_RESPONSE, error.getKind());
+        assertEquals(2, server.getRequestCount());
     }
 
     @Test
-    public void answer_fullCallTimeout_isNotRetried() {
+    public void answer_timeout_usesRemainingDeadlineForAlternateModel() {
         server.enqueue(jsonResponse(200, completionBody("Late answer"))
+                .setBodyDelay(250, TimeUnit.MILLISECONDS));
+        server.enqueue(jsonResponse(200, completionBody("Also late"))
                 .setBodyDelay(250, TimeUnit.MILLISECONDS));
         RemoteAiEngine engine = engine(1_000, 50);
 
         AiServiceException error = expectFailure(engine);
 
         assertEquals(AiServiceException.Kind.TIMEOUT, error.getKind());
-        assertTrue(!error.isRetryable());
-        assertEquals(1, server.getRequestCount());
+        assertEquals(2, server.getRequestCount());
+    }
+
+    @Test
+    public void generateQuiz_parsesPersonalizedMixedQuestionTypes() throws Exception {
+        String content = "{\"questions\":["
+                + "{\"type\":\"MULTIPLE_CHOICE\","
+                + "\"prompt\":\"Which planet is known as the Red Planet?\","
+                + "\"options\":[\"Venus\",\"Mars\",\"Jupiter\",\"Mercury\"],"
+                + "\"correctIndex\":1,"
+                + "\"explanation\":\"Iron oxides make Mars appear red.\"},"
+                + "{\"type\":\"TRUE_FALSE\","
+                + "\"prompt\":\"Sound can travel through a vacuum.\","
+                + "\"options\":[\"True\",\"False\"],"
+                + "\"correctIndex\":1,"
+                + "\"explanation\":\"Sound needs a material medium.\"}]}";
+        server.enqueue(jsonResponse(200, completionBody(content)));
+        RemoteAiEngine engine = engine(1_000, 1_000);
+        QuizGenerationConfig config = new QuizGenerationConfig(
+                SubjectClassifier.SCIENCE, "Advanced", 2,
+                Arrays.asList("Why does Mars look red?", "How does sound travel?"));
+
+        List<QuizQuestion> questions = engine.generateQuiz(config);
+
+        assertEquals(2, questions.size());
+        assertEquals(QuizQuestion.Type.MULTIPLE_CHOICE, questions.get(0).getType());
+        assertEquals(QuizQuestion.Type.TRUE_FALSE, questions.get(1).getType());
+        assertEquals("Advanced", questions.get(0).getDifficulty());
+        RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
+        assertTrue(request != null);
+        JsonObject requestBody = JsonParser.parseString(
+                request.getBody().readUtf8()).getAsJsonObject();
+        assertEquals("llama-3.3-70b-versatile",
+                requestBody.get("model").getAsString());
+        assertTrue(requestBody.toString().contains("Why does Mars look red?"));
     }
 
     private RemoteAiEngine engine(long connectTimeoutMs, long readTimeoutMs) {
-        return new RemoteAiEngine(server.url("/v1/").toString(),
+        return new RemoteAiEngine(server.url("/").toString(),
                 "test-key", connectTimeoutMs, readTimeoutMs);
     }
 
@@ -205,6 +240,16 @@ public class RemoteAiEngineTest {
                 + "\"message\":{\"role\":\"assistant\",\"content\":"
                 + new Gson().toJson(content) + "},"
                 + "\"finish_reason\":" + new Gson().toJson(finishReason) + "}]}";
+    }
+
+    private String structuredContent(String directAnswer) {
+        return "{\"subject\":\"General\",\"difficulty\":\"Intermediate\","
+                + "\"directAnswer\":" + new Gson().toJson(directAnswer) + ","
+                + "\"simplified\":\"Simple explanation\","
+                + "\"steps\":[\"First step\",\"Second step\"],"
+                + "\"keyConcepts\":[\"Key concept\"],"
+                + "\"commonMistakes\":[\"Common mistake\"],"
+                + "\"followUps\":[\"Practice question\"]}";
     }
 
     private int maxTokens(RecordedRequest request) {

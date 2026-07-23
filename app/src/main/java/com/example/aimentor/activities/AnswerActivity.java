@@ -85,7 +85,7 @@ public class AnswerActivity extends AppCompatActivity {
         tvSubject.setText(question.subject + "  |  " + question.difficulty);
         tvAnswerSource.setText(buildSourceLabel(question));
         tvQuestion.setText(question.questionText);
-        tvAnswer.setText(question.answerText);
+        tvAnswer.setText(cleanStoredAnswer(question.answerText));
 
         if (transientAnswer) {
             findViewById(R.id.answerActions).setVisibility(View.GONE);
@@ -118,6 +118,14 @@ public class AnswerActivity extends AppCompatActivity {
     private void refreshReviewedButton() {
         btnReviewed.setEnabled(!question.reviewed);
         btnReviewed.setText(question.reviewed ? R.string.reviewed : R.string.mark_reviewed);
+    }
+
+    private String cleanStoredAnswer(String value) {
+        if (value == null) return "";
+        return value.replace("**", "")
+                .replace("__", "")
+                .replace("`", "")
+                .replaceAll("(?m)^\\s{0,3}#{1,6}\\s*", "");
     }
 
     private Question readTransientQuestion() {
