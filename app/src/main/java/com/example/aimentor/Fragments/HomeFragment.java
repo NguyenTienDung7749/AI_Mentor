@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 
 import com.example.aimentor.R;
 import com.example.aimentor.activities.AnswerActivity;
@@ -34,8 +35,12 @@ public class HomeFragment extends Fragment {
 
     private TextView tvGreeting, tvLevelTitle, tvXp, tvStats, tvInsights;
     private ProgressBar progressXp;
+    private ProgressBar progressAsk;
     private Spinner spSubject;
     private TextInputEditText etQuestion;
+    private MaterialButton btnAsk;
+    private TextView tvAskStatus;
+    private boolean isAsking;
 
     public HomeFragment() { }
 
@@ -61,7 +66,9 @@ public class HomeFragment extends Fragment {
         progressXp = view.findViewById(R.id.progressXp);
         spSubject = view.findViewById(R.id.spSubject);
         etQuestion = view.findViewById(R.id.etQuestion);
-        MaterialButton btnAsk = view.findViewById(R.id.btnAsk);
+        btnAsk = view.findViewById(R.id.btnAsk);
+        progressAsk = view.findViewById(R.id.progressAsk);
+        tvAskStatus = view.findViewById(R.id.tvAskStatus);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_item,
@@ -74,11 +81,25 @@ public class HomeFragment extends Fragment {
     }
 
     private void ask() {
+        if (isAsking) return;
+
         String question = etQuestion.getText() == null ? "" : etQuestion.getText().toString().trim();
         String subjectHint = (String) spSubject.getSelectedItem();
 
-        StudyRepository.AskResult result =
-                studyRepository.ask(session.getCurrentUserId(), question, subjectHint);
+        setAsking(true);
+        studyRepository.askAsync(session.getCurrentUserId(), question, subjectHint,
+                this::handleAskResult);
+    }
+
+    private void handleAskResult(@NonNull StudyRepository.AskResult result) {
+        if (!isAdded()
+                || getView() == null
+                || !getViewLifecycleOwner().getLifecycle().getCurrentState()
+                .isAtLeast(Lifecycle.State.STARTED)) {
+            return;
+        }
+
+        setAsking(false);
         if (!result.success) {
             Toast.makeText(requireContext(), result.message, Toast.LENGTH_LONG).show();
             return;
@@ -90,6 +111,13 @@ public class HomeFragment extends Fragment {
         Intent intent = new Intent(requireContext(), AnswerActivity.class);
         intent.putExtra(AnswerActivity.EXTRA_QUESTION_ID, result.questionId);
         startActivity(intent);
+    }
+
+    private void setAsking(boolean asking) {
+        isAsking = asking;
+        btnAsk.setEnabled(!asking);
+        progressAsk.setVisibility(asking ? View.VISIBLE : View.GONE);
+        tvAskStatus.setVisibility(asking ? View.VISIBLE : View.GONE);
     }
 
     @Override

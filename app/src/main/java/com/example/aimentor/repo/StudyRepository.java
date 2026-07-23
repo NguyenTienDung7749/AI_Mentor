@@ -1,6 +1,11 @@
 package com.example.aimentor.repo;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
 
 import com.example.aimentor.ai.AiAnswer;
 import com.example.aimentor.ai.AiEngine;
@@ -21,6 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Core study logic: asking questions (with a similar-question cache to save AI
@@ -29,10 +36,13 @@ import java.util.Map;
  */
 public class StudyRepository {
 
+    private static final ExecutorService IO_EXECUTOR = Executors.newFixedThreadPool(2);
+
     private final UserDao userDao;
     private final QuestionDao questionDao;
     private final QuizAttemptDao quizDao;
     private final AiEngine engine;
+    private final Handler mainHandler;
 
     public StudyRepository(Context context) {
         AppDatabase db = AppDatabase.getInstance(context);
@@ -40,6 +50,7 @@ public class StudyRepository {
         this.questionDao = db.questionDao();
         this.quizDao = db.quizAttemptDao();
         this.engine = new LocalAiEngine();
+        this.mainHandler = new Handler(Looper.getMainLooper());
     }
 
     public AiEngine getEngine() {
@@ -63,6 +74,32 @@ public class StudyRepository {
         }
     }
 
+    public interface AskCallback {
+        void onResult(@NonNull AskResult result);
+    }
+
+    /**
+     * Runs question processing and Room access away from the UI thread, then
+     * delivers the result on the main thread. The local engine remains the
+     * active implementation in Batch 1; a remote engine can use this same seam.
+     */
+    public void askAsync(long userId, String questionText, String subjectHint,
+                         @NonNull AskCallback callback) {
+        IO_EXECUTOR.execute(() -> {
+            AskResult result;
+            try {
+                result = ask(userId, questionText, subjectHint);
+            } catch (RuntimeException ignored) {
+                result = new AskResult(false,
+                        "Unable to prepare an answer. Please try again.",
+                        -1, false, false);
+            }
+            AskResult deliveredResult = result;
+            mainHandler.post(() -> callback.onResult(deliveredResult));
+        });
+    }
+
+    @WorkerThread
     public AskResult ask(long userId, String questionText, String subjectHint) {
         ContentModerator.Result mod = ContentModerator.check(questionText);
         if (!mod.allowed) {
