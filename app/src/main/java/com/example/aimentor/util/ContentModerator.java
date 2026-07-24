@@ -1,6 +1,7 @@
 package com.example.aimentor.util;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * Very small abuse / spam detector for submitted questions. Pure Java.
@@ -11,6 +12,7 @@ public final class ContentModerator {
 
     private static final String[] BANNED = {
             "fuck", "shit", "bitch", "asshole", "bastard", "dick", "porn", "nsfw"};
+    private static final Pattern[] BANNED_WORD_PATTERNS = buildBannedWordPatterns();
 
     public static final class Result {
         public final boolean allowed;
@@ -29,8 +31,8 @@ public final class ContentModerator {
         }
         String t = text.toLowerCase(Locale.ROOT);
 
-        for (String bad : BANNED) {
-            if (t.contains(bad)) {
+        for (Pattern pattern : BANNED_WORD_PATTERNS) {
+            if (pattern.matcher(t).find()) {
                 return new Result(false, "Your message contains inappropriate language. "
                         + "Please rephrase it as an academic question.");
             }
@@ -61,5 +63,16 @@ public final class ContentModerator {
             if (Character.isLetterOrDigit(t.charAt(i))) { hasAlnum = true; break; }
         }
         return !hasAlnum;
+    }
+
+    private static Pattern[] buildBannedWordPatterns() {
+        Pattern[] patterns = new Pattern[BANNED.length];
+        for (int i = 0; i < BANNED.length; i++) {
+            patterns[i] = Pattern.compile(
+                    "(?<![\\p{L}\\p{N}_])" + Pattern.quote(BANNED[i])
+                            + "(?![\\p{L}\\p{N}_])",
+                    Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        }
+        return patterns;
     }
 }

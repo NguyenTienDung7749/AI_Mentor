@@ -45,7 +45,14 @@ public class StudyLogicTest {
     @Test
     public void passwordValidator_gradesStrength() {
         assertEquals(PasswordValidator.Strength.WEAK, PasswordValidator.evaluate("abc"));
+        assertEquals(PasswordValidator.Strength.MEDIUM,
+                PasswordValidator.evaluate("Study2026"));
+        assertEquals(PasswordValidator.Strength.STRONG,
+                PasswordValidator.evaluate("StrongStudy#2026"));
         assertTrue(PasswordValidator.isAcceptable("Study2026"));
+        assertFalse(PasswordValidator.isAcceptable("Abc1234"));
+        assertFalse(PasswordValidator.isAcceptable("abcdefgh!"));
+        assertFalse(PasswordValidator.isAcceptable("12345678!"));
         assertFalse(PasswordValidator.isAcceptable("123"));
     }
 
@@ -115,7 +122,13 @@ public class StudyLogicTest {
     public void moderation_blocksSpam() {
         assertFalse(ContentModerator.check("aaaaaaaaaa").allowed);
         assertFalse(ContentModerator.check("").allowed);
+        assertFalse(ContentModerator.check(
+                "What the fuck does this error mean?").allowed);
         assertTrue(ContentModerator.check("What is gravity?").allowed);
+        assertTrue(ContentModerator.check(
+                "Analyse a character in Charles Dickens' novel.").allowed);
+        assertTrue(ContentModerator.check(
+                "Explain the Dickinson equation.").allowed);
     }
 
     @Test

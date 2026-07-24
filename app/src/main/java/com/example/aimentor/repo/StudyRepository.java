@@ -43,6 +43,7 @@ public class StudyRepository {
 
     private static final ExecutorService IO_EXECUTOR = Executors.newFixedThreadPool(2);
 
+    private final AppDatabase database;
     private final UserDao userDao;
     private final QuestionDao questionDao;
     private final QuizAttemptDao quizDao;
@@ -59,6 +60,7 @@ public class StudyRepository {
      * in-memory Room database. Production callers continue to use Context.
      */
     StudyRepository(AppDatabase db, AiEngine engine, Handler mainHandler) {
+        this.database = db;
         this.userDao = db.userDao();
         this.questionDao = db.questionDao();
         this.quizDao = db.quizAttemptDao();
@@ -148,17 +150,50 @@ public class StudyRepository {
         q.responseTimeMs = Math.max(0L, elapsedNanos / 1_000_000L);
 
         if (answerSource == AnswerSource.REMOTE) {
-            long id = questionDao.insert(q);
-            q.id = id;
-            boolean leveledUp = addXp(user, Gamification.XP_ASK);
-            return new AskResult(true, "Online answer ready and saved.",
-                    id, true, leveledUp, answerSource, q);
+            return saveRemoteAnswer(userId, q, answerSource);
         }
 
         q.id = -1L;
         return new AskResult(true,
                 "Offline guidance is temporary and was not saved.",
                 -1L, false, false, answerSource, q);
+    }
+
+    /**
+     * Re-checks the account after the network request and saves the answer and
+     * XP in one transaction. If account deletion wins the race, no orphan
+     * question is inserted.
+     */
+    private AskResult saveRemoteAnswer(
+            long userId, Question question, AnswerSource answerSource) {
+        try {
+            return database.runInTransaction(() -> {
+                User currentUser = userDao.findById(userId);
+                if (currentUser == null) {
+                    return new AskResult(false,
+                            "Your account is no longer available. Please sign in again.",
+                            -1L, false, false, AnswerSource.LEGACY, null);
+                }
+                int beforeLevel = Gamification.levelForXp(currentUser.xp);
+                long questionId = questionDao.insert(question);
+                if (userDao.addXp(userId, Gamification.XP_ASK) != 1) {
+                    throw new IllegalStateException("Could not award question XP");
+                }
+                User updatedUser = userDao.findById(userId);
+                if (updatedUser == null) {
+                    throw new IllegalStateException("Account disappeared during save");
+                }
+                question.id = questionId;
+                boolean leveledUp =
+                        Gamification.levelForXp(updatedUser.xp) > beforeLevel;
+                return new AskResult(true, "Online answer ready and saved.",
+                        questionId, true, leveledUp, answerSource, question);
+            });
+        } catch (RuntimeException saveFailed) {
+            return new AskResult(false,
+                    "The answer arrived but could not be saved. Please try again.",
+                    -1L, false, false, AnswerSource.LEGACY, null);
+        }
     }
 
     // --------------------------------------------------------------- Library
@@ -198,27 +233,30 @@ public class StudyRepository {
         return matches;
     }
 
-    public Question getQuestion(long id) {
-        return normalizeSubject(questionDao.findById(id));
+    public Question getQuestion(long userId, long questionId) {
+        return normalizeSubject(
+                questionDao.findByIdForUser(userId, questionId));
     }
 
-    public void toggleBookmark(long questionId) {
-        Question q = questionDao.findById(questionId);
-        if (q != null) {
-            q.bookmarked = !q.bookmarked;
-            questionDao.update(q);
-        }
+    public boolean toggleBookmark(long userId, long questionId) {
+        return questionDao.toggleBookmark(userId, questionId) == 1;
     }
 
     /** Marks a saved answer as reviewed, awarding review XP the first time only. */
-    public boolean markReviewed(long questionId) {
-        Question q = questionDao.findById(questionId);
-        if (q == null || q.reviewed) return false;
-        q.reviewed = true;
-        questionDao.update(q);
-        User user = userDao.findById(q.userId);
-        if (user != null) addXp(user, Gamification.XP_REVIEW);
-        return true;
+    public boolean markReviewed(long userId, long questionId) {
+        try {
+            return database.runInTransaction(() -> {
+                if (userDao.findById(userId) == null) return false;
+                int marked = questionDao.markReviewedIfNeeded(userId, questionId);
+                if (marked != 1) return false;
+                if (userDao.addXp(userId, Gamification.XP_REVIEW) != 1) {
+                    throw new IllegalStateException("Could not award review XP");
+                }
+                return true;
+            });
+        } catch (RuntimeException updateFailed) {
+            return false;
+        }
     }
 
     // ------------------------------------------------------------------ Quiz
@@ -346,40 +384,56 @@ public class StudyRepository {
         public final int awardedXp;
         public final boolean leveledUp;
         public final int newLevel;
-        QuizResult(int awardedXp, boolean leveledUp, int newLevel) {
+        public final boolean recorded;
+        QuizResult(int awardedXp, boolean leveledUp, int newLevel,
+                   boolean recorded) {
             this.awardedXp = awardedXp;
             this.leveledUp = leveledUp;
             this.newLevel = newLevel;
+            this.recorded = recorded;
         }
     }
 
     public QuizResult recordQuiz(long userId, String subject, int correct, int total) {
         int safeTotal = Math.max(0, total);
+        if (safeTotal == 0) {
+            User user = userDao.findById(userId);
+            int level = user == null ? 1 : Gamification.levelForXp(user.xp);
+            return new QuizResult(0, false, level, false);
+        }
         int safeCorrect = Math.max(0, Math.min(correct, safeTotal));
-        QuizAttempt attempt = new QuizAttempt();
-        attempt.userId = userId;
-        attempt.subject = SubjectClassifier.normalize(subject);
-        attempt.correct = safeCorrect;
-        attempt.total = safeTotal;
-        quizDao.insert(attempt);
+        try {
+            return database.runInTransaction(() -> {
+                User currentUser = userDao.findById(userId);
+                if (currentUser == null) {
+                    return new QuizResult(0, false, 1, false);
+                }
+                int beforeLevel = Gamification.levelForXp(currentUser.xp);
+                QuizAttempt attempt = new QuizAttempt();
+                attempt.userId = userId;
+                attempt.subject = SubjectClassifier.normalize(subject);
+                attempt.correct = safeCorrect;
+                attempt.total = safeTotal;
+                quizDao.insert(attempt);
 
-        User user = userDao.findById(userId);
-        int awarded = safeCorrect * Gamification.XP_QUIZ_CORRECT;
-        boolean leveledUp = false;
-        if (user != null) leveledUp = addXp(user, awarded);
-        int newLevel = user != null ? Gamification.levelForXp(user.xp) : 1;
-        return new QuizResult(awarded, leveledUp, newLevel);
+                int awarded = safeCorrect * Gamification.XP_QUIZ_CORRECT;
+                if (awarded > 0 && userDao.addXp(userId, awarded) != 1) {
+                    throw new IllegalStateException("Could not award quiz XP");
+                }
+                User updatedUser = userDao.findById(userId);
+                if (updatedUser == null) {
+                    throw new IllegalStateException("Account disappeared during quiz save");
+                }
+                int newLevel = Gamification.levelForXp(updatedUser.xp);
+                return new QuizResult(
+                        awarded, newLevel > beforeLevel, newLevel, true);
+            });
+        } catch (RuntimeException saveFailed) {
+            return new QuizResult(0, false, 1, false);
+        }
     }
 
     // -------------------------------------------------------------- Progress
-
-    private boolean addXp(User user, int amount) {
-        int before = Gamification.levelForXp(user.xp);
-        user.xp += amount;
-        userDao.update(user);
-        int after = Gamification.levelForXp(user.xp);
-        return after > before;
-    }
 
     public static class Progress {
         public int totalQuestions;

@@ -257,6 +257,11 @@ public class QuizActivity extends AppCompatActivity {
         if (!resultRecorded) {
             StudyRepository.QuizResult result = studyRepository.recordQuiz(
                     session.getCurrentUserId(), subject, correctCount, questions.size());
+            if (!result.recorded) {
+                Toast.makeText(this, R.string.quiz_save_failed,
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
             resultRecorded = true;
             awardedXp = result.awardedXp;
             if (result.leveledUp) {

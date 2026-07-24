@@ -15,6 +15,7 @@ import com.example.aimentor.R;
 import com.example.aimentor.ai.AnswerSource;
 import com.example.aimentor.data.Question;
 import com.example.aimentor.repo.StudyRepository;
+import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
 
 /** Displays a single question and its saved AI answer (works offline). */
@@ -31,6 +32,7 @@ public class AnswerActivity extends AppCompatActivity {
     private static final String EXTRA_RESPONSE_TIME = "answer_response_time";
 
     private StudyRepository studyRepository;
+    private SessionManager session;
     private Question question;
     private MaterialButton btnBookmark, btnReviewed;
     private boolean transientAnswer;
@@ -60,6 +62,7 @@ public class AnswerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_answer);
 
         studyRepository = new StudyRepository(this);
+        session = new SessionManager(this);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
@@ -68,6 +71,7 @@ public class AnswerActivity extends AppCompatActivity {
         question = transientAnswer
                 ? readTransientQuestion()
                 : studyRepository.getQuestion(
+                        session.getCurrentUserId(),
                         getIntent().getLongExtra(EXTRA_QUESTION_ID, -1));
         if (question == null) {
             Toast.makeText(this, R.string.answer_not_found, Toast.LENGTH_SHORT).show();
@@ -95,8 +99,14 @@ public class AnswerActivity extends AppCompatActivity {
             refreshReviewedButton();
 
             btnBookmark.setOnClickListener(v -> {
-                studyRepository.toggleBookmark(question.id);
-                question = studyRepository.getQuestion(question.id);
+                studyRepository.toggleBookmark(
+                        session.getCurrentUserId(), question.id);
+                question = studyRepository.getQuestion(
+                        session.getCurrentUserId(), question.id);
+                if (question == null) {
+                    finish();
+                    return;
+                }
                 refreshBookmarkButton();
                 Toast.makeText(this, question.bookmarked
                                 ? R.string.bookmark_added : R.string.bookmark_removed,
@@ -104,8 +114,14 @@ public class AnswerActivity extends AppCompatActivity {
             });
 
             btnReviewed.setOnClickListener(v -> {
-                boolean awarded = studyRepository.markReviewed(question.id);
-                question = studyRepository.getQuestion(question.id);
+                boolean awarded = studyRepository.markReviewed(
+                        session.getCurrentUserId(), question.id);
+                question = studyRepository.getQuestion(
+                        session.getCurrentUserId(), question.id);
+                if (question == null) {
+                    finish();
+                    return;
+                }
                 refreshReviewedButton();
                 Toast.makeText(this, awarded
                                 ? R.string.review_awarded : R.string.review_already_done,

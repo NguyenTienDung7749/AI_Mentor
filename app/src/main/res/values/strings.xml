@@ -237,6 +237,7 @@
     <string name="quiz_correct_feedback">Correct! %1$s</string>
     <string name="quiz_incorrect_feedback">Not quite. %1$s</string>
     <string name="quiz_error_default">Could not prepare a quiz. Check your connection and try again.</string>
+    <string name="quiz_save_failed">Could not save this quiz result. Please try again.</string>
     <string name="retry_quiz_loading">Try again</string>
     <string name="quiz_complete">Quiz complete</string>
     <string name="quiz_score">You scored %1$d / %2$d</string>

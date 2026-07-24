@@ -190,7 +190,8 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
 
     @Override
     public void onBookmarkToggle(Question question) {
-        studyRepository.toggleBookmark(question.id);
+        studyRepository.toggleBookmark(
+                session.getCurrentUserId(), question.id);
         refresh();
     }
 }

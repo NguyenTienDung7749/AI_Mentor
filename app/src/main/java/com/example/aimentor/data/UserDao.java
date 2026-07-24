@@ -14,6 +14,15 @@ public interface UserDao {
     @Update
     void update(User user);
 
+    /**
+     * Awards XP without a read-modify-write race. The affected-row count also
+     * lets callers detect that the account disappeared before a transaction
+     * completed.
+     */
+    @Query("UPDATE users SET xp = xp + :amount "
+            + "WHERE id = :userId AND :amount >= 0")
+    int addXp(long userId, int amount);
+
     @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
     User findByEmail(String email);
 

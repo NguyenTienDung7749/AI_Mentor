@@ -3,7 +3,6 @@ package com.example.aimentor.data;
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
-import androidx.room.Update;
 
 import java.util.List;
 
@@ -12,9 +11,6 @@ public interface QuestionDao {
 
     @Insert
     long insert(Question question);
-
-    @Update
-    void update(Question question);
 
     @Query("SELECT * FROM questions WHERE userId = :userId ORDER BY createdAt DESC")
     List<Question> getForUser(long userId);
@@ -32,8 +28,16 @@ public interface QuestionDao {
     @Query("SELECT COUNT(*) FROM questions WHERE userId = :userId")
     int countForUser(long userId);
 
-    @Query("SELECT * FROM questions WHERE id = :id LIMIT 1")
-    Question findById(long id);
+    @Query("SELECT * FROM questions WHERE id = :questionId AND userId = :userId LIMIT 1")
+    Question findByIdForUser(long userId, long questionId);
+
+    @Query("UPDATE questions SET bookmarked = CASE WHEN bookmarked = 1 THEN 0 ELSE 1 END "
+            + "WHERE id = :questionId AND userId = :userId")
+    int toggleBookmark(long userId, long questionId);
+
+    @Query("UPDATE questions SET reviewed = 1 "
+            + "WHERE id = :questionId AND userId = :userId AND reviewed = 0")
+    int markReviewedIfNeeded(long userId, long questionId);
 
     @Query("DELETE FROM questions WHERE userId = :userId")
     void deleteForUser(long userId);

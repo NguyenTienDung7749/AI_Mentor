@@ -30,8 +30,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Integration coverage for the Room-backed critical flows. Every test uses an
@@ -75,7 +81,8 @@ public class RepositoryInstrumentedTest {
         assertEquals(1, database.questionDao().countForUser(userId));
         assertEquals(Gamification.XP_ASK, database.userDao().findById(userId).xp);
         assertEquals(AnswerSource.REMOTE.name(),
-                database.questionDao().findById(online.questionId).answerSource);
+                database.questionDao()
+                        .findByIdForUser(userId, online.questionId).answerSource);
 
         engine.source = AnswerSource.LOCAL_FALLBACK;
         StudyRepository.AskResult offline = studyRepository.ask(
@@ -89,17 +96,33 @@ public class RepositoryInstrumentedTest {
     }
 
     @Test
+    public void ask_accountDeletedDuringGeneration_doesNotCreateOrphanAnswer() {
+        long userId = insertUser("deleted-during-answer@example.com", 0);
+        engine.onAnswer = () -> database.runInTransaction(() -> {
+            database.questionDao().deleteForUser(userId);
+            database.quizAttemptDao().deleteForUser(userId);
+            database.userDao().deleteById(userId);
+        });
+
+        StudyRepository.AskResult result = studyRepository.ask(
+                userId, "Explain atomic database writes.", "Programming");
+
+        assertFalse(result.success);
+        assertFalse(result.saved);
+        assertEquals(-1L, result.questionId);
+        assertNull(database.userDao().findById(userId));
+        assertEquals(0, database.questionDao().countForUser(userId));
+    }
+
+    @Test
     public void historySearchBookmarkAndReview_areIsolatedAndIdempotent() {
         long firstUser = insertUser("first@example.com", 10);
         long secondUser = insertUser("second@example.com", 50);
         long firstQuestion = insertQuestion(
                 firstUser, "Explain Java Arrays", "PROGRAMMING", true);
         insertQuestion(firstUser, "World Cup winner", "Sports/Entertainment", false);
-        long hiddenFallback = insertQuestion(
-                firstUser, "Temporary offline answer", "Science", false);
-        Question fallback = database.questionDao().findById(hiddenFallback);
-        fallback.answerSource = AnswerSource.LOCAL_FALLBACK.name();
-        database.questionDao().update(fallback);
+        insertQuestion(firstUser, "Temporary offline answer", "Science",
+                false, AnswerSource.LOCAL_FALLBACK);
         insertQuestion(secondUser, "Private second-user question", "Science", true);
 
         List<Question> history = studyRepository.getHistory(firstUser);
@@ -112,14 +135,107 @@ public class RepositoryInstrumentedTest {
         assertEquals(1, studyRepository.getBookmarked(firstUser).size());
         assertEquals(1, studyRepository.getBySubject(firstUser, "General").size());
 
-        studyRepository.toggleBookmark(firstQuestion);
+        studyRepository.toggleBookmark(firstUser, firstQuestion);
         assertTrue(studyRepository.getBookmarked(firstUser).isEmpty());
 
-        assertTrue(studyRepository.markReviewed(firstQuestion));
-        assertFalse(studyRepository.markReviewed(firstQuestion));
+        assertTrue(studyRepository.markReviewed(firstUser, firstQuestion));
+        assertFalse(studyRepository.markReviewed(firstUser, firstQuestion));
         assertEquals(10 + Gamification.XP_REVIEW,
                 database.userDao().findById(firstUser).xp);
         assertEquals(50, database.userDao().findById(secondUser).xp);
+    }
+
+    @Test
+    public void questionActions_requireMatchingOwner() {
+        long owner = insertUser("owner@example.com", 10);
+        long otherUser = insertUser("other@example.com", 50);
+        long questionId = insertQuestion(
+                owner, "Private study answer", "Science", false);
+
+        assertNull(studyRepository.getQuestion(otherUser, questionId));
+        assertFalse(studyRepository.toggleBookmark(otherUser, questionId));
+        assertFalse(studyRepository.markReviewed(otherUser, questionId));
+
+        Question unchanged = studyRepository.getQuestion(owner, questionId);
+        assertFalse(unchanged.bookmarked);
+        assertFalse(unchanged.reviewed);
+        assertEquals(10, database.userDao().findById(owner).xp);
+        assertEquals(50, database.userDao().findById(otherUser).xp);
+    }
+
+    @Test
+    public void concurrentReview_awardsXpExactlyOnce() throws Exception {
+        long userId = insertUser("review-race@example.com", 20);
+        long questionId = insertQuestion(
+                userId, "Review exactly once", "Science", false);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        Future<Boolean> first;
+        Future<Boolean> second;
+        try {
+            first = executor.submit(() -> {
+                start.await();
+                return studyRepository.markReviewed(userId, questionId);
+            });
+            second = executor.submit(() -> {
+                start.await();
+                return studyRepository.markReviewed(userId, questionId);
+            });
+            start.countDown();
+            int awardedCount = (first.get(10, TimeUnit.SECONDS) ? 1 : 0)
+                    + (second.get(10, TimeUnit.SECONDS) ? 1 : 0);
+            assertEquals(1, awardedCount);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertTrue(studyRepository.getQuestion(userId, questionId).reviewed);
+        assertEquals(20 + Gamification.XP_REVIEW,
+                database.userDao().findById(userId).xp);
+    }
+
+    @Test
+    public void concurrentQuizWrites_preserveEveryXpAward() throws Exception {
+        long userId = insertUser("concurrent@example.com", 0);
+        int writeCount = 12;
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<StudyRepository.QuizResult>> futures = new ArrayList<>();
+        try {
+            for (int index = 0; index < writeCount; index++) {
+                futures.add(executor.submit(() -> {
+                    start.await();
+                    return studyRepository.recordQuiz(
+                            userId, "Science", 1, 1);
+                }));
+            }
+            start.countDown();
+            for (Future<StudyRepository.QuizResult> future : futures) {
+                assertTrue(future.get(10, TimeUnit.SECONDS).recorded);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertEquals(writeCount,
+                database.quizAttemptDao().countForUser(userId));
+        assertEquals(writeCount * Gamification.XP_QUIZ_CORRECT,
+                database.userDao().findById(userId).xp);
+    }
+
+    @Test
+    public void invalidQuizAttempt_isNotPersistedOrRewarded() {
+        long userId = insertUser("invalid-quiz@example.com", 25);
+
+        StudyRepository.QuizResult empty =
+                studyRepository.recordQuiz(userId, "Science", 4, 0);
+        StudyRepository.QuizResult missingUser =
+                studyRepository.recordQuiz(99999L, "Science", 1, 1);
+
+        assertFalse(empty.recorded);
+        assertFalse(missingUser.recorded);
+        assertEquals(0, database.quizAttemptDao().countForUser(userId));
+        assertEquals(25, database.userDao().findById(userId).xp);
     }
 
     @Test
@@ -241,13 +357,19 @@ public class RepositoryInstrumentedTest {
 
     private long insertQuestion(long userId, String text, String subject,
                                 boolean bookmarked) {
+        return insertQuestion(
+                userId, text, subject, bookmarked, AnswerSource.REMOTE);
+    }
+
+    private long insertQuestion(long userId, String text, String subject,
+                                boolean bookmarked, AnswerSource source) {
         Question question = new Question();
         question.userId = userId;
         question.questionText = text;
         question.answerText = "Saved answer for " + text;
         question.subject = subject;
         question.bookmarked = bookmarked;
-        question.answerSource = AnswerSource.REMOTE.name();
+        question.answerSource = source.name();
         question.createdAt = System.currentTimeMillis();
         return database.questionDao().insert(question);
     }
@@ -263,10 +385,12 @@ public class RepositoryInstrumentedTest {
 
     private static class MutableAiEngine implements AiEngine {
         AnswerSource source = AnswerSource.REMOTE;
+        Runnable onAnswer;
 
         @Override
         public AiAnswer answer(String question, String educationLevel,
                                String explanationStyle, String subjectHint) {
+            if (onAnswer != null) onAnswer.run();
             AiAnswer answer = new AiAnswer();
             answer.setSubject(subjectHint);
             answer.setDifficulty("Intermediate");
