@@ -9,12 +9,12 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?actionBarSize"
-        android:background="@color/surface"
+        android:background="?attr/colorSurface"
         app:navigationContentDescription="@string/close_screen"
         app:navigationIcon="@drawable/ic_close_24"
-        app:navigationIconTint="@color/text_primary"
+        app:navigationIconTint="?attr/colorOnSurface"
         app:title="@string/answer_title"
-        app:titleTextColor="@color/text_primary" />
+        app:titleTextColor="?attr/colorOnSurface" />
 
     <ProgressBar
         android:id="@+id/progressAnswer"
@@ -38,74 +38,103 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="@dimen/screen_padding">
+            android:paddingHorizontal="@dimen/screen_padding"
+            android:paddingTop="@dimen/space_md"
+            android:paddingBottom="@dimen/space_xl">
 
-            <TextView
-                android:id="@+id/tvSubject"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_info_panel"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="6dp"
-                android:text="@string/subject"
-                android:textColor="@color/primary"
-                android:textStyle="bold" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/tvAnswerSource"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/answer_source_saved"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/tvSubject"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_info_panel"
+                    android:paddingHorizontal="@dimen/space_md"
+                    android:paddingVertical="@dimen/space_xs"
+                    android:text="@string/subject"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAnswerSource"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_sm"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:gravity="end"
+                    android:maxLines="2"
+                    android:text="@string/answer_source_saved"
+                    android:textAppearance="@style/TextAppearance.AIMentor.Supporting"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.AIMentor.Card.Highlight"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp">
+                android:layout_marginTop="@dimen/space_lg">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/card_padding">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/your_question"
                         android:textColor="?attr/colorOnPrimaryContainer"
-                        android:textSize="13sp"
+                        android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvQuestion"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="@dimen/space_sm"
+                        android:lineSpacingExtra="1dp"
                         android:textColor="?attr/colorOnPrimaryContainer"
                         android:textIsSelectable="true"
-                        android:textSize="16sp" />
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_xl"
+                android:text="@string/mentor_answer_heading"
+                android:textAppearance="@style/TextAppearance.AIMentor.SectionTitle" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_xs"
+                android:text="@string/mentor_answer_supporting"
+                android:textAppearance="@style/TextAppearance.AIMentor.Supporting" />
 
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.AIMentor.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="@dimen/space_md">
 
                 <TextView
                     android:id="@+id/tvAnswer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:lineSpacingExtra="2dp"
-                    android:lineSpacingMultiplier="1.2"
+                    android:lineSpacingExtra="3dp"
+                    android:lineSpacingMultiplier="1.18"
                     android:padding="@dimen/card_padding"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?attr/colorOnSurface"
                     android:textIsSelectable="true"
                     android:textSize="15sp" />
             </com.google.android.material.card.MaterialCardView>
@@ -116,10 +145,10 @@
         android:id="@+id/answerActions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/surface"
+        android:background="?attr/colorSurface"
         android:elevation="8dp"
         android:orientation="horizontal"
-        android:padding="12dp"
+        android:padding="@dimen/space_md"
         android:visibility="gone">
 
         <com.google.android.material.button.MaterialButton
@@ -136,7 +165,7 @@
             android:id="@+id/btnReviewed"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/space_md"
             android:layout_weight="1"
             android:text="@string/mark_reviewed"
             app:icon="@drawable/ic_check_circle_24"

@@ -286,18 +286,20 @@ public class AnswerActivity extends AppCompatActivity {
     }
 
     private boolean isSectionHeading(String line) {
-        return "Answer".equals(line)
-                || "Câu trả lời".equals(line)
-                || "Step-by-step".equals(line)
-                || "Giải thích từng bước".equals(line)
-                || "In simple terms".equals(line)
-                || "Nói một cách đơn giản".equals(line)
-                || "Key concepts".equals(line)
-                || "Khái niệm chính".equals(line)
-                || "Common mistakes to avoid".equals(line)
-                || "Những lỗi thường gặp cần tránh".equals(line)
-                || "Follow-up questions to practise".equals(line)
-                || "Câu hỏi luyện tập thêm".equals(line);
+        String heading = line.endsWith(":")
+                ? line.substring(0, line.length() - 1).trim() : line;
+        return "Answer".equals(heading)
+                || "Câu trả lời".equals(heading)
+                || "Step-by-step".equals(heading)
+                || "Giải thích từng bước".equals(heading)
+                || "In simple terms".equals(heading)
+                || "Nói một cách đơn giản".equals(heading)
+                || "Key concepts".equals(heading)
+                || "Khái niệm chính".equals(heading)
+                || "Common mistakes to avoid".equals(heading)
+                || "Những lỗi thường gặp cần tránh".equals(heading)
+                || "Follow-up questions to practise".equals(heading)
+                || "Câu hỏi luyện tập thêm".equals(heading);
     }
 
     private Question readTransientQuestion() {

@@ -7,9 +7,8 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Spinner;
+import android.widget.AutoCompleteTextView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -26,7 +25,7 @@ import com.example.aimentor.adapters.QuestionAdapter;
 import com.example.aimentor.data.Question;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.SessionManager;
-import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.chip.Chip;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
@@ -50,10 +49,11 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
     private QuestionAdapter adapter;
 
     private TextInputEditText etSearch;
-    private Spinner spSubjectFilter;
-    private SwitchMaterial switchBookmarked;
+    private AutoCompleteTextView actSubjectFilter;
+    private Chip chipBookmarked;
     private RecyclerView rvHistory;
     private TextView tvEmpty, tvSuggest;
+    private int selectedSubjectPosition;
     private int refreshGeneration;
     private int suggestionGeneration;
     private final Set<Long> pendingBookmarkIds = new HashSet<>();
@@ -74,8 +74,8 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         session = new SessionManager(requireContext());
 
         etSearch = view.findViewById(R.id.etSearch);
-        spSubjectFilter = view.findViewById(R.id.spSubjectFilter);
-        switchBookmarked = view.findViewById(R.id.switchBookmarked);
+        actSubjectFilter = view.findViewById(R.id.actSubjectFilter);
+        chipBookmarked = view.findViewById(R.id.chipBookmarked);
         rvHistory = view.findViewById(R.id.rvHistory);
         tvEmpty = view.findViewById(R.id.tvEmpty);
         tvSuggest = view.findViewById(R.id.tvSuggest);
@@ -86,20 +86,26 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         rvHistory.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvHistory.setAdapter(adapter);
 
+        String[] filterLabels =
+                getResources().getStringArray(R.array.subject_filter_choices);
         ArrayAdapter<String> filterAdapter = new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_spinner_item,
-                getResources().getStringArray(R.array.subject_filter_choices));
-        filterAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spSubjectFilter.setAdapter(filterAdapter);
+                android.R.layout.simple_list_item_1, filterLabels);
+        actSubjectFilter.setAdapter(filterAdapter);
+        actSubjectFilter.setOnItemClickListener((parent, selected, position, id) -> {
+            selectedSubjectPosition = position;
+            refresh();
+        });
+        actSubjectFilter.setText(filterLabels[0], false);
 
         if (savedInstanceState != null) {
             String search = savedInstanceState.getString(STATE_SEARCH, "");
             etSearch.setText(search);
             etSearch.setSelection(search.length());
-            int position = savedInstanceState.getInt(STATE_SUBJECT_POSITION, 0);
-            spSubjectFilter.setSelection(Math.max(0,
-                    Math.min(position, FILTER_SUBJECT_VALUES.length - 1)));
-            switchBookmarked.setChecked(
+            selectedSubjectPosition = Math.max(0, Math.min(
+                    savedInstanceState.getInt(STATE_SUBJECT_POSITION, 0),
+                    FILTER_SUBJECT_VALUES.length - 1));
+            actSubjectFilter.setText(filterLabels[selectedSubjectPosition], false);
+            chipBookmarked.setChecked(
                     savedInstanceState.getBoolean(STATE_BOOKMARKED, false));
         }
 
@@ -108,11 +114,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
             public void onTextChanged(CharSequence s, int a, int b, int c) { refresh(); }
             public void afterTextChanged(Editable s) { }
         });
-        spSubjectFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(AdapterView<?> parent, View v, int pos, long id) { refresh(); }
-            public void onNothingSelected(AdapterView<?> parent) { }
-        });
-        switchBookmarked.setOnCheckedChangeListener((b, checked) -> refresh());
+        chipBookmarked.setOnCheckedChangeListener((b, checked) -> refresh());
     }
 
     @Override
@@ -126,10 +128,9 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         long userId = session.getCurrentUserId();
         int generation = ++refreshGeneration;
         String query = etSearch.getText() == null ? "" : etSearch.getText().toString().trim();
-        boolean bookmarkedOnly = switchBookmarked.isChecked();
-        int subjectPosition = spSubjectFilter.getSelectedItemPosition();
+        boolean bookmarkedOnly = chipBookmarked.isChecked();
         String subjectFilter = FILTER_SUBJECT_VALUES[Math.max(0,
-                Math.min(subjectPosition, FILTER_SUBJECT_VALUES.length - 1))];
+                Math.min(selectedSubjectPosition, FILTER_SUBJECT_VALUES.length - 1))];
 
         StudyRepository.DataCallback<List<Question>> callback = base -> {
             if (!canRenderRefresh(generation)) return;
@@ -214,9 +215,8 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         super.onSaveInstanceState(outState);
         outState.putString(STATE_SEARCH, etSearch.getText() == null
                 ? "" : etSearch.getText().toString());
-        outState.putInt(STATE_SUBJECT_POSITION,
-                spSubjectFilter.getSelectedItemPosition());
-        outState.putBoolean(STATE_BOOKMARKED, switchBookmarked.isChecked());
+        outState.putInt(STATE_SUBJECT_POSITION, selectedSubjectPosition);
+        outState.putBoolean(STATE_BOOKMARKED, chipBookmarked.isChecked());
     }
 
     private boolean matchesQuery(Question question, String query) {

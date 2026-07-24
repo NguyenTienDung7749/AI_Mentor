@@ -4,7 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="@dimen/screen_padding">
+    android:paddingHorizontal="@dimen/screen_padding"
+    android:paddingTop="@dimen/space_lg">
 
     <TextView
         android:id="@+id/tvLibraryHeading"
@@ -13,10 +14,17 @@
         android:text="@string/library_title"
         android:textAppearance="@style/TextAppearance.AIMentor.ScreenTitle" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_xs"
+        android:text="@string/library_subtitle"
+        android:textAppearance="@style/TextAppearance.AIMentor.Supporting" />
+
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="@dimen/space_lg"
         android:hint="@string/search_hint"
         app:startIconDrawable="@drawable/ic_search_24">
 
@@ -25,60 +33,78 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:imeOptions="actionSearch"
-            android:inputType="text" />
+            android:inputType="text"
+            android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:background="@drawable/bg_info_panel"
+        android:layout_marginTop="@dimen/space_sm"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="10dp"
-        android:paddingVertical="4dp">
+        android:orientation="horizontal">
 
-        <Spinner
-            android:id="@+id/spSubjectFilter"
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.AIMentor.TextInput"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1" />
+            android:layout_weight="1"
+            android:hint="@string/library_subject_filter"
+            app:endIconMode="dropdown_menu">
 
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchBookmarked"
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/actSubjectFilter"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipBookmarked"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@string/bookmarked_only" />
+            android:layout_marginStart="@dimen/space_sm"
+            android:checkable="true"
+            android:text="@string/bookmarked_filter"
+            app:chipIcon="@drawable/ic_bookmark_24"
+            app:chipIconVisible="true" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/tvSuggest"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="@dimen/space_md"
         android:background="@drawable/bg_info_panel"
-        android:padding="12dp"
-        android:textColor="@color/text_secondary"
-        android:textSize="13sp"
-        android:visibility="gone" />
+        android:drawablePadding="@dimen/space_sm"
+        android:padding="@dimen/space_md"
+        android:textAppearance="@style/TextAppearance.AIMentor.Supporting"
+        android:visibility="gone"
+        app:drawableStartCompat="@drawable/ic_sparkle_24"
+        app:drawableTint="?attr/colorPrimary" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvHistory"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="@dimen/space_md"
         android:layout_weight="1"
         android:clipToPadding="false"
-        android:paddingBottom="8dp" />
+        android:paddingBottom="@dimen/space_sm" />
 
     <TextView
         android:id="@+id/tvEmpty"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:drawablePadding="@dimen/space_md"
         android:gravity="center"
+        android:padding="@dimen/space_xl"
         android:text="@string/empty_history"
-        android:textColor="@color/text_secondary"
-        android:visibility="gone" />
+        android:textAppearance="@style/TextAppearance.AIMentor.Supporting"
+        android:visibility="gone"
+        app:drawableTint="?attr/colorPrimary"
+        app:drawableTopCompat="@drawable/ic_nav_library" />
 </LinearLayout>

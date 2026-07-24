@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.aimentor.R;
 import com.example.aimentor.ai.AnswerSource;
 import com.example.aimentor.data.Question;
+import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,13 +81,14 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionAdapter.VH> {
     public void onBindViewHolder(@NonNull VH holder, int position) {
         Question q = items.get(position);
         holder.tvQuestion.setText(q.questionText);
+        holder.tvSubject.setText(q.subject);
         CharSequence when = DateUtils.getRelativeTimeSpanString(
                 q.createdAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
         String source = sourceLabel(holder, q);
         holder.tvMeta.setText(holder.itemView.getContext().getString(
-                R.string.history_item_meta, q.subject, source, when));
-        holder.tvBookmark.setText(q.bookmarked
-                ? R.string.bookmarked_symbol : R.string.bookmark_symbol);
+                R.string.history_item_secondary, source, when));
+        holder.tvBookmark.setIconResource(q.bookmarked
+                ? R.drawable.ic_bookmark_filled_24 : R.drawable.ic_bookmark_24);
         holder.tvBookmark.setContentDescription(holder.itemView.getContext().getString(
                 q.bookmarked ? R.string.remove_bookmark_description
                         : R.string.bookmark_question_description,
@@ -127,10 +129,12 @@ public class QuestionAdapter extends RecyclerView.Adapter<QuestionAdapter.VH> {
     }
 
     static class VH extends RecyclerView.ViewHolder {
-        final TextView tvQuestion, tvMeta, tvBookmark;
+        final TextView tvQuestion, tvSubject, tvMeta;
+        final MaterialButton tvBookmark;
         VH(@NonNull View itemView) {
             super(itemView);
             tvQuestion = itemView.findViewById(R.id.tvQuestion);
+            tvSubject = itemView.findViewById(R.id.tvSubject);
             tvMeta = itemView.findViewById(R.id.tvMeta);
             tvBookmark = itemView.findViewById(R.id.tvBookmark);
         }

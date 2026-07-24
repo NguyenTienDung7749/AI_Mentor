@@ -43,7 +43,6 @@
 
     <!-- Library -->
     <string name="search_hint">Search your questions…</string>
-    <string name="bookmarked_only">Bookmarked only</string>
     <string name="empty_history">No questions yet. Ask your first question on the Home tab!</string>
     <string name="empty_filtered_history">No saved answers match the current search or filters.</string>
     <string name="suggested_review">Suggested review: you often ask about %1$s. Revisit those answers to reinforce your learning.</string>
@@ -253,6 +252,12 @@
     <string name="home_xp_initial">0 XP</string>
 
     <string name="library_title">Your Library</string>
+    <string name="library_subtitle">Find, revisit and bookmark answers saved from online AI.</string>
+    <string name="library_subject_filter">Subject</string>
+    <string name="bookmarked_filter">Saved</string>
+    <string name="history_item_secondary">%1$s  •  %2$s</string>
+    <string name="mentor_answer_heading">Mentor answer</string>
+    <string name="mentor_answer_supporting">Review the explanation and save it for your next study session.</string>
 
     <string name="practice_quizzes_title">Practice Quizzes</string>
     <string name="quiz_progress_heading">Your quiz progress</string>
@@ -331,9 +336,6 @@
     <string name="bookmark_removed">Removed bookmark</string>
     <string name="review_awarded">Marked as reviewed (+2 XP)</string>
     <string name="review_already_done">Already reviewed</string>
-    <string name="history_item_meta">%1$s  •  %2$s  •  %3$s</string>
-    <string name="bookmark_symbol" translatable="false">☆</string>
-    <string name="bookmarked_symbol" translatable="false">★</string>
     <string name="bookmark_question_description">Bookmark “%1$s”</string>
     <string name="remove_bookmark_description">Remove bookmark from “%1$s”</string>
     <string name="open_saved_answer_description">Open saved answer for “%1$s”</string>
