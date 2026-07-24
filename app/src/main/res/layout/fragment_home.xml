@@ -110,7 +110,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:hint="@string/ask_hint">
+                    android:hint="@string/ask_hint"
+                    app:counterEnabled="true"
+                    app:counterMaxLength="6000">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etQuestion"
@@ -118,6 +120,7 @@
                         android:layout_height="wrap_content"
                         android:gravity="top"
                         android:inputType="textMultiLine"
+                        android:maxLength="6000"
                         android:maxLines="8"
                         android:minLines="3"
                         android:scrollbars="vertical" />

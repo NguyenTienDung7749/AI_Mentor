@@ -10,6 +10,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.SavedStateHandle;
 
 import com.example.aimentor.repo.StudyRepository;
+import com.example.aimentor.util.StudyInputPolicy;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
@@ -62,25 +63,35 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         final OcrStatus status;
         final String extractedText;
         final boolean eventPending;
+        final boolean truncated;
 
         private OcrUiState(
-                OcrStatus status, String extractedText, boolean eventPending) {
+                OcrStatus status, String extractedText,
+                boolean eventPending, boolean truncated) {
             this.status = status;
             this.extractedText = extractedText == null ? "" : extractedText;
             this.eventPending = eventPending;
+            this.truncated = truncated;
         }
 
         static OcrUiState idle() {
-            return new OcrUiState(OcrStatus.IDLE, "", false);
+            return new OcrUiState(OcrStatus.IDLE, "", false, false);
         }
 
         static OcrUiState loading() {
-            return new OcrUiState(OcrStatus.LOADING, "", false);
+            return new OcrUiState(OcrStatus.LOADING, "", false, false);
         }
 
         static OcrUiState terminal(
                 OcrStatus status, String extractedText, boolean eventPending) {
-            return new OcrUiState(status, extractedText, eventPending);
+            return terminal(status, extractedText, eventPending, false);
+        }
+
+        static OcrUiState terminal(
+                OcrStatus status, String extractedText,
+                boolean eventPending, boolean truncated) {
+            return new OcrUiState(
+                    status, extractedText, eventPending, truncated);
         }
     }
 
@@ -168,12 +179,13 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         recognizer.process(image)
                 .addOnSuccessListener(result -> {
                     if (cleared) return;
-                    String extracted = result.getText() == null
-                            ? "" : result.getText().trim();
-                    setOcrState(extracted.isEmpty()
+                    StudyInputPolicy.LimitedText extracted =
+                            StudyInputPolicy.limitOcrText(result.getText());
+                    setOcrState(extracted.text.isEmpty()
                             ? OcrUiState.terminal(OcrStatus.EMPTY, "", true)
                             : OcrUiState.terminal(
-                                    OcrStatus.READY, extracted, true));
+                                    OcrStatus.READY, extracted.text,
+                                    true, extracted.truncated));
                 })
                 .addOnFailureListener(error -> {
                     if (!cleared) {
@@ -195,7 +207,7 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         OcrUiState current = ocrState.getValue();
         if (current == null || !current.eventPending) return;
         setOcrState(OcrUiState.terminal(
-                current.status, "", false));
+                current.status, "", false, current.truncated));
     }
 
     Uri prepareCameraCapture() throws IOException {

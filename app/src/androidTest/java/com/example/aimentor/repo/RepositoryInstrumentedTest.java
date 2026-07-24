@@ -84,6 +84,7 @@ public class RepositoryInstrumentedTest {
         assertEquals(AnswerSource.REMOTE.name(),
                 database.questionDao()
                         .findByIdForUser(userId, online.questionId).answerSource);
+        assertEquals("Science,Programming", engine.lastSubjects);
 
         engine.source = AnswerSource.LOCAL_FALLBACK;
         StudyRepository.AskResult offline = studyRepository.ask(
@@ -113,6 +114,24 @@ public class RepositoryInstrumentedTest {
         assertEquals(-1L, result.questionId);
         assertNull(database.userDao().findById(userId));
         assertEquals(0, database.questionDao().countForUser(userId));
+    }
+
+    @Test
+    public void ask_oversizedInput_isRejectedBeforeAiOrRoomWrite() {
+        long userId = insertUser("oversized@example.com", 0);
+        StringBuilder oversizedBuilder = new StringBuilder();
+        for (int index = 0; index < 600; index++) {
+            oversizedBuilder.append("Study input ");
+        }
+        String oversized = oversizedBuilder.toString();
+
+        StudyRepository.AskResult result = studyRepository.ask(
+                userId, oversized, "Auto");
+
+        assertFalse(result.success);
+        assertEquals(0, engine.answerCalls);
+        assertEquals(0, database.questionDao().countForUser(userId));
+        assertEquals(0, database.userDao().findById(userId).xp);
     }
 
     @Test
@@ -517,6 +536,7 @@ public class RepositoryInstrumentedTest {
         user.xp = xp;
         user.educationLevel = "University";
         user.explanationStyle = "Detailed";
+        user.subjects = "Science,Programming";
         return database.userDao().insert(user);
     }
 
@@ -561,11 +581,23 @@ public class RepositoryInstrumentedTest {
     private static class MutableAiEngine implements AiEngine {
         AnswerSource source = AnswerSource.REMOTE;
         Runnable onAnswer;
+        String lastSubjects = "";
+        int answerCalls;
 
         @Override
         public AiAnswer answer(String question, String educationLevel,
                                String explanationStyle, String subjectHint) {
+            return answer(question, educationLevel, explanationStyle,
+                    subjectHint, "");
+        }
+
+        @Override
+        public AiAnswer answer(String question, String educationLevel,
+                               String explanationStyle, String subjectHint,
+                               String subjects) {
+            answerCalls++;
             if (onAnswer != null) onAnswer.run();
+            lastSubjects = subjects;
             AiAnswer answer = new AiAnswer();
             answer.setSubject(subjectHint);
             answer.setDifficulty("Intermediate");

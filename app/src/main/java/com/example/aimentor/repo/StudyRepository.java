@@ -155,7 +155,8 @@ public class StudyRepository {
 
         long startedAt = System.nanoTime();
         AiAnswer generated = engine.answer(questionText,
-                user.educationLevel, user.explanationStyle, subjectHint);
+                user.educationLevel, user.explanationStyle, subjectHint,
+                user.subjects);
         long elapsedNanos = System.nanoTime() - startedAt;
 
         AnswerSource answerSource = generated.getSource();

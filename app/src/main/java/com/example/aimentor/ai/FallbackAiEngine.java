@@ -51,15 +51,24 @@ public class FallbackAiEngine implements AiEngine {
     @Override
     public AiAnswer answer(String question, String educationLevel,
                            String explanationStyle, String subjectHint) {
+        return answer(question, educationLevel, explanationStyle,
+                subjectHint, "");
+    }
+
+    @Override
+    public AiAnswer answer(String question, String educationLevel,
+                           String explanationStyle, String subjectHint,
+                           String subjects) {
         Future<AiAnswer> remoteTask;
         try {
             remoteTask = remoteExecutor.submit(() -> remoteEngine.answer(
-                    question, educationLevel, explanationStyle, subjectHint));
+                    question, educationLevel, explanationStyle,
+                    subjectHint, subjects));
         } catch (RejectedExecutionException ignored) {
             // A previous platform DNS call may still be blocked. Do not queue
             // more remote work behind it; provide offline help immediately.
             return offlineFallback(question, educationLevel,
-                    explanationStyle, subjectHint);
+                    explanationStyle, subjectHint, subjects);
         }
 
         try {
@@ -67,15 +76,15 @@ public class FallbackAiEngine implements AiEngine {
         } catch (TimeoutException ignored) {
             remoteTask.cancel(true);
             return offlineFallback(question, educationLevel,
-                    explanationStyle, subjectHint);
+                    explanationStyle, subjectHint, subjects);
         } catch (InterruptedException ignored) {
             remoteTask.cancel(true);
             Thread.currentThread().interrupt();
             return offlineFallback(question, educationLevel,
-                    explanationStyle, subjectHint);
+                    explanationStyle, subjectHint, subjects);
         } catch (ExecutionException ignored) {
             return offlineFallback(question, educationLevel,
-                    explanationStyle, subjectHint);
+                    explanationStyle, subjectHint, subjects);
         }
     }
 
@@ -103,9 +112,10 @@ public class FallbackAiEngine implements AiEngine {
     }
 
     private AiAnswer offlineFallback(String question, String educationLevel,
-                                     String explanationStyle, String subjectHint) {
+                                     String explanationStyle, String subjectHint,
+                                     String subjects) {
         AiAnswer fallback = localEngine.answer(question, educationLevel,
-                explanationStyle, subjectHint);
+                explanationStyle, subjectHint, subjects);
         fallback.setSource(AnswerSource.LOCAL_FALLBACK);
         fallback.setModelName(localEngine.name());
         return fallback;

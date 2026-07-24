@@ -25,6 +25,19 @@ public class FallbackAiEngineTest {
     }
 
     @Test
+    public void answer_learningProfile_reachesRemoteEngine() {
+        TestEngine remote = new TestEngine("remote", false);
+        TestEngine local = new TestEngine("local", false);
+        FallbackAiEngine engine = new FallbackAiEngine(remote, local);
+
+        engine.answer("Question", "University", "Short",
+                "Science", "Science,Programming");
+
+        assertEquals("Science,Programming", remote.lastSubjects);
+        assertEquals(0, local.answerCalls);
+    }
+
+    @Test
     public void answer_remoteFailure_returnsClearlyMarkedOfflineFallback() {
         TestEngine remote = new TestEngine("remote", true);
         TestEngine local = new TestEngine("local", false);
@@ -92,6 +105,7 @@ public class FallbackAiEngineTest {
         private final long delayMs;
         int answerCalls;
         int quizCalls;
+        String lastSubjects = "";
 
         TestEngine(String engineName, boolean fail) {
             this(engineName, fail, 0L);
@@ -106,7 +120,16 @@ public class FallbackAiEngineTest {
         @Override
         public AiAnswer answer(String question, String educationLevel,
                                String explanationStyle, String subjectHint) {
+            return answer(question, educationLevel, explanationStyle,
+                    subjectHint, "");
+        }
+
+        @Override
+        public AiAnswer answer(String question, String educationLevel,
+                               String explanationStyle, String subjectHint,
+                               String subjects) {
             answerCalls++;
+            lastSubjects = subjects;
             if (delayMs > 0L) {
                 try {
                     Thread.sleep(delayMs);

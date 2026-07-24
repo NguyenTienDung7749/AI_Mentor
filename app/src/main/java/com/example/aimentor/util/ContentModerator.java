@@ -29,6 +29,10 @@ public final class ContentModerator {
         if (text == null || text.trim().isEmpty()) {
             return new Result(false, "Please type a question first.");
         }
+        if (text.length() > StudyInputPolicy.MAX_QUESTION_CHARS) {
+            return new Result(false, "Your question is too long. Please keep it under "
+                    + StudyInputPolicy.MAX_QUESTION_CHARS + " characters.");
+        }
         String t = text.toLowerCase(Locale.ROOT);
 
         for (Pattern pattern : BANNED_WORD_PATTERNS) {

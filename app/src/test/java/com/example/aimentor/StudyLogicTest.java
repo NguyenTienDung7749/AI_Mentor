@@ -13,6 +13,7 @@ import com.example.aimentor.util.ContentModerator;
 import com.example.aimentor.util.Gamification;
 import com.example.aimentor.util.PasswordValidator;
 import com.example.aimentor.util.SecurityUtils;
+import com.example.aimentor.util.StudyInputPolicy;
 import com.example.aimentor.util.Validators;
 
 import org.junit.Test;
@@ -129,6 +130,27 @@ public class StudyLogicTest {
                 "Analyse a character in Charles Dickens' novel.").allowed);
         assertTrue(ContentModerator.check(
                 "Explain the Dickinson equation.").allowed);
+    }
+
+    @Test
+    public void inputPolicy_capsOcrAndRejectsOversizedQuestions() {
+        StringBuilder oversized = new StringBuilder();
+        while (oversized.length() <= StudyInputPolicy.MAX_QUESTION_CHARS) {
+            oversized.append("Study input ");
+        }
+
+        StudyInputPolicy.LimitedText limited =
+                StudyInputPolicy.limitOcrText(oversized.toString());
+
+        assertTrue(limited.truncated);
+        assertTrue(limited.text.length()
+                <= StudyInputPolicy.MAX_QUESTION_CHARS);
+        assertFalse(ContentModerator.check(oversized.toString()).allowed);
+        assertFalse(StudyInputPolicy.limitOcrText("  What is gravity?  ")
+                .truncated);
+        assertEquals("What is gravity?",
+                StudyInputPolicy.limitOcrText(
+                        "  What is gravity?\u0000  ").text);
     }
 
     @Test

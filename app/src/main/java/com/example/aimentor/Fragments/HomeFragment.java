@@ -259,7 +259,8 @@ public class HomeFragment extends Fragment {
                 tvOcrStatus.setVisibility(View.VISIBLE);
                 break;
             case READY:
-                tvOcrStatus.setText(R.string.ocr_ready);
+                tvOcrStatus.setText(state != null && state.truncated
+                        ? R.string.ocr_ready_truncated : R.string.ocr_ready);
                 tvOcrStatus.setVisibility(View.VISIBLE);
                 break;
             case EMPTY:
@@ -282,6 +283,11 @@ public class HomeFragment extends Fragment {
             etQuestion.setText(state.extractedText);
             etQuestion.setSelection(state.extractedText.length());
             etQuestion.requestFocus();
+            if (state.truncated) {
+                Toast.makeText(requireContext(),
+                        R.string.ocr_ready_truncated,
+                        Toast.LENGTH_LONG).show();
+            }
         } else if (status == HomeUiStateViewModel.OcrStatus.EMPTY) {
             Toast.makeText(requireContext(), R.string.ocr_no_text,
                     Toast.LENGTH_LONG).show();

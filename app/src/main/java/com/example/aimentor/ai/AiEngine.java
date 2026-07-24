@@ -14,6 +14,16 @@ public interface AiEngine {
     /** Generate a structured answer for a student question. */
     AiAnswer answer(String question, String educationLevel, String explanationStyle, String subjectHint);
 
+    /**
+     * Generate a structured answer with optional interests from the student's
+     * local learning profile. Existing engines may ignore the extra context.
+     */
+    default AiAnswer answer(String question, String educationLevel,
+                            String explanationStyle, String subjectHint,
+                            String subjects) {
+        return answer(question, educationLevel, explanationStyle, subjectHint);
+    }
+
     /** Generate a set of practice questions for a subject. */
     List<QuizQuestion> generateQuiz(String subject, int count);
 
