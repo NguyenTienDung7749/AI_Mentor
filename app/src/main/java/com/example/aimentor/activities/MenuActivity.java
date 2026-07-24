@@ -14,6 +14,7 @@ import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.ReminderScheduler;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MenuActivity extends AppCompatActivity {
@@ -31,6 +32,7 @@ public class MenuActivity extends AppCompatActivity {
         AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_menu);
+        WindowUiHelper.apply(this);
 
         SessionManager session = new SessionManager(this);
         if (!session.isLoggedIn()) {
@@ -58,7 +60,8 @@ public class MenuActivity extends AppCompatActivity {
 
     private void clickTabNavigation() {
         bottomNavigationView.setOnItemSelectedListener(item -> {
-            viewPager.setCurrentItem(indexForMenu(item.getItemId()), true);
+            viewPager.setCurrentItem(indexForMenu(item.getItemId()),
+                    WindowUiHelper.animationsEnabled(this));
             return true;
         });
     }

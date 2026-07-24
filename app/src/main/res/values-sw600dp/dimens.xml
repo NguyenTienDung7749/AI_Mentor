@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="screen_padding">28dp</dimen>
+    <dimen name="card_padding">24dp</dimen>
+    <dimen name="section_spacing">24dp</dimen>
+    <dimen name="button_min_height">56dp</dimen>
+    <dimen name="auth_screen_padding">32dp</dimen>
+    <dimen name="auth_vertical_padding">36dp</dimen>
+</resources>

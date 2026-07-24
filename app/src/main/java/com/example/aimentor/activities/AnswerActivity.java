@@ -26,6 +26,7 @@ import com.example.aimentor.data.Question;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
 
 /** Displays a single question and its saved AI answer (works offline). */
@@ -77,6 +78,7 @@ public class AnswerActivity extends AppCompatActivity {
         AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_answer);
+        WindowUiHelper.apply(this);
 
         studyRepository = new StudyRepository(this);
         session = new SessionManager(this);

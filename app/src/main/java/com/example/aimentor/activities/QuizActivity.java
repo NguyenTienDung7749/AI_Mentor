@@ -20,6 +20,7 @@ import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
@@ -83,6 +84,7 @@ public class QuizActivity extends AppCompatActivity {
         AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_quiz);
+        WindowUiHelper.apply(this);
 
         session = new SessionManager(this);
         quizViewModel = new ViewModelProvider(this)

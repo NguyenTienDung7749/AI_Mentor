@@ -8,11 +8,13 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
 
 import com.example.aimentor.R;
 import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
@@ -33,6 +35,15 @@ public class OnboardingActivity extends AppCompatActivity {
         AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_onboarding);
+        WindowUiHelper.apply(this);
+        ViewCompat.setAccessibilityHeading(
+                findViewById(R.id.tvOnboardingHeading), true);
+        ViewCompat.setAccessibilityHeading(
+                findViewById(R.id.tvOnboardingLevelHeading), true);
+        ViewCompat.setAccessibilityHeading(
+                findViewById(R.id.tvOnboardingSubjectHeading), true);
+        ViewCompat.setAccessibilityHeading(
+                findViewById(R.id.tvOnboardingStyleHeading), true);
 
         session = new SessionManager(this);
         userRepository = new UserRepository(this);

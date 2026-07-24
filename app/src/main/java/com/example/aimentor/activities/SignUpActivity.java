@@ -10,12 +10,14 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
 
 import com.example.aimentor.R;
 import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.PasswordValidator;
 import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -33,6 +35,9 @@ public class SignUpActivity extends AppCompatActivity {
         AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
+        WindowUiHelper.apply(this);
+        ViewCompat.setAccessibilityHeading(
+                findViewById(R.id.tvSignupHeading), true);
 
         userRepository = new UserRepository(this);
         session = new SessionManager(this);
@@ -42,6 +47,8 @@ public class SignUpActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.etPassword);
         etConfirm = findViewById(R.id.etConfirm);
         tvStrength = findViewById(R.id.tvStrength);
+        ViewCompat.setAccessibilityLiveRegion(tvStrength,
+                ViewCompat.ACCESSIBILITY_LIVE_REGION_POLITE);
         btnSignup = findViewById(R.id.btnSignup);
 
         etPassword.addTextChangedListener(new TextWatcher() {

@@ -45,7 +45,7 @@
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="@string/app_name"
+                            android:importantForAccessibility="no"
                             android:padding="@dimen/space_sm"
                             android:src="@drawable/ic_sparkle_24"
                             app:tint="?attr/colorOnPrimaryContainer" />
@@ -72,6 +72,7 @@
                     </LinearLayout>
 
                     <TextView
+                        android:id="@+id/tvOnboardingHeading"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_lg"
@@ -102,6 +103,7 @@
                     android:padding="@dimen/card_padding">
 
                     <TextView
+                        android:id="@+id/tvOnboardingLevelHeading"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/education_level"
@@ -158,6 +160,7 @@
                     android:padding="@dimen/card_padding">
 
                     <TextView
+                        android:id="@+id/tvOnboardingSubjectHeading"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/subjects_interest"
@@ -221,6 +224,7 @@
                     android:padding="@dimen/card_padding">
 
                     <TextView
+                        android:id="@+id/tvOnboardingStyleHeading"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/explanation_style"

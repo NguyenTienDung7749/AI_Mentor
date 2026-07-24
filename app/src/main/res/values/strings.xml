@@ -318,7 +318,7 @@
     </plurals>
 
     <string name="learning_preferences">Learning preferences</string>
-    <string name="settings_title">Settings</string>
+    <string name="settings_title">Your study profile</string>
     <string name="settings_subtitle">Personalize your mentor, reminders and account preferences.</string>
     <string name="student_placeholder">Student</string>
     <string name="email_placeholder">email</string>

@@ -41,7 +41,7 @@
                         android:layout_width="64dp"
                         android:layout_height="64dp"
                         android:background="@drawable/bg_brand_mark"
-                        android:contentDescription="@string/app_name"
+                        android:importantForAccessibility="no"
                         android:padding="@dimen/space_lg"
                         android:src="@drawable/ic_sparkle_24"
                         app:tint="?attr/colorOnPrimary" />
@@ -85,6 +85,7 @@
                     android:padding="@dimen/card_padding">
 
                     <TextView
+                        android:id="@+id/tvLoginHeading"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/login_welcome_title"

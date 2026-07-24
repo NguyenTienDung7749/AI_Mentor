@@ -6,12 +6,14 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
 
 import com.example.aimentor.R;
 import com.example.aimentor.data.User;
 import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -28,6 +30,9 @@ public class LoginActivity extends AppCompatActivity {
         AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_linear_layout_login);
+        WindowUiHelper.apply(this);
+        ViewCompat.setAccessibilityHeading(
+                findViewById(R.id.tvLoginHeading), true);
 
         userRepository = new UserRepository(this);
         session = new SessionManager(this);
