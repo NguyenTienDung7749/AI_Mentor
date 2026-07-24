@@ -68,7 +68,7 @@
     <string name="send_reminder">Send me a review reminder</string>
     <string name="logout">Log out</string>
     <string name="privacy_and_data">Privacy and data</string>
-    <string name="demo_privacy_notice">Classroom prototype: use fictional study data only. Successful questions are sent to Groq for an answer and stored locally; OCR runs on-device. Offline fallback answers are not saved. App data is excluded from Android backup.</string>
+    <string name="demo_privacy_notice">Classroom prototype: use fictional study data only. Questions and learning preferences (education level, explanation style and subject interests) are sent to Groq to personalize answers. Successful online questions and answers are stored locally; email and password are not sent. OCR runs on-device, offline fallback answers are not saved, and app data is excluded from Android backup.</string>
     <string name="delete_account">Delete account and local data</string>
     <string name="delete_account_title">Permanently delete this account?</string>
     <string name="delete_account_message">Enter your password to delete this local account, its saved answers, quiz results, progress, XP and badges. This cannot be undone.</string>

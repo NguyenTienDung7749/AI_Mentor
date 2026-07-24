@@ -15,6 +15,8 @@ import com.example.aimentor.repo.StudyRepository;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @RunWith(AndroidJUnit4.class)
@@ -57,6 +59,45 @@ public class HomeUiStateViewModelInstrumentedTest {
 
         assertEquals("A retained draft", restored.getQuestionDraft());
         assertEquals(3, restored.getSubjectPosition());
+    }
+
+    @Test
+    public void savedStateHandle_restoresPendingOcrResult() {
+        Application application = application();
+        Map<String, Object> values = new HashMap<>();
+        values.put("home_ocr_state", "READY");
+        values.put("home_ocr_text", "Text recovered after process death");
+        values.put("home_ocr_event_pending", true);
+        values.put("home_ocr_truncated", true);
+
+        HomeUiStateViewModel restored = new HomeUiStateViewModel(
+                application, new SavedStateHandle(values),
+                new CountingStudyRepository(application));
+        HomeUiStateViewModel.OcrUiState state =
+                restored.getOcrState().getValue();
+
+        assertTrue(state != null);
+        assertEquals(HomeUiStateViewModel.OcrStatus.READY, state.status);
+        assertEquals("Text recovered after process death", state.extractedText);
+        assertTrue(state.eventPending);
+        assertTrue(state.truncated);
+    }
+
+    @Test
+    public void savedStateHandle_convertsInterruptedOcrToError() {
+        Application application = application();
+        Map<String, Object> values = new HashMap<>();
+        values.put("home_ocr_state", "LOADING");
+
+        HomeUiStateViewModel restored = new HomeUiStateViewModel(
+                application, new SavedStateHandle(values),
+                new CountingStudyRepository(application));
+        HomeUiStateViewModel.OcrUiState state =
+                restored.getOcrState().getValue();
+
+        assertTrue(state != null);
+        assertEquals(HomeUiStateViewModel.OcrStatus.ERROR, state.status);
+        assertTrue(state.eventPending);
     }
 
     private Application application() {

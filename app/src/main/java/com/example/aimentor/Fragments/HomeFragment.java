@@ -223,6 +223,7 @@ public class HomeFragment extends Fragment {
         }
         etQuestion.setText("");
         uiState.setQuestionDraft("");
+        uiState.resetOcrState();
         if (result.source == AnswerSource.LOCAL_FALLBACK) {
             Toast.makeText(requireContext(), R.string.offline_fallback_notice,
                     Toast.LENGTH_LONG).show();

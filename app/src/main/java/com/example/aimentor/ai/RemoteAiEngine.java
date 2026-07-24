@@ -572,8 +572,7 @@ public class RemoteAiEngine implements AiEngine {
 
     private boolean isAutoSubject(String subject) {
         return subject == null || subject.trim().isEmpty()
-                || subject.equalsIgnoreCase("Auto")
-                || subject.equalsIgnoreCase(SubjectClassifier.GENERAL);
+                || subject.equalsIgnoreCase("Auto");
     }
 
     private String difficultyFor(String educationLevel) {

@@ -134,23 +134,29 @@ public class StudyLogicTest {
 
     @Test
     public void inputPolicy_capsOcrAndRejectsOversizedQuestions() {
-        StringBuilder oversized = new StringBuilder();
-        while (oversized.length() <= StudyInputPolicy.MAX_QUESTION_CHARS) {
-            oversized.append("Study input ");
-        }
+        String exact = "a".repeat(StudyInputPolicy.MAX_QUESTION_CHARS);
+        String oversized = exact + "b";
 
         StudyInputPolicy.LimitedText limited =
-                StudyInputPolicy.limitOcrText(oversized.toString());
+                StudyInputPolicy.limitOcrText(oversized);
 
         assertTrue(limited.truncated);
-        assertTrue(limited.text.length()
-                <= StudyInputPolicy.MAX_QUESTION_CHARS);
-        assertFalse(ContentModerator.check(oversized.toString()).allowed);
+        assertEquals(StudyInputPolicy.MAX_QUESTION_CHARS, limited.text.length());
+        assertFalse(ContentModerator.check(oversized).allowed);
+        assertFalse(StudyInputPolicy.limitOcrText(exact).truncated);
         assertFalse(StudyInputPolicy.limitOcrText("  What is gravity?  ")
                 .truncated);
         assertEquals("What is gravity?",
                 StudyInputPolicy.limitOcrText(
                         "  What is gravity?\u0000  ").text);
+
+        String splitEmoji = "a".repeat(
+                StudyInputPolicy.MAX_QUESTION_CHARS - 1) + "\uD83D\uDE00tail";
+        StudyInputPolicy.LimitedText emojiLimited =
+                StudyInputPolicy.limitOcrText(splitEmoji);
+        assertTrue(emojiLimited.truncated);
+        assertEquals(StudyInputPolicy.MAX_QUESTION_CHARS - 1,
+                emojiLimited.text.length());
     }
 
     @Test

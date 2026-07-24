@@ -121,6 +121,27 @@ public class RemoteAiEngineTest {
     }
 
     @Test
+    public void answer_explicitGeneralSubject_isNotTreatedAsAuto()
+            throws Exception {
+        server.enqueue(jsonResponse(200,
+                completionBody(structuredContent("General answer"))));
+        RemoteAiEngine engine = engine(1_000, 1_000);
+
+        engine.answer("What is a good study habit?",
+                "High School", "Short", "General");
+
+        RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
+        assertTrue(request != null);
+        JsonObject requestBody = JsonParser.parseString(
+                request.getBody().readUtf8()).getAsJsonObject();
+        String systemPrompt = requestBody.getAsJsonArray("messages")
+                .get(0).getAsJsonObject().get("content").getAsString();
+        assertTrue(systemPrompt.contains("current subject hint = General"));
+        assertFalse(systemPrompt.contains(
+                "current subject hint = Auto-detect from the question"));
+    }
+
+    @Test
     public void answer_http400_isNotRetried() {
         server.enqueue(jsonResponse(400, "{\"error\":{\"message\":\"bad request\"}}"));
         RemoteAiEngine engine = engine(1_000, 1_000);

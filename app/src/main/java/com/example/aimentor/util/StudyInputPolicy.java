@@ -27,7 +27,12 @@ public final class StudyInputPolicy {
         if (clean.length() <= MAX_QUESTION_CHARS) {
             return new LimitedText(clean, false);
         }
+        int end = MAX_QUESTION_CHARS;
+        if (Character.isHighSurrogate(clean.charAt(end - 1))
+                && Character.isLowSurrogate(clean.charAt(end))) {
+            end--;
+        }
         return new LimitedText(
-                clean.substring(0, MAX_QUESTION_CHARS).trim(), true);
+                clean.substring(0, end).trim(), true);
     }
 }

@@ -29,6 +29,9 @@ public class HomeUiStateViewModel extends AndroidViewModel {
     private static final String KEY_DRAFT = "home_draft";
     private static final String KEY_SUBJECT = "home_subject";
     private static final String KEY_OCR_STATE = "home_ocr_state";
+    private static final String KEY_OCR_TEXT = "home_ocr_text";
+    private static final String KEY_OCR_EVENT_PENDING = "home_ocr_event_pending";
+    private static final String KEY_OCR_TRUNCATED = "home_ocr_truncated";
     private static final String KEY_CAMERA_URI = "home_camera_uri";
     private static final String KEY_CAMERA_FILE = "home_camera_file";
 
@@ -118,12 +121,24 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         this.savedState = savedState;
         this.studyRepository = studyRepository;
         OcrStatus restored = restoredOcrStatus();
+        String restoredText = restoredOcrText();
+        boolean restoredEventPending =
+                Boolean.TRUE.equals(savedState.get(KEY_OCR_EVENT_PENDING));
+        boolean restoredTruncated =
+                Boolean.TRUE.equals(savedState.get(KEY_OCR_TRUNCATED));
         // A process restart cannot retain the ML Kit task itself.
-        if (restored == OcrStatus.LOADING) restored = OcrStatus.ERROR;
-        this.ocrState = new MutableLiveData<>(
-                restored == OcrStatus.IDLE
-                        ? OcrUiState.idle()
-                        : OcrUiState.terminal(restored, "", false));
+        OcrUiState initial;
+        if (restored == OcrStatus.LOADING) {
+            initial = OcrUiState.terminal(OcrStatus.ERROR, "", true);
+        } else if (restored == OcrStatus.IDLE) {
+            initial = OcrUiState.idle();
+        } else {
+            initial = OcrUiState.terminal(
+                    restored, restoredText,
+                    restoredEventPending, restoredTruncated);
+        }
+        this.ocrState = new MutableLiveData<>(initial);
+        persistOcrState(initial);
     }
 
     LiveData<AskUiState> getAskState() {
@@ -210,6 +225,10 @@ public class HomeUiStateViewModel extends AndroidViewModel {
                 current.status, "", false, current.truncated));
     }
 
+    void resetOcrState() {
+        setOcrState(OcrUiState.idle());
+    }
+
     Uri prepareCameraCapture() throws IOException {
         deletePendingCameraFile();
         File imageDirectory =
@@ -268,8 +287,15 @@ public class HomeUiStateViewModel extends AndroidViewModel {
     }
 
     private void setOcrState(OcrUiState value) {
-        savedState.set(KEY_OCR_STATE, value.status.name());
+        persistOcrState(value);
         ocrState.setValue(value);
+    }
+
+    private void persistOcrState(OcrUiState value) {
+        savedState.set(KEY_OCR_STATE, value.status.name());
+        savedState.set(KEY_OCR_TEXT, value.extractedText);
+        savedState.set(KEY_OCR_EVENT_PENDING, value.eventPending);
+        savedState.set(KEY_OCR_TRUNCATED, value.truncated);
     }
 
     private OcrStatus restoredOcrStatus() {
@@ -280,6 +306,11 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         } catch (IllegalArgumentException ignored) {
             return OcrStatus.IDLE;
         }
+    }
+
+    private String restoredOcrText() {
+        String value = savedState.get(KEY_OCR_TEXT);
+        return value == null ? "" : value;
     }
 
     @Override

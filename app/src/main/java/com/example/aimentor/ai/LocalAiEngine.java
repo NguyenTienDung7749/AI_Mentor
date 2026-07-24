@@ -33,8 +33,7 @@ public class LocalAiEngine implements AiEngine {
         String q = question == null ? "" : question.trim();
 
         String subject = (subjectHint != null && !subjectHint.isEmpty()
-                && !subjectHint.equalsIgnoreCase("Auto")
-                && !subjectHint.equalsIgnoreCase(SubjectClassifier.GENERAL))
+                && !subjectHint.equalsIgnoreCase("Auto"))
                 ? subjectHint
                 : SubjectClassifier.classify(q);
         a.setSubject(subject);
