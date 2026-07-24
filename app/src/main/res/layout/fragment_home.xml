@@ -9,20 +9,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/screen_padding">
 
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.AIMentor.Card.Highlight"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorPrimaryContainer"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            android:layout_height="wrap_content">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/card_padding">
 
                 <TextView
                     android:id="@+id/tvGreeting"
@@ -30,7 +28,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/home_greeting_initial"
                     android:textColor="?attr/colorOnPrimaryContainer"
-                    android:textSize="20sp"
+                    android:textSize="22sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -46,8 +44,8 @@
                     android:id="@+id/progressXp"
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="12dp"
                     android:max="100"
                     android:progress="0" />
 
@@ -66,32 +64,30 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:background="@drawable/bg_info_panel"
+            android:padding="12dp"
             android:text="@string/home_stats_initial"
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.AIMentor.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            android:layout_marginTop="@dimen/section_spacing">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/card_padding">
 
                 <TextView
                     android:id="@+id/tvAskHeading"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/ask_section_title"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.AIMentor.SectionTitle" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -104,7 +100,8 @@
                     android:id="@+id/spSubject"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" />
+                    android:layout_marginTop="4dp"
+                    android:minHeight="48dp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
@@ -134,20 +131,24 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnChooseImage"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        style="@style/Widget.AIMentor.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/scan_image" />
+                        android:text="@string/scan_image"
+                        app:icon="@drawable/ic_gallery_24"
+                        app:iconGravity="textStart" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnTakePhoto"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        style="@style/Widget.AIMentor.Button.Outlined"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:layout_weight="1"
-                        android:text="@string/take_photo" />
+                        android:text="@string/take_photo"
+                        app:icon="@drawable/ic_camera_24"
+                        app:iconGravity="textStart" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -182,7 +183,9 @@
                     android:layout_marginTop="12dp"
                     android:paddingVertical="12dp"
                     android:text="@string/ask_button"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    app:icon="@drawable/ic_sparkle_24"
+                    app:iconGravity="textStart" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -216,6 +219,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:background="@drawable/bg_info_panel"
+            android:padding="14dp"
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
     </LinearLayout>

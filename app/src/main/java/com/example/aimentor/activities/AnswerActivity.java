@@ -2,7 +2,13 @@ package com.example.aimentor.activities;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -11,6 +17,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 
 import com.example.aimentor.R;
 import com.example.aimentor.ai.AnswerSource;
@@ -108,7 +115,7 @@ public class AnswerActivity extends AppCompatActivity {
                 question.subject, question.difficulty));
         tvAnswerSource.setText(buildSourceLabel(question));
         tvQuestion.setText(question.questionText);
-        tvAnswer.setText(cleanStoredAnswer(question.answerText));
+        tvAnswer.setText(formatAnswerText(question.answerText));
 
         if (transientAnswer) {
             answerActions.setVisibility(View.GONE);
@@ -212,6 +219,63 @@ public class AnswerActivity extends AppCompatActivity {
                 .replace("__", "")
                 .replace("`", "")
                 .replaceAll("(?m)^\\s{0,3}#{1,6}\\s*", "");
+    }
+
+    private CharSequence formatAnswerText(String value) {
+        String cleaned = cleanStoredAnswer(value).trim();
+        if (cleaned.isEmpty()) return "";
+
+        SpannableStringBuilder formatted = new SpannableStringBuilder();
+        boolean firstContentLine = true;
+        int primary = ContextCompat.getColor(this, R.color.primary);
+        for (String rawLine : cleaned.split("\\R", -1)) {
+            String line = rawLine.trim();
+            if (firstContentLine && isRepeatedMetadata(line)) {
+                firstContentLine = false;
+                continue;
+            }
+            if (!line.isEmpty()) firstContentLine = false;
+            if (line.startsWith("- ")) {
+                line = "• " + line.substring(2).trim();
+            }
+
+            int start = formatted.length();
+            if (formatted.length() > 0) formatted.append('\n');
+            formatted.append(line);
+            int end = formatted.length();
+            if (isSectionHeading(line)) {
+                formatted.setSpan(new StyleSpan(Typeface.BOLD),
+                        start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                formatted.setSpan(new ForegroundColorSpan(primary),
+                        start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                formatted.setSpan(new RelativeSizeSpan(1.08f),
+                        start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+        while (formatted.length() > 0
+                && formatted.charAt(formatted.length() - 1) == '\n') {
+            formatted.delete(formatted.length() - 1, formatted.length());
+        }
+        return formatted;
+    }
+
+    private boolean isRepeatedMetadata(String line) {
+        return line.startsWith("Subject:") || line.startsWith("Môn học:");
+    }
+
+    private boolean isSectionHeading(String line) {
+        return "Answer".equals(line)
+                || "Câu trả lời".equals(line)
+                || "Step-by-step".equals(line)
+                || "Giải thích từng bước".equals(line)
+                || "In simple terms".equals(line)
+                || "Nói một cách đơn giản".equals(line)
+                || "Key concepts".equals(line)
+                || "Khái niệm chính".equals(line)
+                || "Common mistakes to avoid".equals(line)
+                || "Những lỗi thường gặp cần tránh".equals(line)
+                || "Follow-up questions to practise".equals(line)
+                || "Câu hỏi luyện tập thêm".equals(line);
     }
 
     private Question readTransientQuestion() {

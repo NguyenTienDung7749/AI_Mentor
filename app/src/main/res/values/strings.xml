@@ -34,7 +34,7 @@
     <string name="answer_loading">Loading saved answer…</string>
     <string name="offline_fallback_notice">Online AI was unavailable, so the app prepared temporary offline guidance. It was not saved.</string>
     <string name="subject">Subject</string>
-    <string name="scan_image">Choose image</string>
+    <string name="scan_image">Gallery</string>
     <string name="take_photo">Take photo</string>
     <string name="ocr_recognizing">Reading text from the image…</string>
     <string name="ocr_ready">Text extracted. Review and edit it before asking AI.</string>
@@ -217,6 +217,8 @@
     <string name="library_title">Your Library</string>
 
     <string name="practice_quizzes_title">Practice Quizzes</string>
+    <string name="quiz_progress_heading">Your quiz progress</string>
+    <string name="quiz_setup_heading">Create a practice quiz</string>
     <string name="practice_quiz_title">Practice quiz</string>
     <string name="quiz_personalized">Personalized (from history)</string>
     <string name="quiz_adaptive">Adaptive</string>

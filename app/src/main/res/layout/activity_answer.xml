@@ -5,14 +5,14 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <androidx.appcompat.widget.Toolbar
+    <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?actionBarSize"
         android:background="@color/surface"
-        android:elevation="4dp"
-        app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"
         app:navigationContentDescription="@string/close_screen"
+        app:navigationIcon="@drawable/ic_close_24"
+        app:navigationIconTint="@color/text_primary"
         app:title="@string/answer_title"
         app:titleTextColor="@color/text_primary" />
 
@@ -30,6 +30,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:clipToPadding="false"
         android:fillViewport="true"
         android:visibility="gone">
 
@@ -37,17 +38,17 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/screen_padding">
 
             <TextView
                 android:id="@+id/tvSubject"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="?attr/colorPrimaryContainer"
+                android:background="@drawable/bg_info_panel"
                 android:paddingHorizontal="12dp"
-                android:paddingVertical="4dp"
+                android:paddingVertical="6dp"
                 android:text="@string/subject"
-                android:textColor="?attr/colorOnPrimaryContainer"
+                android:textColor="@color/primary"
                 android:textStyle="bold" />
 
             <TextView
@@ -57,38 +58,57 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/answer_source_saved"
                 android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:textSize="12sp" />
 
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.AIMentor.Card.Highlight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/your_question"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvQuestion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:textIsSelectable="true"
+                        android:textSize="16sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.AIMentor.Card"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="@string/your_question"
-                android:textColor="@color/text_secondary"
-                android:textStyle="bold" />
+                android:layout_marginBottom="8dp">
 
-            <TextView
-                android:id="@+id/tvQuestion"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="@color/text_primary"
-                android:textSize="16sp" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginVertical="16dp"
-                android:background="@color/primary_light" />
-
-            <TextView
-                android:id="@+id/tvAnswer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/text_primary"
-                android:textSize="15sp"
-                android:lineSpacingMultiplier="1.15" />
+                <TextView
+                    android:id="@+id/tvAnswer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingExtra="2dp"
+                    android:lineSpacingMultiplier="1.2"
+                    android:padding="@dimen/card_padding"
+                    android:textColor="@color/text_primary"
+                    android:textIsSelectable="true"
+                    android:textSize="15sp" />
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
     </ScrollView>
 
@@ -96,18 +116,21 @@
         android:id="@+id/answerActions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/surface"
+        android:elevation="8dp"
         android:orientation="horizontal"
         android:padding="12dp"
-        android:background="@color/surface"
         android:visibility="gone">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBookmark"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.AIMentor.Button.Outlined"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/bookmark" />
+            android:text="@string/bookmark"
+            app:icon="@drawable/ic_bookmark_24"
+            app:iconGravity="textStart" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnReviewed"
@@ -115,6 +138,8 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:text="@string/mark_reviewed" />
+            android:text="@string/mark_reviewed"
+            app:icon="@drawable/ic_check_circle_24"
+            app:iconGravity="textStart" />
     </LinearLayout>
 </LinearLayout>

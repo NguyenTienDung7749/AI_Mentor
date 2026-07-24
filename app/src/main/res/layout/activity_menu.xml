@@ -12,12 +12,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <androidx.appcompat.widget.Toolbar
+        <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?actionBarSize"
             android:background="@color/surface"
-            android:elevation="4dp"
+            app:navigationIconTint="@color/text_primary"
             app:titleTextColor="@color/text_primary" />
 
         <com.google.android.material.bottomnavigation.BottomNavigationView
@@ -26,7 +26,9 @@
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:background="@color/surface"
+            android:elevation="8dp"
             app:itemIconTint="@color/bottom_nav_colors"
+            app:itemRippleColor="@color/primary_light"
             app:itemTextColor="@color/bottom_nav_colors"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/bottom_navigation" />
@@ -43,6 +45,7 @@
         android:id="@+id/drawerNavigation"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
+        android:background="@color/surface"
         android:layout_gravity="start"
         app:headerLayout="@layout/header_menu"
         app:itemIconTint="@color/primary"

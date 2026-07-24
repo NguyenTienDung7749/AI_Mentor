@@ -4,22 +4,21 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/screen_padding">
 
     <TextView
         android:id="@+id/tvLibraryHeading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/library_title"
-        android:textColor="@color/text_primary"
-        android:textSize="20sp"
-        android:textStyle="bold" />
+        android:textAppearance="@style/TextAppearance.AIMentor.ScreenTitle" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="@string/search_hint">
+        android:hint="@string/search_hint"
+        app:startIconDrawable="@drawable/ic_search_24">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etSearch"
@@ -32,9 +31,12 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_info_panel"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="4dp">
 
         <Spinner
             android:id="@+id/spSubjectFilter"
@@ -54,10 +56,10 @@
         android:id="@+id/tvSuggest"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@color/primary_light"
-        android:padding="10dp"
-        android:textColor="@color/text_primary"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_info_panel"
+        android:padding="12dp"
+        android:textColor="@color/text_secondary"
         android:textSize="13sp"
         android:visibility="gone" />
 
@@ -65,7 +67,7 @@
         android:id="@+id/rvHistory"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingBottom="8dp" />

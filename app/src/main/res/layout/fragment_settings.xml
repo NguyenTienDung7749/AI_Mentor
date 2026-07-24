@@ -9,20 +9,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/screen_padding">
 
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.AIMentor.Card.Highlight"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            android:layout_height="wrap_content">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/card_padding">
 
                 <TextView android:id="@+id/tvName" android:layout_width="wrap_content"
                     android:layout_height="wrap_content" android:text="@string/student_placeholder"
@@ -54,18 +52,16 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.AIMentor.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            android:layout_marginTop="@dimen/section_spacing">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="@dimen/card_padding">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -134,15 +130,24 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <TextView
-            android:id="@+id/tvPreferencesHeading"
-            android:layout_width="wrap_content"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.AIMentor.Card"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/learning_preferences"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:layout_marginTop="@dimen/section_spacing">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/card_padding">
+
+                <TextView
+                    android:id="@+id/tvPreferencesHeading"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/learning_preferences"
+                    android:textAppearance="@style/TextAppearance.AIMentor.SectionTitle" />
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:text="@string/education_level"
@@ -186,14 +191,26 @@
             android:layout_height="wrap_content"
             android:text="@string/dark_theme" />
 
-        <TextView
-            android:layout_width="wrap_content"
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.AIMentor.Card"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/study_reminders"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:layout_marginTop="@dimen/section_spacing">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/card_padding">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/study_reminders"
+                    android:textAppearance="@style/TextAppearance.AIMentor.SectionTitle" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchReminder"
@@ -204,11 +221,13 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnReminderTime"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.AIMentor.Button.Outlined"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/reminder_time_default" />
+            android:text="@string/reminder_time_default"
+            app:icon="@drawable/ic_schedule_24"
+            app:iconGravity="textStart" />
 
         <TextView
             android:id="@+id/tvReminderStatus"
@@ -221,20 +240,35 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRemind"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.AIMentor.Button.Outlined"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="@string/send_test_reminder" />
+            android:text="@string/send_test_reminder"
+            app:icon="@drawable/ic_notifications_24"
+            app:iconGravity="textStart" />
 
-        <TextView
-            android:layout_width="wrap_content"
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.AIMentor.Card"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/privacy_and_data"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:layout_marginTop="@dimen/section_spacing"
+            android:layout_marginBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/card_padding">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/privacy_and_data"
+                    android:textAppearance="@style/TextAppearance.AIMentor.SectionTitle" />
 
         <TextView
             android:layout_width="match_parent"
@@ -253,12 +287,14 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDeleteAccount"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.AIMentor.Button.Outlined"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/delete_account"
             android:textColor="@color/error"
             app:strokeColor="@color/error" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </ScrollView>
