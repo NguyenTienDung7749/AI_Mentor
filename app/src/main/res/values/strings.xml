@@ -11,9 +11,18 @@
     <string name="full_name">Full name (optional)</string>
     <string name="no_account">Don\'t have an account? Sign up</string>
     <string name="have_account">Already have an account? Log in</string>
+    <string name="login_welcome_title">Welcome back</string>
+    <string name="login_welcome_subtitle">Continue your questions, quizzes and learning streak.</string>
+    <string name="auth_prototype_notice">Classroom prototype • Use fictional study data only</string>
 
     <!-- Onboarding -->
-    <string name="onboarding_title">Let\'s personalise your learning</string>
+    <string name="onboarding_title">Make your mentor yours</string>
+    <string name="onboarding_subtitle">Three quick choices help tailor explanations and quizzes to your study goals.</string>
+    <string name="onboarding_step_label">1 minute setup</string>
+    <string name="onboarding_level_help">Choose the level that best matches your current course.</string>
+    <string name="onboarding_subject_help">Pick any subjects you want to prioritise. You can change these later.</string>
+    <string name="onboarding_style_help">Choose how much detail you prefer in a typical answer.</string>
+    <string name="onboarding_ready_note">Your choices are stored with this local classroom profile.</string>
     <string name="education_level">Education level</string>
     <string name="subjects_interest">Subjects of interest</string>
     <string name="explanation_style">Preferred explanation style</string>
@@ -212,7 +221,7 @@
     </string-array>
 
     <string name="create_account_title">Create your account</string>
-    <string name="create_account_subtitle">Join AI Study Mentor for free</string>
+    <string name="create_account_subtitle">Create a local classroom profile and start building your study history.</string>
     <string name="password_requirement">Use at least 8 characters with letters and numbers.</string>
     <string name="password_strength_strong">Strong password</string>
     <string name="password_strength_medium">Medium strength password</string>

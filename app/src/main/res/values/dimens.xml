@@ -12,4 +12,6 @@
     <dimen name="space_lg">16dp</dimen>
     <dimen name="space_xl">24dp</dimen>
     <dimen name="hero_corner_radius">28dp</dimen>
+    <dimen name="auth_screen_padding">20dp</dimen>
+    <dimen name="auth_vertical_padding">28dp</dimen>
 </resources>
