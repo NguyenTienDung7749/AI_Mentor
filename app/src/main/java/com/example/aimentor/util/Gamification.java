@@ -76,6 +76,7 @@ public final class Gamification {
     public static List<String> unlockedAccentThemes(int level) {
         List<String> themes = new ArrayList<>();
         themes.add("Indigo");
+        themes.add("Material You");
         if (level >= 3) themes.add("Ocean");
         if (level >= 5) themes.add("Forest");
         if (level >= 8) themes.add("Sunset");

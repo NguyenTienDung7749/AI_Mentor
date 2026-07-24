@@ -6,4 +6,12 @@
     <dimen name="control_corner_radius">16dp</dimen>
     <dimen name="section_spacing">20dp</dimen>
     <dimen name="button_min_height">52dp</dimen>
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_sm">8dp</dimen>
+    <dimen name="space_md">12dp</dimen>
+    <dimen name="space_lg">16dp</dimen>
+    <dimen name="space_xl">24dp</dimen>
+    <dimen name="space_2xl">32dp</dimen>
+    <dimen name="content_max_width">720dp</dimen>
+    <dimen name="hero_corner_radius">28dp</dimen>
 </resources>

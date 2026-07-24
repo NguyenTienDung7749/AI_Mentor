@@ -1,27 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#B9C3FF</color>
-    <color name="primary_dark">#242C61</color>
-    <color name="primary_light">#303A72</color>
-    <color name="accent">#62D4EA</color>
-    <color name="bg">#10111A</color>
-    <color name="surface">#1A1C27</color>
-    <color name="surface_variant">#242735</color>
-    <color name="outline">#414555</color>
-    <color name="text_primary">#F1F1F7</color>
-    <color name="text_secondary">#B8BCCA</color>
-    <color name="success">#81C784</color>
-    <color name="error">#EF9A9A</color>
-    <color name="error_container">#512124</color>
-    <color name="star">#FFD54F</color>
-    <color name="theme_on_primary">#10111A</color>
-    <color name="ocean_primary">#70D4F3</color>
-    <color name="ocean_primary_dark">#16495A</color>
-    <color name="ocean_container">#16495A</color>
-    <color name="forest_primary">#8ED69C</color>
-    <color name="forest_primary_dark">#254B2E</color>
-    <color name="forest_container">#254B2E</color>
+    <!-- Scholar Indigo dark palette. -->
+    <color name="primary">#C3C0FF</color>
+    <color name="primary_dark">#24234D</color>
+    <color name="primary_light">#37366B</color>
+    <color name="accent">#82D5C7</color>
+    <color name="bg">#121318</color>
+    <color name="surface">#121318</color>
+    <color name="surface_variant">#47464F</color>
+    <color name="outline">#928F99</color>
+    <color name="text_primary">#E5E1E9</color>
+    <color name="text_secondary">#C9C5D0</color>
+
+    <color name="scholar_secondary_container">#005047</color>
+    <color name="scholar_on_secondary_container">#9FF2E2</color>
+    <color name="scholar_tertiary">#F4BF48</color>
+    <color name="scholar_tertiary_container">#5C4300</color>
+    <color name="scholar_on_tertiary_container">#FFDEA3</color>
+
+    <color name="ocean_primary">#59D5F5</color>
+    <color name="ocean_primary_dark">#123F4B</color>
+    <color name="ocean_container">#004E60</color>
+    <color name="ocean_on_container">#B4EBFF</color>
+    <color name="ocean_secondary">#B2CAD3</color>
+    <color name="ocean_secondary_container">#334A52</color>
+    <color name="ocean_on_secondary_container">#CEE6F0</color>
+    <color name="ocean_tertiary">#C3C3EB</color>
+    <color name="ocean_tertiary_container">#424465</color>
+    <color name="ocean_on_tertiary_container">#E0E0FF</color>
+    <color name="ocean_bg">#0F1416</color>
+    <color name="ocean_surface_variant">#3F484C</color>
+    <color name="ocean_outline">#899297</color>
+    <color name="ocean_on_surface">#DEE3E5</color>
+    <color name="ocean_on_surface_variant">#BFC8CC</color>
+
+    <color name="forest_primary">#99D5A3</color>
+    <color name="forest_primary_dark">#173C24</color>
+    <color name="forest_container">#1B5130</color>
+    <color name="forest_on_container">#B5F2BD</color>
+    <color name="forest_secondary">#B8CCB6</color>
+    <color name="forest_secondary_container">#3A4B3A</color>
+    <color name="forest_on_secondary_container">#D4E8D1</color>
+    <color name="forest_tertiary">#A0CFD5</color>
+    <color name="forest_tertiary_container">#1E4D53</color>
+    <color name="forest_on_tertiary_container">#BCEBF1</color>
+    <color name="forest_bg">#111510</color>
+    <color name="forest_surface_variant">#43483F</color>
+    <color name="forest_outline">#8D9388</color>
+    <color name="forest_on_surface">#E1E4DD</color>
+    <color name="forest_on_surface_variant">#C3C9BE</color>
+
     <color name="sunset_primary">#FFB596</color>
-    <color name="sunset_primary_dark">#643523</color>
-    <color name="sunset_container">#643523</color>
+    <color name="sunset_primary_dark">#5B2B18</color>
+    <color name="sunset_container">#79300F</color>
+    <color name="sunset_on_container">#FFDBCD</color>
+    <color name="sunset_secondary">#E7BDB0</color>
+    <color name="sunset_secondary_container">#5E4036</color>
+    <color name="sunset_on_secondary_container">#FFDCCF</color>
+    <color name="sunset_tertiary">#D8C58D</color>
+    <color name="sunset_tertiary_container">#534619</color>
+    <color name="sunset_on_tertiary_container">#F5E1A7</color>
+    <color name="sunset_bg">#191210</color>
+    <color name="sunset_surface_variant">#53443F</color>
+    <color name="sunset_outline">#A08D86</color>
+    <color name="sunset_on_surface">#F0DFDA</color>
+    <color name="sunset_on_surface_variant">#D8C2BA</color>
+
+    <color name="success">#99D5A3</color>
+    <color name="success_container">#1B5130</color>
+    <color name="warning">#F4BF48</color>
+    <color name="warning_container">#5C4300</color>
+    <color name="error">#FFB4AB</color>
+    <color name="error_container">#93000A</color>
+    <color name="star">#F4BF48</color>
+    <color name="theme_on_primary">#172019</color>
 </resources>

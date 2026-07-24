@@ -1,23 +1,103 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <style name="Base.Theme.AIMentor" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
-        <item name="colorOnPrimary">@color/bg</item>
-        <item name="colorPrimaryContainer">@color/primary_dark</item>
-        <item name="colorOnPrimaryContainer">@color/white</item>
+        <item name="colorOnPrimary">@color/primary_dark</item>
+        <item name="colorPrimaryContainer">@color/primary_light</item>
+        <item name="colorOnPrimaryContainer">@color/primary</item>
         <item name="colorSecondary">@color/accent</item>
-        <item name="colorOnSecondary">@color/black</item>
+        <item name="colorOnSecondary">@color/primary_dark</item>
+        <item name="colorSecondaryContainer">@color/scholar_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/scholar_on_secondary_container</item>
+        <item name="colorTertiary">@color/scholar_tertiary</item>
+        <item name="colorOnTertiary">@color/primary_dark</item>
+        <item name="colorTertiaryContainer">@color/scholar_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/scholar_on_tertiary_container</item>
         <item name="android:colorBackground">@color/bg</item>
+        <item name="colorOnBackground">@color/text_primary</item>
         <item name="android:windowBackground">@color/bg</item>
         <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
         <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
         <item name="colorOutline">@color/outline</item>
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/error_container</item>
+        <item name="colorErrorContainer">@color/error_container</item>
+        <item name="colorOnErrorContainer">@color/error</item>
         <item name="android:statusBarColor">@color/bg</item>
         <item name="android:navigationBarColor">@color/bg</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="materialButtonStyle">@style/Widget.AIMentor.Button</item>
         <item name="materialCardViewStyle">@style/Widget.AIMentor.Card</item>
         <item name="textInputStyle">@style/Widget.AIMentor.TextInput</item>
+        <item name="bottomNavigationStyle">@style/Widget.AIMentor.BottomNavigation</item>
     </style>
 
     <style name="Theme.AIMentor" parent="Base.Theme.AIMentor" />
+
+    <style name="Theme.AIMentor.Ocean" parent="Base.Theme.AIMentor">
+        <item name="colorPrimary">@color/ocean_primary</item>
+        <item name="colorOnPrimary">@color/ocean_primary_dark</item>
+        <item name="colorPrimaryContainer">@color/ocean_container</item>
+        <item name="colorOnPrimaryContainer">@color/ocean_on_container</item>
+        <item name="colorSecondary">@color/ocean_secondary</item>
+        <item name="colorSecondaryContainer">@color/ocean_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/ocean_on_secondary_container</item>
+        <item name="colorTertiary">@color/ocean_tertiary</item>
+        <item name="colorTertiaryContainer">@color/ocean_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/ocean_on_tertiary_container</item>
+        <item name="android:colorBackground">@color/ocean_bg</item>
+        <item name="android:windowBackground">@color/ocean_bg</item>
+        <item name="colorSurface">@color/ocean_bg</item>
+        <item name="colorOnSurface">@color/ocean_on_surface</item>
+        <item name="colorSurfaceVariant">@color/ocean_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/ocean_on_surface_variant</item>
+        <item name="colorOutline">@color/ocean_outline</item>
+        <item name="android:statusBarColor">@color/ocean_bg</item>
+        <item name="android:navigationBarColor">@color/ocean_bg</item>
+    </style>
+
+    <style name="Theme.AIMentor.Forest" parent="Base.Theme.AIMentor">
+        <item name="colorPrimary">@color/forest_primary</item>
+        <item name="colorOnPrimary">@color/forest_primary_dark</item>
+        <item name="colorPrimaryContainer">@color/forest_container</item>
+        <item name="colorOnPrimaryContainer">@color/forest_on_container</item>
+        <item name="colorSecondary">@color/forest_secondary</item>
+        <item name="colorSecondaryContainer">@color/forest_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/forest_on_secondary_container</item>
+        <item name="colorTertiary">@color/forest_tertiary</item>
+        <item name="colorTertiaryContainer">@color/forest_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/forest_on_tertiary_container</item>
+        <item name="android:colorBackground">@color/forest_bg</item>
+        <item name="android:windowBackground">@color/forest_bg</item>
+        <item name="colorSurface">@color/forest_bg</item>
+        <item name="colorOnSurface">@color/forest_on_surface</item>
+        <item name="colorSurfaceVariant">@color/forest_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/forest_on_surface_variant</item>
+        <item name="colorOutline">@color/forest_outline</item>
+        <item name="android:statusBarColor">@color/forest_bg</item>
+        <item name="android:navigationBarColor">@color/forest_bg</item>
+    </style>
+
+    <style name="Theme.AIMentor.Sunset" parent="Base.Theme.AIMentor">
+        <item name="colorPrimary">@color/sunset_primary</item>
+        <item name="colorOnPrimary">@color/sunset_primary_dark</item>
+        <item name="colorPrimaryContainer">@color/sunset_container</item>
+        <item name="colorOnPrimaryContainer">@color/sunset_on_container</item>
+        <item name="colorSecondary">@color/sunset_secondary</item>
+        <item name="colorSecondaryContainer">@color/sunset_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/sunset_on_secondary_container</item>
+        <item name="colorTertiary">@color/sunset_tertiary</item>
+        <item name="colorTertiaryContainer">@color/sunset_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/sunset_on_tertiary_container</item>
+        <item name="android:colorBackground">@color/sunset_bg</item>
+        <item name="android:windowBackground">@color/sunset_bg</item>
+        <item name="colorSurface">@color/sunset_bg</item>
+        <item name="colorOnSurface">@color/sunset_on_surface</item>
+        <item name="colorSurfaceVariant">@color/sunset_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/sunset_on_surface_variant</item>
+        <item name="colorOutline">@color/sunset_outline</item>
+        <item name="android:statusBarColor">@color/sunset_bg</item>
+        <item name="android:navigationBarColor">@color/sunset_bg</item>
+    </style>
 </resources>

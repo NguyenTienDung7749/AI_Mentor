@@ -13,6 +13,7 @@ public class SessionManager {
     private static final String PREFS = "ai_mentor_session";
     private static final String KEY_USER_ID = "current_user_id";
     private static final String KEY_DARK_THEME = "dark_theme";
+    private static final String KEY_THEME_MODE = "theme_mode";
     private static final String KEY_REMINDER_ENABLED = "reminder_enabled";
     private static final String KEY_REMINDER_HOUR = "reminder_hour";
     private static final String KEY_REMINDER_MINUTE = "reminder_minute";
@@ -21,6 +22,9 @@ public class SessionManager {
 
     public static final int DEFAULT_REMINDER_HOUR = 19;
     public static final int DEFAULT_REMINDER_MINUTE = 0;
+    public static final int THEME_MODE_SYSTEM = 0;
+    public static final int THEME_MODE_LIGHT = 1;
+    public static final int THEME_MODE_DARK = 2;
 
     private final SharedPreferences prefs;
 
@@ -49,11 +53,33 @@ public class SessionManager {
     }
 
     public boolean isDarkTheme() {
-        return prefs.getBoolean(KEY_DARK_THEME, false);
+        return getThemeMode() == THEME_MODE_DARK;
     }
 
     public void setDarkTheme(boolean dark) {
-        prefs.edit().putBoolean(KEY_DARK_THEME, dark).apply();
+        setThemeMode(dark ? THEME_MODE_DARK : THEME_MODE_LIGHT);
+    }
+
+    /**
+     * Returns System/Light/Dark while preserving the old boolean preference for
+     * students who upgrade from an earlier classroom build.
+     */
+    public int getThemeMode() {
+        if (prefs.contains(KEY_THEME_MODE)) {
+            return clampThemeMode(prefs.getInt(KEY_THEME_MODE, THEME_MODE_SYSTEM));
+        }
+        if (prefs.contains(KEY_DARK_THEME)) {
+            return prefs.getBoolean(KEY_DARK_THEME, false)
+                    ? THEME_MODE_DARK : THEME_MODE_LIGHT;
+        }
+        return THEME_MODE_SYSTEM;
+    }
+
+    public void setThemeMode(int mode) {
+        prefs.edit()
+                .putInt(KEY_THEME_MODE, clampThemeMode(mode))
+                .remove(KEY_DARK_THEME)
+                .apply();
     }
 
     public boolean isReminderEnabled() {
@@ -103,5 +129,10 @@ public class SessionManager {
 
     private int clamp(int value, int minimum, int maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    private int clampThemeMode(int mode) {
+        if (mode == THEME_MODE_LIGHT || mode == THEME_MODE_DARK) return mode;
+        return THEME_MODE_SYSTEM;
     }
 }

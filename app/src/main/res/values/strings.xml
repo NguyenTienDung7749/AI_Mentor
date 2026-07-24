@@ -68,6 +68,10 @@
     <!-- Settings -->
     <string name="save_preferences">Save preferences</string>
     <string name="dark_theme">Dark theme</string>
+    <string name="display_mode">Display mode</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
     <string name="study_reminders">Study reminders</string>
     <string name="daily_study_reminder">Daily study reminder</string>
     <string name="reminder_choose_time">Choose reminder time</string>

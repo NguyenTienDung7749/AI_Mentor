@@ -39,6 +39,7 @@ import com.example.aimentor.util.ReminderScheduler;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.Gamification;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
@@ -71,7 +72,8 @@ public class SettingsFragment extends Fragment {
     private LinearLayout weeklyActivityContainer;
     private Spinner spLevel, spStyle, spAvatar, spAccentTheme;
     private CheckBox cbMath, cbScience, cbProgramming, cbHistory, cbLanguages;
-    private SwitchMaterial switchTheme, switchReminder;
+    private SwitchMaterial switchReminder;
+    private MaterialButtonToggleGroup themeModeGroup;
     private MaterialButton btnSavePrefs, btnDeleteAccount, btnReminderTime;
     private MaterialButton btnSaveAppearance;
     private TextView tvReminderStatus, tvUnlockStatus;
@@ -138,7 +140,7 @@ public class SettingsFragment extends Fragment {
         cbProgramming = view.findViewById(R.id.cbProgramming);
         cbHistory = view.findViewById(R.id.cbHistory);
         cbLanguages = view.findViewById(R.id.cbLanguages);
-        switchTheme = view.findViewById(R.id.switchTheme);
+        themeModeGroup = view.findViewById(R.id.themeModeGroup);
         switchReminder = view.findViewById(R.id.switchReminder);
         btnReminderTime = view.findViewById(R.id.btnReminderTime);
         tvReminderStatus = view.findViewById(R.id.tvReminderStatus);
@@ -154,12 +156,7 @@ public class SettingsFragment extends Fragment {
         spStyle.setAdapter(makeAdapter(Arrays.asList(
                 getResources().getStringArray(R.array.explanation_style_choices))));
 
-        switchTheme.setChecked(session.isDarkTheme());
-        switchTheme.setOnCheckedChangeListener((b, checked) -> {
-            session.setDarkTheme(checked);
-            AppCompatDelegate.setDefaultNightMode(checked
-                    ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
-        });
+        bindThemeMode();
 
         btnSavePrefs.setOnClickListener(v -> savePrefs());
         btnSaveAppearance.setOnClickListener(v -> saveAppearance());
@@ -193,6 +190,32 @@ public class SettingsFragment extends Fragment {
                 android.R.layout.simple_spinner_item, items);
         a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         return a;
+    }
+
+    private void bindThemeMode() {
+        int mode = session.getThemeMode();
+        int checkedId = R.id.btnThemeSystem;
+        if (mode == SessionManager.THEME_MODE_LIGHT) {
+            checkedId = R.id.btnThemeLight;
+        } else if (mode == SessionManager.THEME_MODE_DARK) {
+            checkedId = R.id.btnThemeDark;
+        }
+        themeModeGroup.check(checkedId);
+        themeModeGroup.addOnButtonCheckedListener((group, buttonId, isChecked) -> {
+            if (!isChecked) return;
+            int selectedMode = SessionManager.THEME_MODE_SYSTEM;
+            int nightMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+            if (buttonId == R.id.btnThemeLight) {
+                selectedMode = SessionManager.THEME_MODE_LIGHT;
+                nightMode = AppCompatDelegate.MODE_NIGHT_NO;
+            } else if (buttonId == R.id.btnThemeDark) {
+                selectedMode = SessionManager.THEME_MODE_DARK;
+                nightMode = AppCompatDelegate.MODE_NIGHT_YES;
+            }
+            if (session.getThemeMode() == selectedMode) return;
+            session.setThemeMode(selectedMode);
+            AppCompatDelegate.setDefaultNightMode(nightMode);
+        });
     }
 
     private void loadUser() {
