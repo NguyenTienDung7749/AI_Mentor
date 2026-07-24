@@ -60,6 +60,7 @@ dependencies {
     implementation libs.okhttp.dnsoverhttps
     implementation libs.gson
     implementation libs.mlkit.text.recognition
+    implementation libs.work.runtime
     annotationProcessor libs.room.compiler
     testImplementation libs.junit
     testImplementation libs.mockwebserver

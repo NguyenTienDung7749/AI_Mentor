@@ -1,6 +1,9 @@
 package com.example.aimentor.Fragments;
 
+import android.Manifest;
+import android.app.TimePickerDialog;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.LayoutInflater;
@@ -15,6 +18,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -30,6 +35,7 @@ import com.example.aimentor.data.User;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.NotificationHelper;
+import com.example.aimentor.util.ReminderScheduler;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -63,10 +69,28 @@ public class SettingsFragment extends Fragment {
     private LinearLayout weeklyActivityContainer;
     private Spinner spLevel, spStyle;
     private CheckBox cbMath, cbScience, cbProgramming, cbHistory, cbLanguages;
-    private SwitchMaterial switchTheme;
-    private MaterialButton btnSavePrefs, btnDeleteAccount;
+    private SwitchMaterial switchTheme, switchReminder;
+    private MaterialButton btnSavePrefs, btnDeleteAccount, btnReminderTime;
+    private TextView tvReminderStatus;
     private int loadGeneration;
     private int mutationGeneration;
+    private boolean bindingReminderState;
+
+    private final ActivityResultLauncher<String> enableReminderPermission =
+            registerForActivityResult(
+                    new ActivityResultContracts.RequestPermission(),
+                    this::handleEnableReminderPermission);
+    private final ActivityResultLauncher<String> testReminderPermission =
+            registerForActivityResult(
+                    new ActivityResultContracts.RequestPermission(),
+                    granted -> {
+                        if (!canRenderReminderAction()) return;
+                        if (granted) {
+                            sendReminderNow();
+                        } else {
+                            showReminderPermissionNeeded();
+                        }
+                    });
 
     public SettingsFragment() { }
 
@@ -103,6 +127,9 @@ public class SettingsFragment extends Fragment {
         cbHistory = view.findViewById(R.id.cbHistory);
         cbLanguages = view.findViewById(R.id.cbLanguages);
         switchTheme = view.findViewById(R.id.switchTheme);
+        switchReminder = view.findViewById(R.id.switchReminder);
+        btnReminderTime = view.findViewById(R.id.btnReminderTime);
+        tvReminderStatus = view.findViewById(R.id.tvReminderStatus);
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvPreferencesHeading), true);
         btnSavePrefs = view.findViewById(R.id.btnSavePrefs);
@@ -124,13 +151,27 @@ public class SettingsFragment extends Fragment {
 
         btnSavePrefs.setOnClickListener(v -> savePrefs());
         btnRemind.setOnClickListener(v -> sendReminder());
+        switchReminder.setOnCheckedChangeListener((button, checked) -> {
+            if (bindingReminderState) return;
+            if (checked) {
+                requestReminderPermissionOrEnable();
+            } else {
+                ReminderScheduler.disable(requireContext());
+                bindReminderState();
+                Toast.makeText(requireContext(),
+                        R.string.reminder_disabled, Toast.LENGTH_SHORT).show();
+            }
+        });
+        btnReminderTime.setOnClickListener(v -> chooseReminderTime());
         btnLogout.setOnClickListener(v -> logout());
         btnDeleteAccount.setOnClickListener(v -> showDeleteAccountDialog());
+        bindReminderState();
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        bindReminderState();
         loadUser();
     }
 
@@ -356,8 +397,17 @@ public class SettingsFragment extends Fragment {
     }
 
     private void sendReminder() {
-        boolean posted = NotificationHelper.notify(requireContext(),
-                getString(R.string.reminder_title),
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && !NotificationHelper.hasRuntimePermission(requireContext())) {
+            testReminderPermission.launch(Manifest.permission.POST_NOTIFICATIONS);
+            return;
+        }
+        sendReminderNow();
+    }
+
+    private void sendReminderNow() {
+        boolean posted = NotificationHelper.notifyDailyReminder(
+                requireContext(), getString(R.string.reminder_title),
                 getString(R.string.reminder_body));
         Toast.makeText(requireContext(),
                 posted ? R.string.reminder_sent
@@ -365,7 +415,105 @@ public class SettingsFragment extends Fragment {
                 Toast.LENGTH_SHORT).show();
     }
 
+    private void requestReminderPermissionOrEnable() {
+        NotificationHelper.ensureChannel(requireContext());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && !NotificationHelper.hasRuntimePermission(requireContext())) {
+            enableReminderPermission.launch(Manifest.permission.POST_NOTIFICATIONS);
+            return;
+        }
+        enableReminder();
+    }
+
+    private void handleEnableReminderPermission(boolean granted) {
+        if (!canRenderReminderAction()) return;
+        if (granted) {
+            enableReminder();
+        } else {
+            setReminderSwitchChecked(false);
+            ReminderScheduler.disable(requireContext());
+            showReminderPermissionNeeded();
+        }
+    }
+
+    private void enableReminder() {
+        if (!NotificationHelper.canPostNotifications(requireContext())) {
+            setReminderSwitchChecked(false);
+            ReminderScheduler.disable(requireContext());
+            showReminderPermissionNeeded();
+            return;
+        }
+        ReminderScheduler.enable(requireContext(),
+                session.getReminderHour(), session.getReminderMinute());
+        bindReminderState();
+        Toast.makeText(requireContext(),
+                R.string.reminder_enabled, Toast.LENGTH_SHORT).show();
+    }
+
+    private void chooseReminderTime() {
+        TimePickerDialog dialog = new TimePickerDialog(
+                requireContext(),
+                (view, hour, minute) -> {
+                    session.setReminderTime(hour, minute);
+                    if (session.isReminderEnabled()) {
+                        ReminderScheduler.reschedule(
+                                requireContext(), hour, minute);
+                    }
+                    bindReminderState();
+                },
+                session.getReminderHour(),
+                session.getReminderMinute(),
+                android.text.format.DateFormat.is24HourFormat(requireContext()));
+        dialog.setTitle(R.string.reminder_choose_time);
+        dialog.show();
+    }
+
+    private void bindReminderState() {
+        if (switchReminder == null || btnReminderTime == null
+                || tvReminderStatus == null || session == null) {
+            return;
+        }
+        boolean enabled = session.isReminderEnabled();
+        setReminderSwitchChecked(enabled);
+        String displayTime = formattedReminderTime();
+        btnReminderTime.setText(
+                getString(R.string.reminder_time_button, displayTime));
+        if (enabled && !NotificationHelper.canPostNotifications(requireContext())) {
+            tvReminderStatus.setText(R.string.reminder_permission_needed);
+        } else {
+            tvReminderStatus.setText(enabled
+                    ? getString(R.string.reminder_schedule_status, displayTime)
+                    : getString(R.string.reminder_schedule_off));
+        }
+    }
+
+    private String formattedReminderTime() {
+        java.util.Calendar time = java.util.Calendar.getInstance();
+        time.set(java.util.Calendar.HOUR_OF_DAY, session.getReminderHour());
+        time.set(java.util.Calendar.MINUTE, session.getReminderMinute());
+        return android.text.format.DateFormat
+                .getTimeFormat(requireContext()).format(time.getTime());
+    }
+
+    private void setReminderSwitchChecked(boolean checked) {
+        bindingReminderState = true;
+        switchReminder.setChecked(checked);
+        bindingReminderState = false;
+    }
+
+    private boolean canRenderReminderAction() {
+        return isAdded() && getView() != null
+                && getViewLifecycleOwner().getLifecycle().getCurrentState()
+                .isAtLeast(Lifecycle.State.STARTED);
+    }
+
+    private void showReminderPermissionNeeded() {
+        Toast.makeText(requireContext(),
+                R.string.reminder_permission_needed, Toast.LENGTH_LONG).show();
+    }
+
     private void logout() {
+        ReminderScheduler.disable(requireContext());
         session.logout();
         navigateToLogin();
     }
@@ -399,7 +547,10 @@ public class SettingsFragment extends Fragment {
                     setMutationActionsEnabled(false);
                     userRepository.deleteAccountAsync(
                             session.getCurrentUserId(), password, result -> {
-                                if (result.success) session.logout();
+                                if (result.success) {
+                                    ReminderScheduler.disable(requireContext());
+                                    session.logout();
+                                }
                                 if (!canRenderMutation(generation)) return;
                                 if (!result.success) {
                                     passwordInput.setEnabled(true);

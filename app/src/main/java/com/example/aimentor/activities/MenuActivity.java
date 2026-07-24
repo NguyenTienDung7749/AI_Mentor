@@ -1,8 +1,6 @@
 package com.example.aimentor.activities;
 
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.MenuItem;
 
@@ -12,7 +10,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.ActivityCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.viewpager2.widget.ViewPager2;
@@ -20,6 +17,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.example.aimentor.R;
 import com.example.aimentor.adapters.ViewPagerAdapter;
 import com.example.aimentor.util.NotificationHelper;
+import com.example.aimentor.util.ReminderScheduler;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationView;
@@ -71,7 +69,7 @@ public class MenuActivity extends AppCompatActivity
         clickTabNavigation();
 
         NotificationHelper.ensureChannel(this);
-        requestNotificationPermissionIfNeeded();
+        ReminderScheduler.ensureScheduled(this);
 
         // Modern back handling: close the drawer first, otherwise let the system handle back.
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -85,16 +83,6 @@ public class MenuActivity extends AppCompatActivity
                 }
             }
         });
-    }
-
-    private void requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                && ActivityCompat.checkSelfPermission(this,
-                        android.Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 101);
-        }
     }
 
     private void clickTabNavigation() {
@@ -144,6 +132,7 @@ public class MenuActivity extends AppCompatActivity
     }
 
     private void logout() {
+        ReminderScheduler.disable(this);
         new SessionManager(this).logout();
         Intent login = new Intent(this, LoginActivity.class);
         login.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

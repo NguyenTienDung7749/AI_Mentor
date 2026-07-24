@@ -65,7 +65,14 @@
     <!-- Settings -->
     <string name="save_preferences">Save preferences</string>
     <string name="dark_theme">Dark theme</string>
-    <string name="send_reminder">Send me a review reminder</string>
+    <string name="study_reminders">Study reminders</string>
+    <string name="daily_study_reminder">Daily study reminder</string>
+    <string name="reminder_choose_time">Choose reminder time</string>
+    <string name="reminder_time_default">Reminder time: 7:00 PM</string>
+    <string name="reminder_time_button">Reminder time: %1$s</string>
+    <string name="reminder_schedule_off">Daily reminder is off.</string>
+    <string name="reminder_schedule_status">Scheduled around %1$s each day. Android may delay it slightly to save battery.</string>
+    <string name="send_test_reminder">Send test reminder now</string>
     <string name="logout">Log out</string>
     <string name="privacy_and_data">Privacy and data</string>
     <string name="demo_privacy_notice">Classroom prototype: use fictional study data only. Questions and learning preferences (education level, explanation style and subject interests) are sent to Groq to personalize answers. Successful online questions and answers are stored locally; email and password are not sent. OCR runs on-device, offline fallback answers are not saved, and app data is excluded from Android backup.</string>
@@ -263,8 +270,12 @@
     <string name="preferences_saved">Preferences saved.</string>
     <string name="reminder_sent">Reminder sent to your notifications.</string>
     <string name="reminder_permission_needed">Enable notifications to receive reminders.</string>
+    <string name="reminder_enabled">Daily study reminder enabled.</string>
+    <string name="reminder_disabled">Daily study reminder disabled.</string>
     <string name="reminder_title">Time to review!</string>
     <string name="reminder_body">Revisit your bookmarked answers and try a quick practice quiz today.</string>
+    <string name="notification_channel_name">Study reminders</string>
+    <string name="notification_channel_description">Study reminders and progress alerts from AI Study Mentor</string>
 
     <string name="answer_not_found">Answer not found.</string>
     <string name="answer_subject_difficulty">%1$s  |  %2$s</string>
