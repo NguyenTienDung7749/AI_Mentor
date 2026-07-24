@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">AI Study Mentor</string>
-    <string name="open_nav">Open</string>
-    <string name="close_nav">Close</string>
 
     <!-- Auth -->
     <string name="login">Log in</string>
@@ -67,7 +65,6 @@
 
     <!-- Settings -->
     <string name="save_preferences">Save preferences</string>
-    <string name="dark_theme">Dark theme</string>
     <string name="display_mode">Display mode</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
@@ -171,11 +168,8 @@
     <string name="reviewed">Reviewed</string>
     <!-- Batch 8: localized UI labels and accessibility text -->
     <string name="app_tagline">Ask. Learn. Level up.</string>
-    <string name="app_logo_description">AI Study Mentor logo</string>
     <string name="close_screen">Close screen</string>
     <string name="done">Done</string>
-    <string name="menu_others">Others</string>
-    <string name="menu_account">Account</string>
 
     <string name="subject_auto">Auto</string>
     <string name="subject_all">All subjects</string>
@@ -231,12 +225,24 @@
     <string name="account_created">Account created! Let’s set up your profile.</string>
 
     <string name="ask_section_title">Ask a question</string>
+    <string name="ask_section_subtitle">Get a clear explanation, work from a photo, or continue a topic you are studying.</string>
+    <string name="add_from_notes">Add from your notes</string>
+    <string name="home_dashboard_eyebrow">Your study space</string>
+    <string name="home_snapshot_title">Learning snapshot</string>
+    <string name="home_questions_stat">Saved answers</string>
+    <string name="home_accuracy_stat">Quiz accuracy</string>
+    <string name="home_quizzes_stat">Quizzes</string>
+    <string name="study_insight">Study insight</string>
+    <string name="home_no_insight">Start with a question or a short quiz to build your learning insight.</string>
+    <string name="stat_zero">0</string>
+    <string name="stat_zero_percent">0%</string>
+    <string name="stat_number">%1$d</string>
+    <string name="stat_percent">%1$d%%</string>
     <string name="default_student_name">there</string>
     <string name="home_greeting">Hi, %1$s!</string>
     <string name="level_summary">Level %1$d — %2$s</string>
     <string name="level_summary_with_xp">Level %1$d — %2$s (%3$d XP)</string>
     <string name="home_xp_progress">%1$d XP (%2$d to next level)</string>
-    <string name="home_stats">Questions asked: %1$d  •  Quiz accuracy: %2$d%%</string>
     <string name="level_progress_description">Progress for level %1$d: %2$d of %3$d XP</string>
     <string name="level_up_toast">Level up! Keep learning.</string>
     <string name="level_up_notification_title">Level up!</string>
@@ -245,7 +251,6 @@
     <string name="home_greeting_initial">Welcome!</string>
     <string name="home_level_initial">Level 1 — Beginner</string>
     <string name="home_xp_initial">0 XP</string>
-    <string name="home_stats_initial">Questions asked: 0  •  Quiz accuracy: 0%</string>
 
     <string name="library_title">Your Library</string>
 

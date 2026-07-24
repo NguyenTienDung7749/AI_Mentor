@@ -8,10 +8,9 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AutoCompleteTextView;
 import android.widget.ArrayAdapter;
-import android.widget.AdapterView;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,6 +34,7 @@ import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.Gamification;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.IOException;
@@ -52,10 +52,11 @@ public class HomeFragment extends Fragment {
     private SessionManager session;
     private HomeUiStateViewModel uiState;
 
-    private TextView tvGreeting, tvLevelTitle, tvXp, tvStats, tvInsights, tvHomeAvatar;
+    private TextView tvGreeting, tvLevelTitle, tvXp, tvInsights, tvHomeAvatar;
+    private TextView tvQuestionsStat, tvAccuracyStat, tvQuizStat;
     private ProgressBar progressXp;
     private ProgressBar progressAsk;
-    private Spinner spSubject;
+    private AutoCompleteTextView spSubject;
     private TextInputEditText etQuestion;
     private MaterialButton btnAsk, btnChooseImage, btnTakePhoto;
     private ProgressBar progressOcr;
@@ -102,7 +103,9 @@ public class HomeFragment extends Fragment {
         tvHomeAvatar = view.findViewById(R.id.tvHomeAvatar);
         tvLevelTitle = view.findViewById(R.id.tvLevelTitle);
         tvXp = view.findViewById(R.id.tvXp);
-        tvStats = view.findViewById(R.id.tvStats);
+        tvQuestionsStat = view.findViewById(R.id.tvQuestionsStat);
+        tvAccuracyStat = view.findViewById(R.id.tvAccuracyStat);
+        tvQuizStat = view.findViewById(R.id.tvQuizStat);
         tvInsights = view.findViewById(R.id.tvInsights);
         progressXp = view.findViewById(R.id.progressXp);
         spSubject = view.findViewById(R.id.spSubject);
@@ -117,17 +120,19 @@ public class HomeFragment extends Fragment {
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvAskHeading), true);
 
+        String[] subjectLabels = getResources().getStringArray(R.array.subject_choices);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_item,
-                getResources().getStringArray(R.array.subject_choices));
+                subjectLabels);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spSubject.setAdapter(adapter);
 
         String restoredDraft = uiState.getQuestionDraft();
         etQuestion.setText(restoredDraft);
         etQuestion.setSelection(restoredDraft.length());
-        spSubject.setSelection(Math.max(0,
-                Math.min(uiState.getSubjectPosition(), SUBJECT_VALUES.length - 1)));
+        int restoredSubject = Math.max(0,
+                Math.min(uiState.getSubjectPosition(), SUBJECT_VALUES.length - 1));
+        spSubject.setText(subjectLabels[restoredSubject], false);
         etQuestion.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -140,16 +145,8 @@ public class HomeFragment extends Fragment {
             @Override
             public void afterTextChanged(Editable s) { }
         });
-        spSubject.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View selectedView,
-                                       int position, long id) {
-                uiState.setSubjectPosition(position);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) { }
-        });
+        spSubject.setOnItemClickListener((parent, selectedView, position, id) ->
+                uiState.setSubjectPosition(position));
 
         btnAsk.setOnClickListener(v -> ask());
         btnChooseImage.setOnClickListener(v -> chooseImage());
@@ -189,7 +186,7 @@ public class HomeFragment extends Fragment {
         if (uiState.isAsking() || uiState.isScanning()) return;
 
         String question = etQuestion.getText() == null ? "" : etQuestion.getText().toString().trim();
-        int selectedSubject = spSubject.getSelectedItemPosition();
+        int selectedSubject = uiState.getSubjectPosition();
         String subjectHint = SUBJECT_VALUES[Math.max(0,
                 Math.min(selectedSubject, SUBJECT_VALUES.length - 1))];
 
@@ -217,7 +214,8 @@ public class HomeFragment extends Fragment {
             String message = result.message == null || result.message.trim().isEmpty()
                     ? getString(R.string.answer_error_default) : result.message;
             tvAskStatus.setText(message);
-            tvAskStatus.setTextColor(requireContext().getColor(R.color.error));
+            tvAskStatus.setTextColor(MaterialColors.getColor(
+                    tvAskStatus, com.google.android.material.R.attr.colorError));
             tvAskStatus.setVisibility(View.VISIBLE);
             tvAskStatus.announceForAccessibility(message);
             Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show();
@@ -246,7 +244,9 @@ public class HomeFragment extends Fragment {
         tvAskStatus.setVisibility(asking ? View.VISIBLE : View.GONE);
         if (asking) {
             tvAskStatus.setText(R.string.preparing_answer);
-            tvAskStatus.setTextColor(requireContext().getColor(R.color.text_secondary));
+            tvAskStatus.setTextColor(MaterialColors.getColor(
+                    tvAskStatus,
+                    com.google.android.material.R.attr.colorOnSurfaceVariant));
         }
     }
 
@@ -312,7 +312,6 @@ public class HomeFragment extends Fragment {
         if (uiState == null || etQuestion == null) return;
         uiState.setQuestionDraft(etQuestion.getText() == null
                 ? "" : etQuestion.getText().toString());
-        uiState.setSubjectPosition(spSubject.getSelectedItemPosition());
     }
 
     @Override
@@ -360,11 +359,17 @@ public class HomeFragment extends Fragment {
                 p.level, p.xpIntoLevel,
                 com.example.aimentor.util.Gamification.XP_PER_LEVEL));
         tvXp.setText(getString(R.string.home_xp_progress, p.xp, p.xpToNext));
-        tvStats.setText(getString(
-                R.string.home_stats, p.totalQuestions, p.accuracyPercent));
+        tvQuestionsStat.setText(getString(
+                R.string.stat_number, p.totalQuestions));
+        tvAccuracyStat.setText(getString(
+                R.string.stat_percent, p.accuracyPercent));
+        tvQuizStat.setText(getString(
+                R.string.stat_number, p.quizzesCompleted));
 
         StringBuilder insights = new StringBuilder();
         for (String s : p.insights) insights.append("\u2022 ").append(s).append("\n");
-        tvInsights.setText(insights.toString().trim());
+        tvInsights.setText(insights.length() == 0
+                ? getString(R.string.home_no_insight)
+                : insights.toString().trim());
     }
 }

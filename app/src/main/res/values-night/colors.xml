@@ -67,11 +67,7 @@
     <color name="sunset_on_surface_variant">#D8C2BA</color>
 
     <color name="success">#99D5A3</color>
-    <color name="success_container">#1B5130</color>
-    <color name="warning">#F4BF48</color>
-    <color name="warning_container">#5C4300</color>
     <color name="error">#FFB4AB</color>
     <color name="error_container">#93000A</color>
     <color name="star">#F4BF48</color>
-    <color name="theme_on_primary">#172019</color>
 </resources>

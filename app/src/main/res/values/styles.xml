@@ -50,15 +50,6 @@
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
-    <style name="TextAppearance.AIMentor.Display" parent="TextAppearance.Material3.HeadlineMedium">
-        <item name="android:textColor">?attr/colorOnSurface</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
-    <style name="TextAppearance.AIMentor.Body" parent="TextAppearance.Material3.BodyLarge">
-        <item name="android:textColor">?attr/colorOnSurface</item>
-    </style>
-
     <style name="TextAppearance.AIMentor.Supporting" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>

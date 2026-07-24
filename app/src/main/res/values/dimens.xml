@@ -11,7 +11,5 @@
     <dimen name="space_md">12dp</dimen>
     <dimen name="space_lg">16dp</dimen>
     <dimen name="space_xl">24dp</dimen>
-    <dimen name="space_2xl">32dp</dimen>
-    <dimen name="content_max_width">720dp</dimen>
     <dimen name="hero_corner_radius">28dp</dimen>
 </resources>
