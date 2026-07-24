@@ -20,10 +20,8 @@ import androidx.annotation.Nullable;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.core.content.FileProvider;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.aimentor.R;
@@ -36,21 +34,11 @@ import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.mlkit.vision.common.InputImage;
-import com.google.mlkit.vision.text.TextRecognition;
-import com.google.mlkit.vision.text.TextRecognizer;
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
-import java.io.File;
 import java.io.IOException;
+
 public class HomeFragment extends Fragment {
 
-    private static final String STATE_CAMERA_URI = "ocr_camera_uri";
-    private static final String STATE_CAMERA_FILE = "ocr_camera_file";
-    private static final String STATE_QUESTION_DRAFT = "question_draft";
-    private static final String STATE_SUBJECT_POSITION = "subject_position";
-    private static final String STATE_OCR_STATUS = "ocr_status";
-    private static final String STATE_OCR_STATUS_VISIBLE = "ocr_status_visible";
     private static final String[] SUBJECT_VALUES = {
             "Auto", SubjectClassifier.MATH, SubjectClassifier.SCIENCE,
             SubjectClassifier.PROGRAMMING, SubjectClassifier.HISTORY,
@@ -70,24 +58,22 @@ public class HomeFragment extends Fragment {
     private MaterialButton btnAsk, btnChooseImage, btnTakePhoto;
     private ProgressBar progressOcr;
     private TextView tvAskStatus, tvOcrStatus;
-    private boolean isAsking;
-    private boolean isScanning;
-    private Uri pendingCameraUri;
-    private File pendingCameraFile;
 
     private final ActivityResultLauncher<PickVisualMediaRequest> imagePicker =
             registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
-                if (uri != null) {
-                    recognizeText(uri, false);
+                if (uri != null && uiState != null) {
+                    uiState.recognizeText(uri, false);
                 }
             });
 
     private final ActivityResultLauncher<Uri> cameraLauncher =
             registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+                if (uiState == null) return;
+                Uri pendingCameraUri = uiState.getPendingCameraUri();
                 if (success && pendingCameraUri != null) {
-                    recognizeText(pendingCameraUri, true);
+                    uiState.recognizeText(pendingCameraUri, true);
                 } else {
-                    deletePendingCameraFile();
+                    uiState.deletePendingCameraFile();
                 }
             });
 
@@ -106,7 +92,7 @@ public class HomeFragment extends Fragment {
         studyRepository = new StudyRepository(requireContext());
         userRepository = new UserRepository(requireContext());
         session = new SessionManager(requireContext());
-        uiState = new ViewModelProvider(requireActivity())
+        uiState = new ViewModelProvider(this)
                 .get(HomeUiStateViewModel.class);
 
         tvGreeting = view.findViewById(R.id.tvGreeting);
@@ -127,40 +113,17 @@ public class HomeFragment extends Fragment {
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvAskHeading), true);
 
-        if (savedInstanceState != null) {
-            String cameraUri = savedInstanceState.getString(STATE_CAMERA_URI);
-            String cameraFile = savedInstanceState.getString(STATE_CAMERA_FILE);
-            if (cameraUri != null) pendingCameraUri = Uri.parse(cameraUri);
-            if (cameraFile != null) pendingCameraFile = new File(cameraFile);
-        }
-
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_item,
                 getResources().getStringArray(R.array.subject_choices));
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spSubject.setAdapter(adapter);
 
-        if (savedInstanceState != null) {
-            if (uiState.getQuestionDraft().isEmpty()) {
-                uiState.setQuestionDraft(
-                        savedInstanceState.getString(STATE_QUESTION_DRAFT, ""));
-            }
-            uiState.setSubjectPosition(savedInstanceState.getInt(
-                    STATE_SUBJECT_POSITION, uiState.getSubjectPosition()));
-            CharSequence savedOcrStatus =
-                    savedInstanceState.getCharSequence(STATE_OCR_STATUS);
-            if (savedOcrStatus != null) uiState.setOcrStatus(savedOcrStatus);
-            uiState.setOcrStatusVisible(savedInstanceState.getBoolean(
-                    STATE_OCR_STATUS_VISIBLE, uiState.isOcrStatusVisible()));
-        }
         String restoredDraft = uiState.getQuestionDraft();
         etQuestion.setText(restoredDraft);
         etQuestion.setSelection(restoredDraft.length());
         spSubject.setSelection(Math.max(0,
                 Math.min(uiState.getSubjectPosition(), SUBJECT_VALUES.length - 1)));
-        tvOcrStatus.setText(uiState.getOcrStatus());
-        tvOcrStatus.setVisibility(
-                uiState.isOcrStatusVisible() ? View.VISIBLE : View.GONE);
         etQuestion.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -187,137 +150,64 @@ public class HomeFragment extends Fragment {
         btnAsk.setOnClickListener(v -> ask());
         btnChooseImage.setOnClickListener(v -> chooseImage());
         btnTakePhoto.setOnClickListener(v -> takePhoto());
+        uiState.getAskState().observe(
+                getViewLifecycleOwner(), this::renderAskState);
+        uiState.getOcrState().observe(
+                getViewLifecycleOwner(), this::renderOcrState);
     }
 
     private void chooseImage() {
-        if (isAsking || isScanning) return;
+        if (uiState.isAsking() || uiState.isScanning()) return;
         imagePicker.launch(new PickVisualMediaRequest.Builder()
                 .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
                 .build());
     }
 
     private void takePhoto() {
-        if (isAsking || isScanning) return;
+        if (uiState.isAsking() || uiState.isScanning()) return;
         try {
-            File imageDirectory = new File(requireContext().getCacheDir(), "ocr");
-            if (!imageDirectory.exists() && !imageDirectory.mkdirs()) {
-                throw new IOException("Unable to create OCR cache directory");
-            }
-            pendingCameraFile = File.createTempFile(
-                    "study_question_", ".jpg", imageDirectory);
-            pendingCameraUri = FileProvider.getUriForFile(
-                    requireContext(),
-                    requireContext().getPackageName() + ".fileprovider",
-                    pendingCameraFile);
-            cameraLauncher.launch(pendingCameraUri);
+            cameraLauncher.launch(uiState.prepareCameraCapture());
         } catch (RuntimeException | IOException error) {
-            deletePendingCameraFile();
+            uiState.deletePendingCameraFile();
             Toast.makeText(requireContext(), R.string.camera_failed,
                     Toast.LENGTH_LONG).show();
         }
     }
 
-    private void recognizeText(@NonNull Uri imageUri, boolean deleteAfterReading) {
-        if (!isAdded()) return;
-        setScanning(true);
-        tvOcrStatus.setText(R.string.ocr_recognizing);
-        tvOcrStatus.setVisibility(View.VISIBLE);
-
-        InputImage image;
-        try {
-            image = InputImage.fromFilePath(requireContext(), imageUri);
-        } catch (IOException error) {
-            finishOcrWithError(deleteAfterReading);
-            return;
-        }
-
-        TextRecognizer recognizer = TextRecognition.getClient(
-                TextRecognizerOptions.DEFAULT_OPTIONS);
-        recognizer.process(image)
-                .addOnSuccessListener(result -> {
-                    if (!isAdded() || getView() == null) return;
-                    String extracted = result.getText() == null
-                            ? "" : result.getText().trim();
-                    if (extracted.isEmpty()) {
-                        tvOcrStatus.setText(R.string.ocr_no_text);
-                        Toast.makeText(requireContext(), R.string.ocr_no_text,
-                                Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    etQuestion.setText(extracted);
-                    etQuestion.setSelection(extracted.length());
-                    tvOcrStatus.setText(R.string.ocr_ready);
-                    etQuestion.requestFocus();
-                })
-                .addOnFailureListener(error -> {
-                    if (!isAdded() || getView() == null) return;
-                    tvOcrStatus.setText(R.string.ocr_failed);
-                    Toast.makeText(requireContext(), R.string.ocr_failed,
-                            Toast.LENGTH_LONG).show();
-                })
-                .addOnCompleteListener(task -> {
-                    recognizer.close();
-                    if (deleteAfterReading) deletePendingCameraFile();
-                    if (isAdded() && getView() != null) {
-                        setScanning(false);
-                    } else {
-                        isScanning = false;
-                    }
-                });
-    }
-
-    private void finishOcrWithError(boolean deleteAfterReading) {
-        if (deleteAfterReading) deletePendingCameraFile();
-        setScanning(false);
-        tvOcrStatus.setText(R.string.ocr_failed);
-        tvOcrStatus.setVisibility(View.VISIBLE);
-        Toast.makeText(requireContext(), R.string.ocr_failed,
-                Toast.LENGTH_LONG).show();
-    }
-
-    private void setScanning(boolean scanning) {
-        isScanning = scanning;
-        progressOcr.setVisibility(scanning ? View.VISIBLE : View.GONE);
-        updateInputActions();
-    }
-
     private void updateInputActions() {
-        boolean enabled = !isAsking && !isScanning;
+        boolean enabled = !uiState.isAsking() && !uiState.isScanning();
         btnAsk.setEnabled(enabled);
         btnChooseImage.setEnabled(enabled);
         btnTakePhoto.setEnabled(enabled);
     }
 
-    private void deletePendingCameraFile() {
-        if (pendingCameraFile != null && pendingCameraFile.exists()) {
-            // The file is an app-created temporary image inside cache/ocr.
-            pendingCameraFile.delete();
-        }
-        pendingCameraFile = null;
-        pendingCameraUri = null;
-    }
-
     private void ask() {
-        if (isAsking) return;
+        if (uiState.isAsking() || uiState.isScanning()) return;
 
         String question = etQuestion.getText() == null ? "" : etQuestion.getText().toString().trim();
         int selectedSubject = spSubject.getSelectedItemPosition();
         String subjectHint = SUBJECT_VALUES[Math.max(0,
                 Math.min(selectedSubject, SUBJECT_VALUES.length - 1))];
 
-        setAsking(true);
-        studyRepository.askAsync(session.getCurrentUserId(), question, subjectHint,
-                this::handleAskResult);
+        uiState.ask(
+                session.getCurrentUserId(), question, subjectHint);
+    }
+
+    private void renderAskState(HomeUiStateViewModel.AskUiState state) {
+        boolean loading =
+                state != null && state.status == HomeUiStateViewModel.AskStatus.LOADING;
+        setAsking(loading);
+        if (state == null
+                || state.status != HomeUiStateViewModel.AskStatus.RESULT
+                || state.result == null) {
+            return;
+        }
+        StudyRepository.AskResult result = state.result;
+        uiState.consumeAskResult();
+        handleAskResult(result);
     }
 
     private void handleAskResult(@NonNull StudyRepository.AskResult result) {
-        if (!isAdded()
-                || getView() == null
-                || !getViewLifecycleOwner().getLifecycle().getCurrentState()
-                .isAtLeast(Lifecycle.State.STARTED)) {
-            return;
-        }
-
         setAsking(false);
         if (!result.success) {
             String message = result.message == null || result.message.trim().isEmpty()
@@ -346,7 +236,6 @@ public class HomeFragment extends Fragment {
     }
 
     private void setAsking(boolean asking) {
-        isAsking = asking;
         updateInputActions();
         progressAsk.setVisibility(asking ? View.VISIBLE : View.GONE);
         tvAskStatus.setVisibility(asking ? View.VISIBLE : View.GONE);
@@ -356,21 +245,49 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState) {
-        captureUiState();
-        super.onSaveInstanceState(outState);
-        if (pendingCameraUri != null) {
-            outState.putString(STATE_CAMERA_URI, pendingCameraUri.toString());
+    private void renderOcrState(HomeUiStateViewModel.OcrUiState state) {
+        HomeUiStateViewModel.OcrStatus status = state == null
+                ? HomeUiStateViewModel.OcrStatus.IDLE : state.status;
+        progressOcr.setVisibility(
+                status == HomeUiStateViewModel.OcrStatus.LOADING
+                        ? View.VISIBLE : View.GONE);
+        switch (status) {
+            case LOADING:
+                tvOcrStatus.setText(R.string.ocr_recognizing);
+                tvOcrStatus.setVisibility(View.VISIBLE);
+                break;
+            case READY:
+                tvOcrStatus.setText(R.string.ocr_ready);
+                tvOcrStatus.setVisibility(View.VISIBLE);
+                break;
+            case EMPTY:
+                tvOcrStatus.setText(R.string.ocr_no_text);
+                tvOcrStatus.setVisibility(View.VISIBLE);
+                break;
+            case ERROR:
+                tvOcrStatus.setText(R.string.ocr_failed);
+                tvOcrStatus.setVisibility(View.VISIBLE);
+                break;
+            case IDLE:
+            default:
+                tvOcrStatus.setVisibility(View.GONE);
+                break;
         }
-        if (pendingCameraFile != null) {
-            outState.putString(STATE_CAMERA_FILE, pendingCameraFile.getAbsolutePath());
+        updateInputActions();
+
+        if (state == null || !state.eventPending) return;
+        if (status == HomeUiStateViewModel.OcrStatus.READY) {
+            etQuestion.setText(state.extractedText);
+            etQuestion.setSelection(state.extractedText.length());
+            etQuestion.requestFocus();
+        } else if (status == HomeUiStateViewModel.OcrStatus.EMPTY) {
+            Toast.makeText(requireContext(), R.string.ocr_no_text,
+                    Toast.LENGTH_LONG).show();
+        } else if (status == HomeUiStateViewModel.OcrStatus.ERROR) {
+            Toast.makeText(requireContext(), R.string.ocr_failed,
+                    Toast.LENGTH_LONG).show();
         }
-        outState.putString(STATE_QUESTION_DRAFT, uiState.getQuestionDraft());
-        outState.putInt(STATE_SUBJECT_POSITION, uiState.getSubjectPosition());
-        outState.putCharSequence(STATE_OCR_STATUS, uiState.getOcrStatus());
-        outState.putBoolean(
-                STATE_OCR_STATUS_VISIBLE, uiState.isOcrStatusVisible());
+        uiState.consumeOcrEvent();
     }
 
     @Override
@@ -384,9 +301,6 @@ public class HomeFragment extends Fragment {
         uiState.setQuestionDraft(etQuestion.getText() == null
                 ? "" : etQuestion.getText().toString());
         uiState.setSubjectPosition(spSubject.getSelectedItemPosition());
-        uiState.setOcrStatus(tvOcrStatus.getText());
-        uiState.setOcrStatusVisible(
-                tvOcrStatus.getVisibility() == View.VISIBLE);
     }
 
     @Override

@@ -12,6 +12,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.example.aimentor.R;
 import com.example.aimentor.ai.QuizQuestion;
@@ -44,6 +45,7 @@ public class QuizActivity extends AppCompatActivity {
     private static final String STATE_LAST_CORRECT = "last_correct";
 
     private StudyRepository studyRepository;
+    private QuizViewModel quizViewModel;
     private SessionManager session;
     private ArrayList<QuizQuestion> questions = new ArrayList<>();
     private ArrayList<QuizQuestion> wrongQuestions = new ArrayList<>();
@@ -60,6 +62,7 @@ public class QuizActivity extends AppCompatActivity {
     private boolean retryRound;
     private boolean resultRecorded;
     private boolean lastAnswerCorrect;
+    private boolean gameInitialized;
 
     private TextView tvProgress, tvQuestionPrompt, tvFeedback, tvQuizType, tvQuizError;
     private RadioGroup rgOptions;
@@ -74,31 +77,40 @@ public class QuizActivity extends AppCompatActivity {
 
         studyRepository = new StudyRepository(this);
         session = new SessionManager(this);
+        quizViewModel = new ViewModelProvider(this)
+                .get(QuizViewModel.class);
         bindViews();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
         btnAction.setOnClickListener(v -> onAction());
-        btnRetryQuiz.setOnClickListener(v -> loadQuiz());
-
-        if (savedInstanceState != null && restoreState(savedInstanceState)) {
-            showLoadedQuiz();
-            return;
-        }
+        btnRetryQuiz.setOnClickListener(v -> requestQuiz());
 
         requestedSubject = getIntent().getStringExtra(EXTRA_SUBJECT);
         requestedDifficulty = getIntent().getStringExtra(EXTRA_DIFFICULTY);
-        loadQuiz();
+        gameInitialized =
+                savedInstanceState != null && restoreState(savedInstanceState);
+        quizViewModel.getLoadState().observe(this, this::renderLoadState);
+        if (gameInitialized) {
+            showLoadedQuiz();
+        } else {
+            requestQuiz();
+        }
     }
 
-    private void loadQuiz() {
+    private void requestQuiz() {
+        if (gameInitialized) return;
+        quizViewModel.loadQuiz(
+                session.getCurrentUserId(), requestedSubject,
+                requestedDifficulty, 5);
+    }
+
+    private void showLoadingState() {
         quizLoadingState.setVisibility(View.VISIBLE);
         quizErrorState.setVisibility(View.GONE);
         quizContent.setVisibility(View.GONE);
         btnAction.setEnabled(false);
-        studyRepository.generateQuizAsync(
-                session.getCurrentUserId(), requestedSubject,
-                requestedDifficulty, 5, this::handleQuizLoaded);
+        btnRetryQuiz.setEnabled(false);
     }
 
     private void bindViews() {
@@ -120,14 +132,24 @@ public class QuizActivity extends AppCompatActivity {
         tvQuizError.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE);
     }
 
-    private void handleQuizLoaded(StudyRepository.QuizLoadResult result) {
-        if (isFinishing() || isDestroyed()) return;
+    private void renderLoadState(QuizViewModel.LoadUiState state) {
+        if (state == null || gameInitialized) return;
+        if (state.status == QuizViewModel.LoadStatus.LOADING) {
+            showLoadingState();
+            return;
+        }
+        if (state.status != QuizViewModel.LoadStatus.RESULT
+                || state.result == null) {
+            return;
+        }
+        StudyRepository.QuizLoadResult result = state.result;
         if (!result.success || result.questions.isEmpty()) {
             String message = result.message == null || result.message.trim().isEmpty()
                     ? getString(R.string.quiz_error_default) : result.message;
             quizLoadingState.setVisibility(View.GONE);
             quizContent.setVisibility(View.GONE);
             quizErrorState.setVisibility(View.VISIBLE);
+            btnRetryQuiz.setEnabled(true);
             tvQuizError.setText(message);
             tvQuizError.announceForAccessibility(message);
             return;
@@ -135,11 +157,13 @@ public class QuizActivity extends AppCompatActivity {
         subject = result.subject;
         difficulty = result.difficulty;
         questions = new ArrayList<>(result.questions);
+        gameInitialized = true;
         showLoadedQuiz();
         Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
     }
 
     private void showLoadedQuiz() {
+        gameInitialized = true;
         quizLoadingState.setVisibility(View.GONE);
         quizErrorState.setVisibility(View.GONE);
         quizContent.setVisibility(View.VISIBLE);
