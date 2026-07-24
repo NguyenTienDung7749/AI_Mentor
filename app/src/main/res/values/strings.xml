@@ -324,6 +324,11 @@
     <string name="appearance_locked">This reward has not been unlocked yet.</string>
     <string name="next_appearance_unlock">Next reward: %1$s</string>
     <string name="selected_avatar_description">%1$s avatar</string>
+    <string name="selected_check_mark">✓</string>
+    <string name="reward_selected">Selected</string>
+    <string name="reward_unlocked">Available</string>
+    <string name="reward_locked_level">Unlocks at level %1$d</string>
+    <string name="reward_option_description">%1$s. %2$s.</string>
     <string name="preferences_saved">Preferences saved.</string>
     <string name="reminder_sent">Reminder sent to your notifications.</string>
     <string name="reminder_permission_needed">Enable notifications to receive reminders.</string>

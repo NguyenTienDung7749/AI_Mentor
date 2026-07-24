@@ -3,6 +3,7 @@ package com.example.aimentor.Fragments;
 import android.Manifest;
 import android.app.TimePickerDialog;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
@@ -12,6 +13,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -23,6 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
@@ -38,6 +41,8 @@ import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.Gamification;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
@@ -47,6 +52,8 @@ import java.util.List;
 
 public class SettingsFragment extends Fragment {
 
+    private static final String STATE_AVATAR = "settings_selected_avatar";
+    private static final String STATE_ACCENT = "settings_selected_accent";
     private static final String[] EDUCATION_VALUES = {
             "Middle School", "High School", "University"
     };
@@ -58,9 +65,10 @@ public class SettingsFragment extends Fragment {
     private StudyRepository studyRepository;
     private SessionManager session;
 
-    private TextView tvName, tvEmail, tvLevelInfo, tvBadges, tvXpProgress, tvAvatar;
+    private TextView tvName, tvEmail, tvLevelInfo, tvBadges, tvXpProgress;
     private ProgressBar progressLevel;
-    private Spinner spLevel, spStyle, spAvatar, spAccentTheme;
+    private Spinner spLevel, spStyle;
+    private LinearLayout avatarRewardGallery, themeRewardGallery;
     private CheckBox cbMath, cbScience, cbProgramming, cbHistory, cbLanguages;
     private SwitchMaterial switchReminder;
     private MaterialButtonToggleGroup themeModeGroup;
@@ -71,6 +79,8 @@ public class SettingsFragment extends Fragment {
     private int loadGeneration;
     private int mutationGeneration;
     private boolean bindingReminderState;
+    private String selectedAvatar;
+    private String selectedAccentTheme;
 
     private final ActivityResultLauncher<String> enableReminderPermission =
             registerForActivityResult(
@@ -105,7 +115,6 @@ public class SettingsFragment extends Fragment {
         session = new SessionManager(requireContext());
 
         tvName = view.findViewById(R.id.tvName);
-        tvAvatar = view.findViewById(R.id.tvAvatar);
         tvEmail = view.findViewById(R.id.tvEmail);
         tvLevelInfo = view.findViewById(R.id.tvLevelInfo);
         tvBadges = view.findViewById(R.id.tvBadges);
@@ -113,8 +122,8 @@ public class SettingsFragment extends Fragment {
         progressLevel = view.findViewById(R.id.progressLevel);
         spLevel = view.findViewById(R.id.spLevel);
         spStyle = view.findViewById(R.id.spStyle);
-        spAvatar = view.findViewById(R.id.spAvatar);
-        spAccentTheme = view.findViewById(R.id.spAccentTheme);
+        avatarRewardGallery = view.findViewById(R.id.avatarRewardGallery);
+        themeRewardGallery = view.findViewById(R.id.themeRewardGallery);
         tvUnlockStatus = view.findViewById(R.id.tvUnlockStatus);
         btnSaveAppearance = view.findViewById(R.id.btnSaveAppearance);
         cbMath = view.findViewById(R.id.cbMath);
@@ -132,6 +141,14 @@ public class SettingsFragment extends Fragment {
         MaterialButton btnRemind = view.findViewById(R.id.btnRemind);
         MaterialButton btnLogout = view.findViewById(R.id.btnLogout);
         btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
+        selectedAvatar = savedInstanceState == null
+                ? session.getSelectedAvatar()
+                : savedInstanceState.getString(
+                        STATE_AVATAR, session.getSelectedAvatar());
+        selectedAccentTheme = savedInstanceState == null
+                ? session.getSelectedAccentTheme()
+                : savedInstanceState.getString(
+                        STATE_ACCENT, session.getSelectedAccentTheme());
 
         spLevel.setAdapter(makeAdapter(Arrays.asList(
                 getResources().getStringArray(R.array.education_level_choices))));
@@ -261,36 +278,170 @@ public class SettingsFragment extends Fragment {
     }
 
     private void bindAppearanceRewards(int level) {
-        List<String> avatars = Gamification.unlockedAvatars(level);
-        List<String> themes = Gamification.unlockedAccentThemes(level);
-        spAvatar.setAdapter(makeAdapter(avatars));
-        spAccentTheme.setAdapter(makeAdapter(themes));
-        selectSpinner(spAvatar, avatars.toArray(new String[0]),
-                session.getSelectedAvatar());
-        selectSpinner(spAccentTheme, themes.toArray(new String[0]),
-                session.getSelectedAccentTheme());
-        tvAvatar.setText(Gamification.avatarSymbol(
-                String.valueOf(spAvatar.getSelectedItem())));
-        tvAvatar.setContentDescription(getString(R.string.selected_avatar_description,
-                String.valueOf(spAvatar.getSelectedItem())));
+        if (!Gamification.allAvatars().contains(selectedAvatar)) {
+            selectedAvatar = "Learner";
+        }
+        if (!Gamification.allAccentThemes().contains(selectedAccentTheme)) {
+            selectedAccentTheme = "Indigo";
+        }
+        bindAvatarGallery(level);
+        bindThemeGallery(level);
         tvUnlockStatus.setText(getString(
                 R.string.next_appearance_unlock, Gamification.nextUnlock(level)));
     }
 
+    private void bindAvatarGallery(int level) {
+        avatarRewardGallery.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+        for (String avatar : Gamification.allAvatars()) {
+            View item = inflater.inflate(
+                    R.layout.item_avatar_reward, avatarRewardGallery, false);
+            MaterialCardView card = item.findViewById(R.id.cardAvatarReward);
+            TextView symbol = item.findViewById(R.id.tvAvatarRewardSymbol);
+            TextView name = item.findViewById(R.id.tvAvatarRewardName);
+            TextView status = item.findViewById(R.id.tvAvatarRewardStatus);
+            int requiredLevel = Gamification.requiredLevelForAvatar(avatar);
+            boolean unlocked = level >= requiredLevel;
+            boolean selected = avatar.equals(selectedAvatar);
+            symbol.setText(Gamification.avatarSymbol(avatar));
+            name.setText(avatar);
+            status.setText(rewardStatus(selected, unlocked, requiredLevel));
+            configureRewardCard(card, selected, unlocked);
+            card.setContentDescription(getString(R.string.reward_option_description,
+                    avatar, status.getText()));
+            card.setOnClickListener(v -> {
+                if (!unlocked) {
+                    Toast.makeText(requireContext(),
+                            R.string.appearance_locked, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                selectedAvatar = avatar;
+                bindAvatarGallery(currentLevel);
+            });
+            avatarRewardGallery.addView(item);
+        }
+    }
+
+    private void bindThemeGallery(int level) {
+        themeRewardGallery.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+        for (String theme : Gamification.allAccentThemes()) {
+            View item = inflater.inflate(
+                    R.layout.item_theme_reward, themeRewardGallery, false);
+            MaterialCardView card = item.findViewById(R.id.cardThemeReward);
+            TextView name = item.findViewById(R.id.tvThemeRewardName);
+            TextView status = item.findViewById(R.id.tvThemeRewardStatus);
+            TextView check = item.findViewById(R.id.tvThemeRewardCheck);
+            int requiredLevel = Gamification.requiredLevelForAccentTheme(theme);
+            boolean unlocked = level >= requiredLevel;
+            boolean selected = theme.equals(selectedAccentTheme);
+            name.setText(theme);
+            status.setText(rewardStatus(selected, unlocked, requiredLevel));
+            check.setVisibility(selected ? View.VISIBLE : View.INVISIBLE);
+            configureRewardCard(card, selected, unlocked);
+            bindThemeSwatches(item, theme);
+            card.setContentDescription(getString(R.string.reward_option_description,
+                    theme, status.getText()));
+            card.setOnClickListener(v -> {
+                if (!unlocked) {
+                    Toast.makeText(requireContext(),
+                            R.string.appearance_locked, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                selectedAccentTheme = theme;
+                bindThemeGallery(currentLevel);
+            });
+            themeRewardGallery.addView(item);
+        }
+    }
+
+    private String rewardStatus(boolean selected, boolean unlocked, int requiredLevel) {
+        if (selected) return getString(R.string.reward_selected);
+        if (unlocked) return getString(R.string.reward_unlocked);
+        return getString(R.string.reward_locked_level, requiredLevel);
+    }
+
+    private void configureRewardCard(MaterialCardView card, boolean selected,
+                                     boolean unlocked) {
+        int strokeAttr = selected
+                ? com.google.android.material.R.attr.colorPrimary
+                : com.google.android.material.R.attr.colorOutline;
+        int backgroundAttr = selected
+                ? com.google.android.material.R.attr.colorSecondaryContainer
+                : com.google.android.material.R.attr.colorSurface;
+        card.setStrokeColor(MaterialColors.getColor(card, strokeAttr));
+        card.setStrokeWidth(dp(selected ? 2 : 1));
+        card.setCardBackgroundColor(MaterialColors.getColor(card, backgroundAttr));
+        card.setAlpha(unlocked ? 1f : 0.64f);
+        card.setSelected(selected);
+    }
+
+    private void bindThemeSwatches(View item, String theme) {
+        int[] palette = themePalette(theme);
+        tintSwatch(item.findViewById(R.id.swatchPrimary), palette[0]);
+        tintSwatch(item.findViewById(R.id.swatchSecondary), palette[1]);
+        tintSwatch(item.findViewById(R.id.swatchTertiary), palette[2]);
+    }
+
+    private int[] themePalette(String theme) {
+        if ("Ocean".equals(theme)) {
+            return colorResources(R.color.ocean_primary, R.color.ocean_secondary,
+                    R.color.ocean_tertiary);
+        }
+        if ("Forest".equals(theme)) {
+            return colorResources(R.color.forest_primary, R.color.forest_secondary,
+                    R.color.forest_tertiary);
+        }
+        if ("Sunset".equals(theme)) {
+            return colorResources(R.color.sunset_primary, R.color.sunset_secondary,
+                    R.color.sunset_tertiary);
+        }
+        if ("Material You".equals(theme)) {
+            return new int[] {
+                    MaterialColors.getColor(requireView(),
+                            com.google.android.material.R.attr.colorPrimary),
+                    MaterialColors.getColor(requireView(),
+                            com.google.android.material.R.attr.colorSecondary),
+                    MaterialColors.getColor(requireView(),
+                            com.google.android.material.R.attr.colorTertiary)
+            };
+        }
+        return colorResources(R.color.primary, R.color.accent,
+                R.color.scholar_tertiary);
+    }
+
+    private int[] colorResources(int primary, int secondary, int tertiary) {
+        return new int[] {
+                ContextCompat.getColor(requireContext(), primary),
+                ContextCompat.getColor(requireContext(), secondary),
+                ContextCompat.getColor(requireContext(), tertiary)
+        };
+    }
+
+    private void tintSwatch(View swatch, int color) {
+        swatch.setBackgroundTintList(ColorStateList.valueOf(color));
+    }
+
     private void saveAppearance() {
-        String avatar = String.valueOf(spAvatar.getSelectedItem());
-        String accent = String.valueOf(spAccentTheme.getSelectedItem());
-        if (!Gamification.unlockedAvatars(currentLevel).contains(avatar)
-                || !Gamification.unlockedAccentThemes(currentLevel).contains(accent)) {
+        if (!Gamification.unlockedAvatars(currentLevel).contains(selectedAvatar)
+                || !Gamification.unlockedAccentThemes(currentLevel)
+                        .contains(selectedAccentTheme)) {
             Toast.makeText(requireContext(),
                     R.string.appearance_locked, Toast.LENGTH_SHORT).show();
             return;
         }
-        session.setSelectedAvatar(avatar);
-        session.setSelectedAccentTheme(accent);
+        session.setSelectedAvatar(selectedAvatar);
+        session.setSelectedAccentTheme(selectedAccentTheme);
         Toast.makeText(requireContext(),
                 R.string.appearance_saved, Toast.LENGTH_SHORT).show();
         requireActivity().recreate();
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(STATE_AVATAR, selectedAvatar);
+        outState.putString(STATE_ACCENT, selectedAccentTheme);
     }
 
     @Override

@@ -239,6 +239,10 @@ public class StudyLogicTest {
         assertFalse(Gamification.unlockedAvatars(5).contains("Master"));
         assertTrue(Gamification.unlockedAccentThemes(8).contains("Sunset"));
         assertEquals("🏆", Gamification.avatarSymbol("Master"));
+        assertEquals(4, Gamification.allAvatars().size());
+        assertEquals(5, Gamification.allAccentThemes().size());
+        assertEquals(10, Gamification.requiredLevelForAvatar("Master"));
+        assertEquals(8, Gamification.requiredLevelForAccentTheme("Sunset"));
     }
 
     private static byte[] hexToBytes(String hex) {

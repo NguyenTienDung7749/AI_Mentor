@@ -1,6 +1,7 @@
 package com.example.aimentor.util;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -66,21 +67,42 @@ public final class Gamification {
 
     public static List<String> unlockedAvatars(int level) {
         List<String> avatars = new ArrayList<>();
-        avatars.add("Learner");
-        if (level >= 2) avatars.add("Explorer");
-        if (level >= 5) avatars.add("Scholar");
-        if (level >= 10) avatars.add("Master");
+        for (String avatar : allAvatars()) {
+            if (level >= requiredLevelForAvatar(avatar)) avatars.add(avatar);
+        }
         return avatars;
     }
 
     public static List<String> unlockedAccentThemes(int level) {
         List<String> themes = new ArrayList<>();
-        themes.add("Indigo");
-        themes.add("Material You");
-        if (level >= 3) themes.add("Ocean");
-        if (level >= 5) themes.add("Forest");
-        if (level >= 8) themes.add("Sunset");
+        for (String theme : allAccentThemes()) {
+            if (level >= requiredLevelForAccentTheme(theme)) themes.add(theme);
+        }
         return themes;
+    }
+
+    public static List<String> allAvatars() {
+        return new ArrayList<>(Arrays.asList(
+                "Learner", "Explorer", "Scholar", "Master"));
+    }
+
+    public static List<String> allAccentThemes() {
+        return new ArrayList<>(Arrays.asList(
+                "Indigo", "Material You", "Ocean", "Forest", "Sunset"));
+    }
+
+    public static int requiredLevelForAvatar(String avatar) {
+        if ("Explorer".equals(avatar)) return 2;
+        if ("Scholar".equals(avatar)) return 5;
+        if ("Master".equals(avatar)) return 10;
+        return 1;
+    }
+
+    public static int requiredLevelForAccentTheme(String theme) {
+        if ("Ocean".equals(theme)) return 3;
+        if ("Forest".equals(theme)) return 5;
+        if ("Sunset".equals(theme)) return 8;
+        return 1;
     }
 
     public static String avatarSymbol(String avatar) {

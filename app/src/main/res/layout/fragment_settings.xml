@@ -85,37 +85,38 @@
                     android:textAppearance="@style/TextAppearance.AIMentor.SectionTitle" />
 
                 <TextView
-                    android:id="@+id/tvAvatar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:importantForAccessibility="yes"
-                    android:textSize="42sp" />
-
-                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/avatar"
                     android:textColor="@color/text_secondary" />
 
-                <Spinner
-                    android:id="@+id/spAvatar"
+                <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="48dp" />
+                    android:layout_marginTop="@dimen/space_sm"
+                    android:clipToPadding="false"
+                    android:fillViewport="false"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/avatarRewardGallery"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_lg"
                     android:text="@string/accent_theme"
                     android:textColor="@color/text_secondary" />
 
-                <Spinner
-                    android:id="@+id/spAccentTheme"
+                <LinearLayout
+                    android:id="@+id/themeRewardGallery"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="48dp" />
+                    android:orientation="vertical" />
 
                 <TextView
                     android:id="@+id/tvUnlockStatus"
