@@ -3,16 +3,12 @@ package com.example.aimentor.data;
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
-import androidx.room.Update;
 
 @Dao
 public interface UserDao {
 
     @Insert
     long insert(User user);
-
-    @Update
-    void update(User user);
 
     /**
      * Awards XP without a read-modify-write race. The affected-row count also
@@ -22,6 +18,21 @@ public interface UserDao {
     @Query("UPDATE users SET xp = xp + :amount "
             + "WHERE id = :userId AND :amount >= 0")
     int addXp(long userId, int amount);
+
+    @Query("UPDATE users SET salt = :salt, passwordHash = :passwordHash "
+            + "WHERE id = :userId")
+    int updateCredentials(long userId, String salt, String passwordHash);
+
+    @Query("UPDATE users SET educationLevel = :level, subjects = :subjects, "
+            + "explanationStyle = :style, onboardingCompleted = 1 "
+            + "WHERE id = :userId")
+    int completeOnboarding(
+            long userId, String level, String subjects, String style);
+
+    @Query("UPDATE users SET educationLevel = :level, subjects = :subjects, "
+            + "explanationStyle = :style WHERE id = :userId")
+    int updatePreferences(
+            long userId, String level, String subjects, String style);
 
     @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
     User findByEmail(String email);

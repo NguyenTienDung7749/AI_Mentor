@@ -43,9 +43,34 @@ public class QuizViewModelInstrumentedTest {
         assertEquals(1, repository.quizCount);
     }
 
+    @Test
+    public void recordWhileSaving_startsOnlyOneRepositoryWrite() {
+        Application application = (Application)
+                InstrumentationRegistry.getInstrumentation()
+                        .getTargetContext().getApplicationContext();
+        CountingStudyRepository repository =
+                new CountingStudyRepository(application);
+        QuizViewModel viewModel =
+                new QuizViewModel(application, repository);
+        AtomicBoolean firstStarted = new AtomicBoolean();
+        AtomicBoolean secondStarted = new AtomicBoolean();
+
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            firstStarted.set(viewModel.recordQuiz(
+                    1L, "Science", 4, 5));
+            secondStarted.set(viewModel.recordQuiz(
+                    1L, "Science", 4, 5));
+        });
+
+        assertTrue(firstStarted.get());
+        assertFalse(secondStarted.get());
+        assertEquals(1, repository.recordCount);
+    }
+
     private static final class CountingStudyRepository
             extends StudyRepository {
         int quizCount;
+        int recordCount;
 
         CountingStudyRepository(Application application) {
             super(application);
@@ -57,6 +82,14 @@ public class QuizViewModelInstrumentedTest {
                 String requestedDifficulty, int count,
                 @androidx.annotation.NonNull QuizLoadCallback callback) {
             quizCount++;
+        }
+
+        @Override
+        public void recordQuizAsync(
+                long userId, String subject, int correct, int total,
+                @androidx.annotation.NonNull
+                DataCallback<QuizResult> callback) {
+            recordCount++;
         }
     }
 }

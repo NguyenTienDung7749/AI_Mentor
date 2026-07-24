@@ -16,6 +16,7 @@ import com.example.aimentor.repo.StudyRepository;
 public class QuizViewModel extends AndroidViewModel {
 
     enum LoadStatus { IDLE, LOADING, RESULT }
+    enum RecordStatus { IDLE, LOADING, RESULT }
 
     static final class LoadUiState {
         final LoadStatus status;
@@ -40,9 +41,34 @@ public class QuizViewModel extends AndroidViewModel {
         }
     }
 
+    static final class RecordUiState {
+        final RecordStatus status;
+        final StudyRepository.QuizResult result;
+
+        private RecordUiState(
+                RecordStatus status, StudyRepository.QuizResult result) {
+            this.status = status;
+            this.result = result;
+        }
+
+        static RecordUiState idle() {
+            return new RecordUiState(RecordStatus.IDLE, null);
+        }
+
+        static RecordUiState loading() {
+            return new RecordUiState(RecordStatus.LOADING, null);
+        }
+
+        static RecordUiState result(StudyRepository.QuizResult result) {
+            return new RecordUiState(RecordStatus.RESULT, result);
+        }
+    }
+
     private final StudyRepository studyRepository;
     private final MutableLiveData<LoadUiState> loadState =
             new MutableLiveData<>(LoadUiState.idle());
+    private final MutableLiveData<RecordUiState> recordState =
+            new MutableLiveData<>(RecordUiState.idle());
     private boolean cleared;
 
     public QuizViewModel(@NonNull Application application) {
@@ -61,6 +87,10 @@ public class QuizViewModel extends AndroidViewModel {
         return loadState;
     }
 
+    LiveData<RecordUiState> getRecordState() {
+        return recordState;
+    }
+
     boolean loadQuiz(
             long userId, String subject, String difficulty, int count) {
         LoadUiState current = loadState.getValue();
@@ -77,6 +107,35 @@ public class QuizViewModel extends AndroidViewModel {
                     }
                 });
         return true;
+    }
+
+    boolean recordQuiz(
+            long userId, String subject, int correct, int total) {
+        RecordUiState current = recordState.getValue();
+        if (cleared
+                || (current != null
+                && (current.status == RecordStatus.LOADING
+                || (current.status == RecordStatus.RESULT
+                && current.result != null
+                && current.result.recorded)))) {
+            return false;
+        }
+        recordState.setValue(RecordUiState.loading());
+        studyRepository.recordQuizAsync(
+                userId, subject, correct, total, result -> {
+                    if (!cleared) {
+                        recordState.setValue(
+                                RecordUiState.result(result));
+                    }
+                });
+        return true;
+    }
+
+    void consumeRecordResult() {
+        RecordUiState current = recordState.getValue();
+        if (current != null && current.status == RecordStatus.RESULT) {
+            recordState.setValue(RecordUiState.idle());
+        }
     }
 
     @Override

@@ -64,7 +64,9 @@ public class SettingsFragment extends Fragment {
     private Spinner spLevel, spStyle;
     private CheckBox cbMath, cbScience, cbProgramming, cbHistory, cbLanguages;
     private SwitchMaterial switchTheme;
+    private MaterialButton btnSavePrefs, btnDeleteAccount;
     private int loadGeneration;
+    private int mutationGeneration;
 
     public SettingsFragment() { }
 
@@ -103,10 +105,10 @@ public class SettingsFragment extends Fragment {
         switchTheme = view.findViewById(R.id.switchTheme);
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvPreferencesHeading), true);
-        MaterialButton btnSavePrefs = view.findViewById(R.id.btnSavePrefs);
+        btnSavePrefs = view.findViewById(R.id.btnSavePrefs);
         MaterialButton btnRemind = view.findViewById(R.id.btnRemind);
         MaterialButton btnLogout = view.findViewById(R.id.btnLogout);
-        MaterialButton btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
+        btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
 
         spLevel.setAdapter(makeAdapter(Arrays.asList(
                 getResources().getStringArray(R.array.education_level_choices))));
@@ -140,6 +142,10 @@ public class SettingsFragment extends Fragment {
     }
 
     private void loadUser() {
+        if (!session.isLoggedIn()) {
+            navigateToLogin();
+            return;
+        }
         long userId = session.getCurrentUserId();
         int generation = ++loadGeneration;
         userRepository.getUserAsync(userId, user -> {
@@ -207,6 +213,7 @@ public class SettingsFragment extends Fragment {
     @Override
     public void onDestroyView() {
         loadGeneration++;
+        mutationGeneration++;
         super.onDestroyView();
     }
 
@@ -314,12 +321,38 @@ public class SettingsFragment extends Fragment {
         if (cbHistory.isChecked()) subjects.add("History");
         if (cbLanguages.isChecked()) subjects.add("Languages");
 
-        userRepository.updatePreferences(session.getCurrentUserId(),
+        int generation = ++mutationGeneration;
+        setMutationActionsEnabled(false);
+        userRepository.updatePreferencesAsync(
+                session.getCurrentUserId(),
                 EDUCATION_VALUES[spLevel.getSelectedItemPosition()],
                 android.text.TextUtils.join(",", subjects),
-                STYLE_VALUES[spStyle.getSelectedItemPosition()]);
-        Toast.makeText(requireContext(), R.string.preferences_saved,
-                Toast.LENGTH_SHORT).show();
+                STYLE_VALUES[spStyle.getSelectedItemPosition()],
+                result -> {
+                    if (!canRenderMutation(generation)) return;
+                    setMutationActionsEnabled(true);
+                    Toast.makeText(requireContext(),
+                            result.success
+                                    ? getString(R.string.preferences_saved)
+                                    : result.message,
+                            result.success
+                                    ? Toast.LENGTH_SHORT : Toast.LENGTH_LONG)
+                            .show();
+                    if (result.success) loadUser();
+                });
+    }
+
+    private boolean canRenderMutation(int generation) {
+        return generation == mutationGeneration
+                && isAdded()
+                && getView() != null
+                && getViewLifecycleOwner().getLifecycle().getCurrentState()
+                .isAtLeast(Lifecycle.State.STARTED);
+    }
+
+    private void setMutationActionsEnabled(boolean enabled) {
+        btnSavePrefs.setEnabled(enabled);
+        btnDeleteAccount.setEnabled(enabled);
     }
 
     private void sendReminder() {
@@ -357,17 +390,33 @@ public class SettingsFragment extends Fragment {
                 .setOnClickListener(v -> {
                     String password = passwordInput.getText() == null
                             ? "" : passwordInput.getText().toString();
-                    UserRepository.Result result = userRepository.deleteAccount(
-                            session.getCurrentUserId(), password);
-                    if (!result.success) {
-                        passwordInput.setError(result.message);
-                        return;
-                    }
-                    session.logout();
-                    dialog.dismiss();
-                    Toast.makeText(requireContext(),
-                            R.string.delete_account_success, Toast.LENGTH_SHORT).show();
-                    navigateToLogin();
+                    int generation = ++mutationGeneration;
+                    passwordInput.setEnabled(false);
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                            .setEnabled(false);
+                    dialog.setCancelable(false);
+                    dialog.setCanceledOnTouchOutside(false);
+                    setMutationActionsEnabled(false);
+                    userRepository.deleteAccountAsync(
+                            session.getCurrentUserId(), password, result -> {
+                                if (result.success) session.logout();
+                                if (!canRenderMutation(generation)) return;
+                                if (!result.success) {
+                                    passwordInput.setEnabled(true);
+                                    dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                                            .setEnabled(true);
+                                    dialog.setCancelable(true);
+                                    dialog.setCanceledOnTouchOutside(true);
+                                    setMutationActionsEnabled(true);
+                                    passwordInput.setError(result.message);
+                                    return;
+                                }
+                                dialog.dismiss();
+                                Toast.makeText(requireContext(),
+                                        R.string.delete_account_success,
+                                        Toast.LENGTH_SHORT).show();
+                                navigateToLogin();
+                            });
                 }));
         dialog.show();
     }

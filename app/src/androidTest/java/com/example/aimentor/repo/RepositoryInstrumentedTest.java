@@ -322,6 +322,147 @@ public class RepositoryInstrumentedTest {
     }
 
     @Test
+    public void asyncAuthenticationAndOnboarding_runWithoutMainThreadRoom()
+            throws Exception {
+        AtomicBoolean callbacksOnMain = new AtomicBoolean(true);
+        AtomicReference<UserRepository.Result> registered =
+                new AtomicReference<>();
+        CountDownLatch registerDone = new CountDownLatch(1);
+        userRepository.registerAsync(
+                "Async Student", "async-auth@example.com", "Study2026",
+                result -> {
+                    callbacksOnMain.set(callbacksOnMain.get()
+                            && Looper.myLooper() == Looper.getMainLooper());
+                    registered.set(result);
+                    registerDone.countDown();
+                });
+
+        assertTrue(registerDone.await(5, TimeUnit.SECONDS));
+        assertTrue(registered.get().success);
+        long userId = registered.get().userId;
+
+        AtomicReference<UserRepository.Result> loggedIn =
+                new AtomicReference<>();
+        CountDownLatch loginDone = new CountDownLatch(1);
+        userRepository.loginAsync(
+                "ASYNC-AUTH@example.com", "Study2026", result -> {
+                    callbacksOnMain.set(callbacksOnMain.get()
+                            && Looper.myLooper() == Looper.getMainLooper());
+                    loggedIn.set(result);
+                    loginDone.countDown();
+                });
+        assertTrue(loginDone.await(5, TimeUnit.SECONDS));
+        assertTrue(loggedIn.get().success);
+        assertEquals(userId, loggedIn.get().userId);
+
+        AtomicReference<UserRepository.Result> onboarded =
+                new AtomicReference<>();
+        CountDownLatch onboardingDone = new CountDownLatch(1);
+        userRepository.saveOnboardingAsync(
+                userId, "University", "Science,Programming", "Detailed",
+                result -> {
+                    callbacksOnMain.set(callbacksOnMain.get()
+                            && Looper.myLooper() == Looper.getMainLooper());
+                    onboarded.set(result);
+                    onboardingDone.countDown();
+                });
+        assertTrue(onboardingDone.await(5, TimeUnit.SECONDS));
+        assertTrue(onboarded.get().success);
+        assertTrue(callbacksOnMain.get());
+        User user = database.userDao().findById(userId);
+        assertTrue(user.onboardingCompleted);
+        assertEquals("University", user.educationLevel);
+        assertEquals("Detailed", user.explanationStyle);
+    }
+
+    @Test
+    public void asyncStudyAndPreferenceMutations_persistAtomically()
+            throws Exception {
+        long userId = insertUser("async-mutations@example.com", 0);
+        long questionId = insertQuestion(
+                userId, "Async mutation", "Science", false);
+        CountDownLatch completed = new CountDownLatch(4);
+        AtomicReference<UserRepository.Result> preferences =
+                new AtomicReference<>();
+        AtomicReference<Boolean> bookmarked = new AtomicReference<>();
+        AtomicReference<Boolean> reviewed = new AtomicReference<>();
+        AtomicReference<StudyRepository.QuizResult> quiz =
+                new AtomicReference<>();
+
+        userRepository.updatePreferencesAsync(
+                userId, "Middle School", "Science", "Short", result -> {
+                    preferences.set(result);
+                    completed.countDown();
+                });
+        studyRepository.toggleBookmarkAsync(
+                userId, questionId, result -> {
+                    bookmarked.set(result);
+                    completed.countDown();
+                });
+        studyRepository.markReviewedAsync(
+                userId, questionId, result -> {
+                    reviewed.set(result);
+                    completed.countDown();
+                });
+        studyRepository.recordQuizAsync(
+                userId, "Science", 2, 3, result -> {
+                    quiz.set(result);
+                    completed.countDown();
+                });
+
+        assertTrue(completed.await(10, TimeUnit.SECONDS));
+        assertTrue(preferences.get().success);
+        assertTrue(bookmarked.get());
+        assertTrue(reviewed.get());
+        assertTrue(quiz.get().recorded);
+
+        User user = database.userDao().findById(userId);
+        Question question =
+                database.questionDao().findByIdForUser(userId, questionId);
+        assertEquals("Middle School", user.educationLevel);
+        assertEquals(Gamification.XP_REVIEW
+                + 2 * Gamification.XP_QUIZ_CORRECT, user.xp);
+        assertTrue(question.bookmarked);
+        assertTrue(question.reviewed);
+        assertEquals(1, database.quizAttemptDao().countForUser(userId));
+    }
+
+    @Test
+    public void asyncDeleteAccount_removesOnlyAuthenticatedUserData()
+            throws Exception {
+        long deletedUser =
+                insertPasswordUser("async-delete@example.com", "Study2026");
+        long retainedUser =
+                insertPasswordUser("async-keep@example.com", "Keep2026");
+        insertQuestion(deletedUser, "Delete asynchronously", "Science", false);
+        insertQuestion(retainedUser, "Keep asynchronously", "History", false);
+        insertQuiz(deletedUser);
+        insertQuiz(retainedUser);
+
+        AtomicReference<UserRepository.Result> deletion =
+                new AtomicReference<>();
+        AtomicBoolean callbackOnMain = new AtomicBoolean(false);
+        CountDownLatch completed = new CountDownLatch(1);
+        userRepository.deleteAccountAsync(
+                deletedUser, "Study2026", result -> {
+                    callbackOnMain.set(
+                            Looper.myLooper() == Looper.getMainLooper());
+                    deletion.set(result);
+                    completed.countDown();
+                });
+
+        assertTrue(completed.await(5, TimeUnit.SECONDS));
+        assertTrue(callbackOnMain.get());
+        assertTrue(deletion.get().success);
+        assertNull(database.userDao().findById(deletedUser));
+        assertEquals(0, database.questionDao().countForUser(deletedUser));
+        assertEquals(0, database.quizAttemptDao().countForUser(deletedUser));
+        assertTrue(database.userDao().findById(retainedUser) != null);
+        assertEquals(1, database.questionDao().countForUser(retainedUser));
+        assertEquals(1, database.quizAttemptDao().countForUser(retainedUser));
+    }
+
+    @Test
     public void accountDeletion_requiresPasswordAndPreservesOtherUserData() {
         long firstUser = insertPasswordUser("delete@example.com", "Study2026");
         long secondUser = insertPasswordUser("keep@example.com", "Keep2026");

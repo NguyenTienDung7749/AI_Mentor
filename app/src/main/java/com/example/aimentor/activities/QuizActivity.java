@@ -44,7 +44,6 @@ public class QuizActivity extends AppCompatActivity {
     private static final String STATE_SELECTED = "selected_index";
     private static final String STATE_LAST_CORRECT = "last_correct";
 
-    private StudyRepository studyRepository;
     private QuizViewModel quizViewModel;
     private SessionManager session;
     private ArrayList<QuizQuestion> questions = new ArrayList<>();
@@ -75,7 +74,6 @@ public class QuizActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_quiz);
 
-        studyRepository = new StudyRepository(this);
         session = new SessionManager(this);
         quizViewModel = new ViewModelProvider(this)
                 .get(QuizViewModel.class);
@@ -91,6 +89,7 @@ public class QuizActivity extends AppCompatActivity {
         gameInitialized =
                 savedInstanceState != null && restoreState(savedInstanceState);
         quizViewModel.getLoadState().observe(this, this::renderLoadState);
+        quizViewModel.getRecordState().observe(this, this::renderRecordState);
         if (gameInitialized) {
             showLoadedQuiz();
         } else {
@@ -279,20 +278,39 @@ public class QuizActivity extends AppCompatActivity {
             return;
         }
         if (!resultRecorded) {
-            StudyRepository.QuizResult result = studyRepository.recordQuiz(
-                    session.getCurrentUserId(), subject, correctCount, questions.size());
-            if (!result.recorded) {
-                Toast.makeText(this, R.string.quiz_save_failed,
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-            resultRecorded = true;
-            awardedXp = result.awardedXp;
-            if (result.leveledUp) {
-                NotificationHelper.notify(this,
-                        getString(R.string.level_up_notification_title),
-                        getString(R.string.level_up_notification_body, result.newLevel));
-            }
+            quizViewModel.recordQuiz(
+                    session.getCurrentUserId(), subject,
+                    correctCount, questions.size());
+            return;
+        }
+        showCompletionDialog();
+    }
+
+    private void renderRecordState(QuizViewModel.RecordUiState state) {
+        if (state == null || resultRecorded) return;
+        if (state.status == QuizViewModel.RecordStatus.LOADING) {
+            btnAction.setEnabled(false);
+            return;
+        }
+        if (state.status != QuizViewModel.RecordStatus.RESULT
+                || state.result == null) {
+            return;
+        }
+        StudyRepository.QuizResult result = state.result;
+        quizViewModel.consumeRecordResult();
+        if (!result.recorded) {
+            btnAction.setEnabled(true);
+            Toast.makeText(this, R.string.quiz_save_failed,
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        resultRecorded = true;
+        awardedXp = result.awardedXp;
+        btnAction.setEnabled(true);
+        if (result.leveledUp) {
+            NotificationHelper.notify(this,
+                    getString(R.string.level_up_notification_title),
+                    getString(R.string.level_up_notification_body, result.newLevel));
         }
         showCompletionDialog();
     }

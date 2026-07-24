@@ -41,6 +41,7 @@ public class AnswerActivity extends AppCompatActivity {
     private ProgressBar progressAnswer;
     private boolean transientAnswer;
     private int loadGeneration;
+    private int actionGeneration;
 
     public static Intent savedAnswerIntent(Context context, long questionId) {
         Intent intent = new Intent(context, AnswerActivity.class);
@@ -143,6 +144,7 @@ public class AnswerActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         loadGeneration++;
+        actionGeneration++;
         super.onDestroy();
     }
 
@@ -152,23 +154,36 @@ public class AnswerActivity extends AppCompatActivity {
 
     private void toggleBookmark() {
         if (question == null) return;
+        int generation = ++actionGeneration;
         setActionButtonsEnabled(false);
-        studyRepository.toggleBookmark(
-                session.getCurrentUserId(), question.id);
-        loadSavedQuestion(() -> Toast.makeText(this,
-                question.bookmarked
-                        ? R.string.bookmark_added : R.string.bookmark_removed,
-                Toast.LENGTH_SHORT).show());
+        studyRepository.toggleBookmarkAsync(
+                session.getCurrentUserId(), question.id, changed -> {
+                    if (!canHandleAction(generation)) return;
+                    loadSavedQuestion(() -> Toast.makeText(this,
+                            question.bookmarked
+                                    ? R.string.bookmark_added
+                                    : R.string.bookmark_removed,
+                            Toast.LENGTH_SHORT).show());
+                });
     }
 
     private void markReviewed() {
         if (question == null) return;
+        int generation = ++actionGeneration;
         setActionButtonsEnabled(false);
-        boolean awarded = studyRepository.markReviewed(
-                session.getCurrentUserId(), question.id);
-        loadSavedQuestion(() -> Toast.makeText(this, awarded
-                        ? R.string.review_awarded : R.string.review_already_done,
-                Toast.LENGTH_SHORT).show());
+        studyRepository.markReviewedAsync(
+                session.getCurrentUserId(), question.id, awarded -> {
+                    if (!canHandleAction(generation)) return;
+                    loadSavedQuestion(() -> Toast.makeText(this, awarded
+                                    ? R.string.review_awarded
+                                    : R.string.review_already_done,
+                            Toast.LENGTH_SHORT).show());
+                });
+    }
+
+    private boolean canHandleAction(int generation) {
+        return generation == actionGeneration
+                && !isFinishing() && !isDestroyed();
     }
 
     private void setActionButtonsEnabled(boolean enabled) {

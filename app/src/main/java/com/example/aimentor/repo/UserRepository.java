@@ -17,6 +17,7 @@ import com.example.aimentor.util.Validators;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 
 /** Registration and authentication backed by the local Room database. */
 public class UserRepository {
@@ -58,6 +59,27 @@ public class UserRepository {
         }
     }
 
+    public interface ResultCallback {
+        void onResult(@NonNull Result result);
+    }
+
+    private void runAsync(
+            @NonNull Supplier<Result> operation,
+            @NonNull String failureMessage,
+            @NonNull ResultCallback callback) {
+        IO_EXECUTOR.execute(() -> {
+            Result result;
+            try {
+                result = operation.get();
+            } catch (RuntimeException operationFailed) {
+                result = new Result(false, failureMessage, -1);
+            }
+            Result delivered = result;
+            mainHandler.post(() -> callback.onResult(delivered));
+        });
+    }
+
+    @WorkerThread
     public Result register(String name, String email, String password) {
         String cleanEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
         if (!Validators.isValidEmail(cleanEmail)) {
@@ -80,6 +102,14 @@ public class UserRepository {
         return new Result(true, "Account created.", id);
     }
 
+    public void registerAsync(
+            String name, String email, String password,
+            @NonNull ResultCallback callback) {
+        runAsync(() -> register(name, email, password),
+                "Could not create the account. Please try again.", callback);
+    }
+
+    @WorkerThread
     public Result login(String email, String password) {
         String cleanEmail = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
         if (!Validators.isValidEmail(cleanEmail)) {
@@ -95,11 +125,18 @@ public class UserRepository {
         }
         if (SecurityUtils.needsUpgrade(user.passwordHash)) {
             String upgradedSalt = SecurityUtils.generateSalt();
-            user.salt = upgradedSalt;
-            user.passwordHash = SecurityUtils.hashPassword(safePassword, upgradedSalt);
-            userDao.update(user);
+            String upgradedHash =
+                    SecurityUtils.hashPassword(safePassword, upgradedSalt);
+            userDao.updateCredentials(user.id, upgradedSalt, upgradedHash);
         }
         return new Result(true, "Welcome back!", user.id);
+    }
+
+    public void loginAsync(
+            String email, String password,
+            @NonNull ResultCallback callback) {
+        runAsync(() -> login(email, password),
+                "Could not sign in. Please try again.", callback);
     }
 
     public interface UserCallback {
@@ -125,29 +162,56 @@ public class UserRepository {
         });
     }
 
-    public void saveOnboarding(long userId, String level, String subjects, String style) {
+    @WorkerThread
+    public Result saveOnboarding(
+            long userId, String level, String subjects, String style) {
         User user = userDao.findById(userId);
-        if (user == null) return;
-        user.educationLevel = level;
-        user.subjects = subjects;
-        user.explanationStyle = style;
-        user.onboardingCompleted = true;
-        userDao.update(user);
+        if (user == null) {
+            return new Result(false, "Account not found.", -1);
+        }
+        boolean updated = userDao.completeOnboarding(
+                userId, level, subjects, style) == 1;
+        return new Result(updated,
+                updated ? "Learning profile saved."
+                        : "Could not save the learning profile. Please try again.",
+                updated ? userId : -1);
     }
 
-    public void updatePreferences(long userId, String level, String subjects, String style) {
+    public void saveOnboardingAsync(
+            long userId, String level, String subjects, String style,
+            @NonNull ResultCallback callback) {
+        runAsync(() -> saveOnboarding(userId, level, subjects, style),
+                "Could not save the learning profile. Please try again.",
+                callback);
+    }
+
+    @WorkerThread
+    public Result updatePreferences(
+            long userId, String level, String subjects, String style) {
         User user = userDao.findById(userId);
-        if (user == null) return;
-        user.educationLevel = level;
-        user.subjects = subjects;
-        user.explanationStyle = style;
-        userDao.update(user);
+        if (user == null) {
+            return new Result(false, "Account not found.", -1);
+        }
+        boolean updated = userDao.updatePreferences(
+                userId, level, subjects, style) == 1;
+        return new Result(updated,
+                updated ? "Preferences saved."
+                        : "Could not save preferences. Please try again.",
+                updated ? userId : -1);
+    }
+
+    public void updatePreferencesAsync(
+            long userId, String level, String subjects, String style,
+            @NonNull ResultCallback callback) {
+        runAsync(() -> updatePreferences(userId, level, subjects, style),
+                "Could not save preferences. Please try again.", callback);
     }
 
     /**
      * Deletes only the authenticated student's local account and related study
      * records. The transaction prevents a partially deleted account.
      */
+    @WorkerThread
     public Result deleteAccount(long userId, String password) {
         User user = userDao.findById(userId);
         if (user == null) {
@@ -167,5 +231,12 @@ public class UserRepository {
             return new Result(false, "Could not delete local data. Please try again.", -1);
         }
         return new Result(true, "Account and local study data deleted.", userId);
+    }
+
+    public void deleteAccountAsync(
+            long userId, String password,
+            @NonNull ResultCallback callback) {
+        runAsync(() -> deleteAccount(userId, password),
+                "Could not delete local data. Please try again.", callback);
     }
 }

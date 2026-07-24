@@ -77,14 +77,14 @@ public class StudyRepository {
         void onResult(T value);
     }
 
-    private <T> void readAsync(
-            @NonNull Supplier<T> query, T fallback,
+    private <T> void executeAsync(
+            @NonNull Supplier<T> operation, T fallback,
             @NonNull DataCallback<T> callback) {
         IO_EXECUTOR.execute(() -> {
             T value;
             try {
-                value = query.get();
-            } catch (RuntimeException readFailed) {
+                value = operation.get();
+            } catch (RuntimeException operationFailed) {
                 value = fallback;
             }
             T delivered = value;
@@ -225,7 +225,7 @@ public class StudyRepository {
 
     public void getHistoryAsync(
             long userId, @NonNull DataCallback<List<Question>> callback) {
-        readAsync(() -> getHistory(userId), new ArrayList<>(), callback);
+        executeAsync(() -> getHistory(userId), new ArrayList<>(), callback);
     }
 
     @WorkerThread
@@ -248,7 +248,7 @@ public class StudyRepository {
     public void searchAsync(
             long userId, String query,
             @NonNull DataCallback<List<Question>> callback) {
-        readAsync(() -> search(userId, query), new ArrayList<>(), callback);
+        executeAsync(() -> search(userId, query), new ArrayList<>(), callback);
     }
 
     @WorkerThread
@@ -258,7 +258,7 @@ public class StudyRepository {
 
     public void getBookmarkedAsync(
             long userId, @NonNull DataCallback<List<Question>> callback) {
-        readAsync(() -> getBookmarked(userId), new ArrayList<>(), callback);
+        executeAsync(() -> getBookmarked(userId), new ArrayList<>(), callback);
     }
 
     @WorkerThread
@@ -282,14 +282,23 @@ public class StudyRepository {
     public void getQuestionAsync(
             long userId, long questionId,
             @NonNull DataCallback<Question> callback) {
-        readAsync(() -> getQuestion(userId, questionId), null, callback);
+        executeAsync(() -> getQuestion(userId, questionId), null, callback);
     }
 
+    @WorkerThread
     public boolean toggleBookmark(long userId, long questionId) {
         return questionDao.toggleBookmark(userId, questionId) == 1;
     }
 
+    public void toggleBookmarkAsync(
+            long userId, long questionId,
+            @NonNull DataCallback<Boolean> callback) {
+        executeAsync(
+                () -> toggleBookmark(userId, questionId), false, callback);
+    }
+
     /** Marks a saved answer as reviewed, awarding review XP the first time only. */
+    @WorkerThread
     public boolean markReviewed(long userId, long questionId) {
         try {
             return database.runInTransaction(() -> {
@@ -304,6 +313,13 @@ public class StudyRepository {
         } catch (RuntimeException updateFailed) {
             return false;
         }
+    }
+
+    public void markReviewedAsync(
+            long userId, long questionId,
+            @NonNull DataCallback<Boolean> callback) {
+        executeAsync(
+                () -> markReviewed(userId, questionId), false, callback);
     }
 
     // ------------------------------------------------------------------ Quiz
@@ -441,6 +457,7 @@ public class StudyRepository {
         }
     }
 
+    @WorkerThread
     public QuizResult recordQuiz(long userId, String subject, int correct, int total) {
         int safeTotal = Math.max(0, total);
         if (safeTotal == 0) {
@@ -478,6 +495,14 @@ public class StudyRepository {
         } catch (RuntimeException saveFailed) {
             return new QuizResult(0, false, 1, false);
         }
+    }
+
+    public void recordQuizAsync(
+            long userId, String subject, int correct, int total,
+            @NonNull DataCallback<QuizResult> callback) {
+        executeAsync(() -> recordQuiz(
+                        userId, subject, correct, total),
+                new QuizResult(0, false, 1, false), callback);
     }
 
     // -------------------------------------------------------------- Progress
@@ -561,7 +586,7 @@ public class StudyRepository {
 
     public void getProgressAsync(
             long userId, @NonNull DataCallback<Progress> callback) {
-        readAsync(() -> getProgress(userId), emptyProgress(), callback);
+        executeAsync(() -> getProgress(userId), emptyProgress(), callback);
     }
 
     private Progress emptyProgress() {

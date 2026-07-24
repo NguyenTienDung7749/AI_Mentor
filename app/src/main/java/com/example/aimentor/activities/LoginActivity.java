@@ -20,7 +20,7 @@ public class LoginActivity extends AppCompatActivity {
     private MaterialButton btnLogin;
     private UserRepository userRepository;
     private SessionManager session;
-    private int userLoadGeneration;
+    private int operationGeneration;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -38,8 +38,11 @@ public class LoginActivity extends AppCompatActivity {
 
         // Keep the user signed in across app launches.
         if (session.isLoggedIn()) {
+            int generation = ++operationGeneration;
             btnLogin.setEnabled(false);
-            loadUser(session.getCurrentUserId(), existing -> {
+            userRepository.getUserAsync(
+                    session.getCurrentUserId(), existing -> {
+                if (!canHandle(generation)) return;
                 if (existing != null) {
                     goToNextScreen(existing);
                 } else {
@@ -54,31 +57,40 @@ public class LoginActivity extends AppCompatActivity {
         String email = valueOf(etEmail);
         String password = valueOf(etPassword);
 
-        UserRepository.Result result = userRepository.login(email, password);
-        if (!result.success) {
-            Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        session.setCurrentUserId(result.userId);
+        int generation = ++operationGeneration;
         btnLogin.setEnabled(false);
-        Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
-        loadUser(result.userId, this::goToNextScreen);
-    }
-
-    private void loadUser(long userId, UserRepository.UserCallback callback) {
-        int generation = ++userLoadGeneration;
-        userRepository.getUserAsync(userId, user -> {
-            if (generation != userLoadGeneration
-                    || isFinishing() || isDestroyed()) {
+        userRepository.loginAsync(email, password, result -> {
+            if (!canHandle(generation)) return;
+            if (!result.success) {
+                btnLogin.setEnabled(true);
+                Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
                 return;
             }
-            callback.onResult(user);
+            session.setCurrentUserId(result.userId);
+            Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
+            userRepository.getUserAsync(result.userId, user -> {
+                if (!canHandle(generation)) return;
+                if (user == null) {
+                    session.logout();
+                    btnLogin.setEnabled(true);
+                    Toast.makeText(this,
+                            R.string.login_account_load_failed,
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+                goToNextScreen(user);
+            });
         });
+    }
+
+    private boolean canHandle(int generation) {
+        return generation == operationGeneration
+                && !isFinishing() && !isDestroyed();
     }
 
     @Override
     protected void onDestroy() {
-        userLoadGeneration++;
+        operationGeneration++;
         super.onDestroy();
     }
 

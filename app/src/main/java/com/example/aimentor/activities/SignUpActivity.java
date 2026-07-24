@@ -22,8 +22,10 @@ public class SignUpActivity extends AppCompatActivity {
 
     private TextInputEditText etName, etEmail, etPassword, etConfirm;
     private TextView tvStrength;
+    private MaterialButton btnSignup;
     private UserRepository userRepository;
     private SessionManager session;
+    private int submitGeneration;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -38,7 +40,7 @@ public class SignUpActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.etPassword);
         etConfirm = findViewById(R.id.etConfirm);
         tvStrength = findViewById(R.id.tvStrength);
-        MaterialButton btnSignup = findViewById(R.id.btnSignup);
+        btnSignup = findViewById(R.id.btnSignup);
 
         etPassword.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
@@ -90,17 +92,33 @@ public class SignUpActivity extends AppCompatActivity {
             return;
         }
 
-        UserRepository.Result result = userRepository.register(name, email, password);
-        if (!result.success) {
-            Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
-            return;
-        }
-        session.setCurrentUserId(result.userId);
-        Toast.makeText(this, R.string.account_created, Toast.LENGTH_SHORT).show();
-        Intent intent = new Intent(this, OnboardingActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        startActivity(intent);
-        finish();
+        int generation = ++submitGeneration;
+        btnSignup.setEnabled(false);
+        userRepository.registerAsync(name, email, password, result -> {
+            if (!canHandle(generation)) return;
+            if (!result.success) {
+                btnSignup.setEnabled(true);
+                Toast.makeText(this, result.message, Toast.LENGTH_LONG).show();
+                return;
+            }
+            session.setCurrentUserId(result.userId);
+            Toast.makeText(this, R.string.account_created, Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(this, OnboardingActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(intent);
+            finish();
+        });
+    }
+
+    private boolean canHandle(int generation) {
+        return generation == submitGeneration
+                && !isFinishing() && !isDestroyed();
+    }
+
+    @Override
+    protected void onDestroy() {
+        submitGeneration++;
+        super.onDestroy();
     }
 
     private String valueOf(TextInputEditText field) {

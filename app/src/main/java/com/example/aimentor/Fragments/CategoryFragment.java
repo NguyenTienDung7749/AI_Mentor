@@ -30,8 +30,10 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class CategoryFragment extends Fragment implements QuestionAdapter.Listener {
 
@@ -54,6 +56,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
     private TextView tvEmpty, tvSuggest;
     private int refreshGeneration;
     private int suggestionGeneration;
+    private final Set<Long> pendingBookmarkIds = new HashSet<>();
 
     public CategoryFragment() { }
 
@@ -235,8 +238,19 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
 
     @Override
     public void onBookmarkToggle(Question question) {
-        studyRepository.toggleBookmark(
-                session.getCurrentUserId(), question.id);
-        refresh();
+        if (!pendingBookmarkIds.add(question.id)) return;
+        studyRepository.toggleBookmarkAsync(
+                session.getCurrentUserId(), question.id, changed -> {
+                    pendingBookmarkIds.remove(question.id);
+                    if (!isViewStarted()) return;
+                    refresh();
+                });
+    }
+
+    private boolean isViewStarted() {
+        return isAdded()
+                && getView() != null
+                && getViewLifecycleOwner().getLifecycle().getCurrentState()
+                .isAtLeast(Lifecycle.State.STARTED);
     }
 }

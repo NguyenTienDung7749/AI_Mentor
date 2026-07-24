@@ -13,9 +13,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
  * answers and quiz results stored on the device.
  * Temporary offline guidance is intentionally not persisted.
  *
- * Read-heavy screens use repository executors. {@code allowMainThreadQueries()}
- * remains temporarily enabled only until the authentication and mutation paths
- * are migrated in Batch 14B; removing it earlier would break those flows.
+ * All reads and mutations are dispatched through repository executors; Room's
+ * main-thread guard remains enabled to prevent accidental UI-thread database
+ * access from being introduced later.
  */
 @Database(
         entities = {User.class, Question.class, QuizAttempt.class},
@@ -58,10 +58,9 @@ public abstract class AppDatabase extends RoomDatabase {
             synchronized (AppDatabase.class) {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(
-                                    context.getApplicationContext(),
+                            context.getApplicationContext(),
                                     AppDatabase.class,
                                     "ai_mentor.db")
-                            .allowMainThreadQueries()
                             .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                             .build();
                 }

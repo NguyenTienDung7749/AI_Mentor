@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.CheckBox;
 import android.widget.RadioGroup;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,6 +24,8 @@ public class OnboardingActivity extends AppCompatActivity {
     private CheckBox cbMath, cbScience, cbProgramming, cbHistory, cbLanguages;
     private SessionManager session;
     private UserRepository userRepository;
+    private MaterialButton btnFinish;
+    private int saveGeneration;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -46,7 +49,7 @@ public class OnboardingActivity extends AppCompatActivity {
         cbHistory = findViewById(R.id.cbHistory);
         cbLanguages = findViewById(R.id.cbLanguages);
 
-        MaterialButton btnFinish = findViewById(R.id.btnFinish);
+        btnFinish = findViewById(R.id.btnFinish);
         btnFinish.setOnClickListener(v -> saveAndContinue());
     }
 
@@ -68,12 +71,34 @@ public class OnboardingActivity extends AppCompatActivity {
         if (styleId == R.id.rbShort) style = "Short";
         else if (styleId == R.id.rbDetailed) style = "Detailed";
 
-        userRepository.saveOnboarding(session.getCurrentUserId(), level,
-                android.text.TextUtils.join(",", subjects), style);
+        int generation = ++saveGeneration;
+        btnFinish.setEnabled(false);
+        userRepository.saveOnboardingAsync(
+                session.getCurrentUserId(), level,
+                android.text.TextUtils.join(",", subjects), style,
+                result -> {
+                    if (!canHandle(generation)) return;
+                    if (!result.success) {
+                        btnFinish.setEnabled(true);
+                        Toast.makeText(this, result.message,
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    Intent intent = new Intent(this, MenuActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
+                    finish();
+                });
+    }
 
-        Intent intent = new Intent(this, MenuActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        startActivity(intent);
-        finish();
+    private boolean canHandle(int generation) {
+        return generation == saveGeneration
+                && !isFinishing() && !isDestroyed();
+    }
+
+    @Override
+    protected void onDestroy() {
+        saveGeneration++;
+        super.onDestroy();
     }
 }
