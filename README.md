@@ -1,136 +1,172 @@
-# AI Study Mentor (Android)
+# AI Study Mentor
 
-An offline-first Android study assistant built for the **BrightPath Learning – "AI Study
-Mentor"** scenario (BTEC Unit 22: Application Development). Students register, ask academic
-questions, receive structured AI-style explanations, build a personal question library,
-practise with auto-generated quizzes and track their progress through XP, levels and badges.
+AI Study Mentor is an Android Java application created for the BrightPath
+Learning scenario in BTEC Unit 22: Application Development. It combines a
+Groq-powered study assistant with on-device OCR, personalised quizzes, local
+history, progress tracking and scheduled study reminders.
 
-> This repository is the **software package deliverable for Assignment Part 2, Activity 2
-> (P5 + M4)** – "Develop a functional business application using the preferred tools,
-> techniques and methodologies".
+This repository contains the application implementation. Assignment analysis,
+test evidence, screenshots, peer review and evaluation belong in the submitted
+report rather than in the source tree.
 
----
+## Features
 
-## 1. Highlights / feature map
-
-| Requirement (from the brief) | Where it is implemented |
+| Area | Current implementation |
 |---|---|
-| Register with email + secure login | `activities/LoginActivity`, `activities/SignUpActivity`, `repo/UserRepository` |
-| First-use setup (level, subjects, explanation style) | `activities/OnboardingActivity` |
-| Ask questions (text) | `Fragments/HomeFragment` → `AnswerActivity` |
-| AI answer generation (subject + difficulty, step-by-step, key concepts, common mistakes, follow-ups) | `ai/RemoteAiEngine`, `ai/LocalAiEngine`, `ai/AiAnswer` |
-| Resilient AI (bounded retry, token-limit recovery, offline fallback, answer provenance) | `ai/RemoteAiEngine`, `ai/FallbackAiEngine`, `data/Question` |
-| Real computed results for maths | `ai/MathEvaluator` |
-| Question history & personal library (search, bookmark, filter by subject, review suggestions) | `Fragments/CategoryFragment`, `adapters/QuestionAdapter` |
-| AI practice quizzes (MCQ) with instant feedback | `Fragments/QuizFragment`, `activities/QuizActivity`, `ai/LocalAiEngine#generateQuiz` |
-| Progress tracking / dashboard + insights | `repo/StudyRepository#getProgress`, `HomeFragment`, `SettingsFragment` |
-| Gamification (XP, levels, badges) | `util/Gamification`, `repo/StudyRepository` |
-| Notifications (review reminders, level-up) | `util/NotificationHelper` |
-| Security & safety (password strength, salted hashing, abuse detection) | `util/PasswordValidator`, `util/SecurityUtils`, `util/ContentModerator` |
-| Offline access | Successful online answers are stored locally in Room; temporary offline guidance is not persisted |
-| Fresh online answers | Every submission calls the remote model again; earlier answers are never reused as a cache |
-| Light / dark theme | `util/SessionManager`, `AiMentorApp`, Material 3 day/night themes |
+| Accounts | Registration, login, onboarding and local session handling |
+| AI answers | Structured answers in the question language with subject and difficulty classification |
+| Model routing | Local selection between `llama-3.1-8b-instant` and `llama-3.3-70b-versatile` |
+| Reliability | One bounded alternate-model attempt, a 60-second total deadline and rule-based offline fallback |
+| OCR | Photo Picker or camera input, on-device ML Kit OCR and editable extracted text |
+| History | Search, subject filter, bookmarks and reviewed state backed by Room |
+| Quizzes | Topic/history personalisation, adaptive difficulty, multiple choice, true/false, explanations and retrying mistakes |
+| Progress | Real Room statistics, seven-day activity, subject totals, accuracy, XP, levels and badges |
+| Notifications | User-controlled daily WorkManager reminder, selectable time and a test notification |
+| Presentation | Material UI, light/dark theme, loading/error/empty states and state restoration |
 
-See the pull request description for the full requirement-by-requirement checklist,
-including items intentionally deferred as future work (e.g. real 2FA, cloud sync).
+Only successful remote answers are saved to Room. Offline fallback content is
+temporary and does not enter history, progress or XP calculations. Submitting a
+question always starts a fresh request instead of reusing an old answer.
 
-## 2. Tech stack & tools
+## Technology
 
-* **Language:** Java 11
-* **IDE / build:** Android Studio, Gradle 8.13, Android Gradle Plugin 8.11.2
-* **UI:** AndroidX AppCompat + Material 3 (Material Components), ViewPager2, RecyclerView, CardView
-* **Persistence:** Room (SQLite) – single local source of truth for offline use
-* **Min / target SDK:** 24 / 36
-* **Package / applicationId:** `com.example.aimentor` (unchanged)
+- Java 11 source compatibility
+- Android SDK: min 24, compile/target 36
+- Android Gradle Plugin 8.11.2 and Gradle 8.13
+- AndroidX, Material Components and ViewPager2
+- Room for local persistence
+- Retrofit, OkHttp and Gson for the Groq OpenAI-compatible endpoint
+- ML Kit Text Recognition for on-device OCR
+- WorkManager for persistent, inexact daily reminders
+- JUnit, MockWebServer, AndroidX Test and Espresso
 
-## 3. Project structure
+## Project structure
 
-```
+```text
 app/src/main/java/com/example/aimentor/
-├── AiMentorApp.java            # Application – applies saved theme
-├── activities/                 # Login, SignUp, Onboarding, Menu, Answer, Quiz
-├── Fragments/                  # Home (ask + dashboard), Category (library),
-│                               #   Quiz, Settings
-├── adapters/                   # ViewPagerAdapter, QuestionAdapter
-├── ai/                         # AiEngine + offline LocalAiEngine, MathEvaluator,
-│                               #   SubjectClassifier, models
-├── data/                       # Room: entities, DAOs, AppDatabase
-├── repo/                       # UserRepository, StudyRepository
-└── util/                       # SessionManager, SecurityUtils, PasswordValidator,
-                                #   Validators, Gamification, ContentModerator,
-                                #   NotificationHelper
+|-- activities/    Login, signup, onboarding, answer and quiz screens
+|-- Fragments/     Home, history, quiz setup and settings
+|-- adapters/      ViewPager and question-list adapters
+|-- ai/            Remote/local engines, parsing, classification and quiz models
+|-- data/          Room entities, DAOs, database and migrations
+|-- network/       Groq Retrofit service and request/response models
+|-- repo/          Asynchronous user and study repositories
+|-- util/          Security, validation, gamification and reminder helpers
+`-- worker/        Scheduled study reminder worker
 ```
 
-## 4. AI engine configuration
+## Local configuration
 
-Text answers use the OpenAI-compatible HCNSEC chat-completions endpoint when
-`HCNSEC_API_KEY` is present in the gitignored `local.properties` file:
+The application does not ask students for an API key. The developer supplies
+the key locally at build time.
+
+Create or update the root `local.properties` file:
 
 ```properties
-HCNSEC_API_KEY=replace-with-a-local-demo-key
-HCNSEC_MODEL=DeepSeek-V4-Flash
+sdk.dir=/absolute/path/to/Android/Sdk
+GROQ_API_KEY=replace-with-your-own-groq-key
 ```
 
-`RemoteAiEngine` requests the developer-configured `HCNSEC_MODEL` (currently
-`DeepSeek-V4-Flash`) and maps structured JSON into `AiAnswer`. The request runs through
-`StudyRepository`'s IO executor, so it never blocks Android's main thread. The first request
-allows 1,200 completion tokens. If a reasoning model reports
-`finish_reason=length`, the app retries once with 2,400 tokens and never stores the partial
-answer. Temporary network, HTTP 408/429 and 5xx failures are also retried at most once. Only
-the final `content` is displayed; provider `reasoning_content` is never shown or persisted.
-The online operation has a 60-second total deadline. While that minute remains, the loading
-state keeps waiting for the remote answer. At the deadline, the hybrid engine cancels the
-remote worker and produces temporary offline guidance. This also covers Android DNS/TLS calls
-that may remain blocked below OkHttp's cancellable layer; late remote results are discarded
-and never create history records.
-The provider client resolves public hostnames with OkHttp DNS-over-HTTPS using Google DNS
-bootstrap IPs. This avoids emulator/system resolver stalls without pinning the provider to a
-temporary CDN address; unit tests continue to use the local system resolver for MockWebServer.
+`local.properties` is ignored by Git. Never put a real key in Java, XML,
+screenshots, issues, reports or commits.
 
-When no key is configured, `AiEngineFactory` selects `LocalAiEngine`, a deterministic,
-rule-based study coach that computes arithmetic and returns structured offline guidance.
-When a key is configured but the remote provider still fails after its bounded retry,
-`FallbackAiEngine` returns clearly labelled offline guidance instead of crashing. Offline
-guidance is shown for the current screen only: it is not added to Room, history, progress or
-XP. Only successful remote answers are saved with model name and response time. Submitting an
-identical question later makes a fresh online request instead of reusing the earlier answer.
-The version 2-to-3 Room migration clears the existing question table once while preserving
-users and quiz attempts. Practice quizzes currently remain local.
+The debug prototype reads the key into `BuildConfig` and calls:
 
-There is no API-key field in the app UI: the assignment developer configures the key at build
-time and students simply install the APK. For this assignment demo the local key is compiled
-into `BuildConfig`. It must never be committed, logged or shown in screenshots. A production
-application must keep the provider key on a backend/proxy because values compiled into an APK
-can be extracted.
+```text
+https://api.groq.com/openai/v1/chat/completions
+```
 
-## 5. Build & run
+This is acceptable only for a controlled classroom prototype using fictional
+data. A value compiled into an APK can be extracted. A production version must
+keep the provider credential on a trusted backend/proxy and authenticate app
+users before forwarding requests.
 
-Requirements: Android Studio (Giraffe+) or command-line Android SDK with **platform 36** and
-**build-tools 36**, plus a **JDK 17+**.
+If `GROQ_API_KEY` is empty, the app uses `LocalAiEngine`. When a configured
+remote request fails with an eligible transient error, the app may try the
+alternate Groq model once within the same 60-second deadline and then show the
+offline fallback without crashing.
+
+## Build and run
+
+Prerequisites:
+
+- Android Studio with Android SDK/platform 36
+- JDK 17 or the JBR bundled with Android Studio
+- An Android device or emulator running API 24 or newer
+
+Windows PowerShell:
+
+```powershell
+.\gradlew.bat testDebugUnitTest assembleDebug lintDebug
+```
+
+macOS/Linux:
 
 ```bash
-# 1. Point the build at your SDK (local.properties is gitignored)
-echo "sdk.dir=/path/to/Android/sdk" > local.properties
-
-# 2. Build / test / lint
-chmod +x gradlew
-./gradlew test           # JVM unit tests for the core logic
-./gradlew lint           # static analysis
-./gradlew assembleDebug  # produces app/build/outputs/apk/debug/app-debug.apk
+./gradlew testDebugUnitTest assembleDebug lintDebug
 ```
 
-Then install `app-debug.apk` on a device/emulator, or open the project in Android Studio and
-press **Run**. First launch: **Sign up → onboarding → Home**.
+The debug APK is generated at:
 
-## 6. Testing
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
 
-JVM tests under `app/src/test/java` cover the pure-Java study logic plus remote response
-parsing, authentication headers, bounded retry, token-limit recovery, timeout/error handling
-and offline fallback. Run them with `./gradlew test`.
+Open the project in Android Studio, select a device and run the `app`
+configuration. The normal first-use flow is:
 
-## 7. Security notes
+```text
+Sign up -> onboarding -> Home
+```
 
-Passwords are **never stored in plain text** – they are hashed with SHA-256 over a per-user
-random salt (`util/SecurityUtils`). For production this should be upgraded to a slow KDF
-(bcrypt / Argon2 / PBKDF2) together with encryption-at-rest (EncryptedSharedPreferences /
-SQLCipher). No secrets, keys or tokens are stored in this repository.
+## Testing
+
+JVM tests cover:
+
+- response parsing and bilingual structured output
+- local model selection and retry/error mapping
+- the shared 60-second fallback deadline
+- authentication, password hashing and validation
+- subject classification, quiz scoring, XP, levels and badges
+- input/OCR limits and reminder-time calculation
+
+Instrumented tests cover:
+
+- Room repository operations and user isolation
+- online-only answer persistence and offline non-persistence
+- atomic XP/review/quiz mutations
+- asynchronous repository callbacks
+- ViewModel state restoration and duplicate-request prevention
+- unique WorkManager scheduling, cancellation and notification channel setup
+
+Run instrumented tests with a connected device:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest
+```
+
+## Data and security notes
+
+- Passwords are stored as per-user salted PBKDF2 hashes; legacy hashes are
+  upgraded after a successful login.
+- Room main-thread access is disabled. Repository work runs on background
+  executors and returns results to the main thread.
+- Photos remain on the device. OCR runs locally and only the edited text is
+  sent to the AI provider.
+- Question input is limited to 6,000 characters.
+- App backup is disabled and the Settings screen provides account/data deletion.
+- Daily reminders are optional, use one unique periodic job and are cancelled
+  on normal logout or account deletion.
+- The application is an educational prototype and should use fictional data.
+
+## Known prototype limitations
+
+- Authentication and all user data are device-local; there is no cloud account
+  service or multi-device synchronisation.
+- The Groq key is recoverable from a built APK because there is no backend proxy.
+- WorkManager reminders are battery-friendly and persistent but not exact alarms;
+  Android may deliver them later than the selected time.
+- Offline answers are deterministic study guidance, not a replacement for the
+  remote language models.
+- Release signing, production monitoring and store deployment are outside the
+  assignment prototype scope.
