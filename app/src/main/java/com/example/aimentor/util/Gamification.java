@@ -63,4 +63,38 @@ public final class Gamification {
         if (level >= 10) badges.add("Level 10 Reached");
         return badges;
     }
+
+    public static List<String> unlockedAvatars(int level) {
+        List<String> avatars = new ArrayList<>();
+        avatars.add("Learner");
+        if (level >= 2) avatars.add("Explorer");
+        if (level >= 5) avatars.add("Scholar");
+        if (level >= 10) avatars.add("Master");
+        return avatars;
+    }
+
+    public static List<String> unlockedAccentThemes(int level) {
+        List<String> themes = new ArrayList<>();
+        themes.add("Indigo");
+        if (level >= 3) themes.add("Ocean");
+        if (level >= 5) themes.add("Forest");
+        if (level >= 8) themes.add("Sunset");
+        return themes;
+    }
+
+    public static String avatarSymbol(String avatar) {
+        if ("Explorer".equals(avatar)) return "🧭";
+        if ("Scholar".equals(avatar)) return "📚";
+        if ("Master".equals(avatar)) return "🏆";
+        return "🎓";
+    }
+
+    public static String nextUnlock(int level) {
+        if (level < 2) return "Level 2: Explorer avatar";
+        if (level < 3) return "Level 3: Ocean accent";
+        if (level < 5) return "Level 5: Scholar avatar and Forest accent";
+        if (level < 8) return "Level 8: Sunset accent";
+        if (level < 10) return "Level 10: Master avatar";
+        return "All appearance rewards unlocked";
+    }
 }

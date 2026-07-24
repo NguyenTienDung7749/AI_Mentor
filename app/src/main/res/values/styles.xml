@@ -9,8 +9,8 @@
     </style>
 
     <style name="Widget.AIMentor.Card.Highlight" parent="Widget.AIMentor.Card">
-        <item name="cardBackgroundColor">@color/primary_light</item>
-        <item name="strokeColor">@color/primary_light</item>
+        <item name="cardBackgroundColor">?attr/colorPrimaryContainer</item>
+        <item name="strokeColor">?attr/colorPrimaryContainer</item>
     </style>
 
     <style name="Widget.AIMentor.Button" parent="Widget.Material3.Button">

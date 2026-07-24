@@ -16,6 +16,7 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.aimentor.R;
 import com.example.aimentor.adapters.ViewPagerAdapter;
+import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.ReminderScheduler;
 import com.example.aimentor.util.SessionManager;
@@ -36,6 +37,7 @@ public class MenuActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_menu);
 

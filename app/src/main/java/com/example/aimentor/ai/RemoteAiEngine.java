@@ -335,13 +335,17 @@ public class RemoteAiEngine implements AiEngine {
                 : "Write every prompt, option and explanation in English.";
         return "You create accurate study quizzes. " + languageRule
                 + " Return only one valid JSON object without markdown: "
-                + "{\"questions\":[{\"type\":\"MULTIPLE_CHOICE|TRUE_FALSE\","
+                + "{\"questions\":[{\"type\":\"MULTIPLE_CHOICE|TRUE_FALSE|SHORT_ANSWER|FILL_IN_THE_BLANK\","
                 + "\"prompt\":\"question\",\"options\":[\"option\"],"
-                + "\"correctIndex\":0,\"explanation\":\"why the answer is correct\"}]}. "
+                + "\"correctIndex\":0,\"acceptedAnswers\":[\"accepted answer\"],"
+                + "\"explanation\":\"why the answer is correct\"}]}. "
                 + "Create exactly " + config.getCount() + " unique questions for "
                 + config.getSubject() + " at " + config.getDifficulty() + " difficulty. "
-                + "Include both MULTIPLE_CHOICE and TRUE_FALSE. Multiple-choice questions "
-                + "must have exactly 4 distinct options; true/false questions exactly 2. "
+                + "For 4 or more questions include all four question types. Multiple-choice "
+                + "questions must have exactly 4 distinct options and true/false questions "
+                + "exactly 2; both use correctIndex and an empty acceptedAnswers list. "
+                + "Short-answer and fill-in-the-blank questions use an empty options list, "
+                + "correctIndex -1, and 1 to 4 concise acceptedAnswers. "
                 + "Do not use markdown and do not repeat a prompt.";
     }
 
@@ -401,15 +405,22 @@ public class RemoteAiEngine implements AiEngine {
         Set<String> prompts = new HashSet<>();
         boolean hasMultipleChoice = false;
         boolean hasTrueFalse = false;
+        boolean hasShortAnswer = false;
+        boolean hasFillBlank = false;
         for (QuizItem item : envelope.questions) {
             String prompt = cleanQuizText(item == null ? null : item.prompt);
             String explanation = cleanQuizText(item == null ? null : item.explanation);
             QuizQuestion.Type type = parseQuizType(item == null ? null : item.type);
-            int expectedOptions = type == QuizQuestion.Type.TRUE_FALSE ? 2 : 4;
-            if (prompt.isEmpty() || explanation.isEmpty() || item.options == null
-                    || item.options.size() != expectedOptions
-                    || item.correctIndex < 0 || item.correctIndex >= expectedOptions
-                    || !prompts.add(prompt.toLowerCase(Locale.ROOT))) {
+            boolean textAnswer = type == QuizQuestion.Type.SHORT_ANSWER
+                    || type == QuizQuestion.Type.FILL_IN_THE_BLANK;
+            int expectedOptions = type == QuizQuestion.Type.TRUE_FALSE ? 2
+                    : type == QuizQuestion.Type.MULTIPLE_CHOICE ? 4 : 0;
+            if (prompt.isEmpty() || explanation.isEmpty()
+                    || !prompts.add(prompt.toLowerCase(Locale.ROOT))
+                    || item.options == null || item.options.size() != expectedOptions
+                    || (!textAnswer
+                    && (item.correctIndex < 0 || item.correctIndex >= expectedOptions))
+                    || (textAnswer && item.correctIndex != -1)) {
                 throw AiServiceException.invalidResponse();
             }
             List<String> options = new ArrayList<>();
@@ -422,10 +433,33 @@ public class RemoteAiEngine implements AiEngine {
                 }
                 options.add(clean);
             }
+            List<String> acceptedAnswers = new ArrayList<>();
+            if (textAnswer) {
+                if (item.acceptedAnswers == null || item.acceptedAnswers.isEmpty()
+                        || item.acceptedAnswers.size() > 4) {
+                    throw AiServiceException.invalidResponse();
+                }
+                Set<String> uniqueAnswers = new HashSet<>();
+                for (String answer : item.acceptedAnswers) {
+                    String clean = cleanQuizText(answer);
+                    if (clean.isEmpty()
+                            || !uniqueAnswers.add(clean.toLowerCase(Locale.ROOT))) {
+                        throw AiServiceException.invalidResponse();
+                    }
+                    acceptedAnswers.add(clean);
+                }
+            }
             hasMultipleChoice |= type == QuizQuestion.Type.MULTIPLE_CHOICE;
             hasTrueFalse |= type == QuizQuestion.Type.TRUE_FALSE;
+            hasShortAnswer |= type == QuizQuestion.Type.SHORT_ANSWER;
+            hasFillBlank |= type == QuizQuestion.Type.FILL_IN_THE_BLANK;
             result.add(new QuizQuestion(prompt, options, item.correctIndex,
-                    explanation, config.getSubject(), config.getDifficulty(), type));
+                    explanation, config.getSubject(), config.getDifficulty(), type,
+                    acceptedAnswers));
+        }
+        if (config.getCount() >= 4 && (!hasMultipleChoice || !hasTrueFalse
+                || !hasShortAnswer || !hasFillBlank)) {
+            throw AiServiceException.invalidResponse();
         }
         if (config.getCount() >= 2 && (!hasMultipleChoice || !hasTrueFalse)) {
             throw AiServiceException.invalidResponse();
@@ -434,9 +468,15 @@ public class RemoteAiEngine implements AiEngine {
     }
 
     private QuizQuestion.Type parseQuizType(String value) {
-        return "TRUE_FALSE".equalsIgnoreCase(value)
-                ? QuizQuestion.Type.TRUE_FALSE
-                : QuizQuestion.Type.MULTIPLE_CHOICE;
+        if ("TRUE_FALSE".equalsIgnoreCase(value)) return QuizQuestion.Type.TRUE_FALSE;
+        if ("SHORT_ANSWER".equalsIgnoreCase(value)) return QuizQuestion.Type.SHORT_ANSWER;
+        if ("FILL_IN_THE_BLANK".equalsIgnoreCase(value)) {
+            return QuizQuestion.Type.FILL_IN_THE_BLANK;
+        }
+        if ("MULTIPLE_CHOICE".equalsIgnoreCase(value)) {
+            return QuizQuestion.Type.MULTIPLE_CHOICE;
+        }
+        throw AiServiceException.invalidResponse();
     }
 
     private String cleanQuizText(String value) {
@@ -599,6 +639,7 @@ public class RemoteAiEngine implements AiEngine {
         String prompt;
         List<String> options;
         int correctIndex;
+        List<String> acceptedAnswers;
         String explanation;
     }
 }

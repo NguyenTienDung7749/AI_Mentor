@@ -59,6 +59,9 @@
     <string name="quiz_loading">Creating a personalized quiz…</string>
     <string name="quiz_multiple_choice">Multiple choice</string>
     <string name="quiz_true_false">True / False</string>
+    <string name="quiz_short_answer">Short answer</string>
+    <string name="quiz_fill_blank">Fill in the blank</string>
+    <string name="quiz_type_answer_hint">Type your answer</string>
     <string name="retry_mistakes">Retry mistakes</string>
     <string name="quiz_review_complete">Mistake review complete</string>
 
@@ -85,6 +88,16 @@
     <string name="delete_account_success">Account and local study data deleted.</string>
     <string name="learning_progress">Learning progress</string>
     <string name="progress_summary">%1$s  •  %2$s\n%3$d / %4$d quiz answers correct  •  %5$d%% accuracy\n%6$s</string>
+    <string name="review_time_summary">%1$d answers marked reviewed  •  %2$d min actual reading time</string>
+    <string name="accuracy_trends">Accuracy trends</string>
+    <string name="last_7_days">7 days</string>
+    <string name="last_30_days">30 days</string>
+    <string name="accuracy_trend_empty">%1$s: no quiz answers yet</string>
+    <string name="accuracy_trend_first">%1$s: %2$d%% across %3$d answers (first period)</string>
+    <string name="accuracy_trend_comparison">%1$s: %2$d%% (%3$s points vs previous period)</string>
+    <string name="repeated_topics">Repeated study topics</string>
+    <string name="repeated_topics_empty">No topic has appeared in multiple saved questions yet.</string>
+    <string name="repeated_topic_item">%1$s (%2$d questions)</string>
     <string name="xp_progress">%1$d / %2$d XP in this level • %3$d XP to next</string>
     <string name="subject_activity">Activity by subject</string>
     <string name="subject_activity_empty">No subject activity yet.</string>
@@ -248,6 +261,7 @@
     <string name="quiz_choose_answer">Please choose an answer.</string>
     <string name="quiz_correct_feedback">Correct! %1$s</string>
     <string name="quiz_incorrect_feedback">Not quite. %1$s</string>
+    <string name="quiz_incorrect_feedback_answer">Not quite. Correct answer: %1$s\n\n%2$s</string>
     <string name="quiz_error_default">Could not prepare a quiz. Check your connection and try again.</string>
     <string name="quiz_save_failed">Could not save this quiz result. Please try again.</string>
     <string name="retry_quiz_loading">Try again</string>
@@ -269,6 +283,14 @@
     <string name="initial_level_summary">Level 1 — Beginner (0 XP)</string>
     <string name="badges_empty">Badges: none yet — keep learning!</string>
     <string name="badges_summary">Badges: %1$s</string>
+    <string name="appearance_rewards">Appearance rewards</string>
+    <string name="avatar">Avatar</string>
+    <string name="accent_theme">Accent theme</string>
+    <string name="save_appearance">Use this appearance</string>
+    <string name="appearance_saved">Appearance updated.</string>
+    <string name="appearance_locked">This reward has not been unlocked yet.</string>
+    <string name="next_appearance_unlock">Next reward: %1$s</string>
+    <string name="selected_avatar_description">%1$s avatar</string>
     <string name="preferences_saved">Preferences saved.</string>
     <string name="reminder_sent">Reminder sent to your notifications.</string>
     <string name="reminder_permission_needed">Enable notifications to receive reminders.</string>

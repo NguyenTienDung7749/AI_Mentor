@@ -267,10 +267,22 @@ public class LocalAiEngine implements AiEngine {
         }
 
         Collections.shuffle(bank);
-        if (bank.size() > count) {
-            return new ArrayList<>(bank.subList(0, count));
+        List<QuizQuestion> selected = new ArrayList<>();
+        if (count >= QuizQuestion.Type.values().length) {
+            for (QuizQuestion.Type type : QuizQuestion.Type.values()) {
+                for (QuizQuestion question : bank) {
+                    if (question.getType() == type) {
+                        selected.add(question);
+                        break;
+                    }
+                }
+            }
         }
-        return bank;
+        for (QuizQuestion question : bank) {
+            if (selected.size() >= count) break;
+            if (!selected.contains(question)) selected.add(question);
+        }
+        return selected;
     }
 
     @Override
@@ -282,7 +294,8 @@ public class LocalAiEngine implements AiEngine {
             adapted.add(new QuizQuestion(
                     question.getPrompt(), new ArrayList<>(question.getOptions()),
                     question.getCorrectIndex(), question.getExplanation(),
-                    config.getSubject(), config.getDifficulty(), question.getType()));
+                    config.getSubject(), config.getDifficulty(), question.getType(),
+                    question.getAcceptedAnswers()));
         }
         return adapted;
     }
@@ -323,6 +336,12 @@ public class LocalAiEngine implements AiEngine {
                 list.add(trueFalse("A triangle's interior angles add up to 180 degrees.",
                         true, "In Euclidean geometry, the three interior angles total 180 degrees.",
                         subject, "Beginner"));
+                list.add(shortAnswer("What is pi rounded to two decimal places?",
+                        Arrays.asList("3.14"), "Pi rounded to two decimal places is 3.14.",
+                        subject, "Intermediate"));
+                list.add(fillBlank("The square root of 81 is ____.",
+                        Arrays.asList("9", "nine"), "9 multiplied by 9 equals 81.",
+                        subject, "Beginner"));
                 break;
             case SubjectClassifier.SCIENCE:
                 list.add(new QuizQuestion("What is the chemical symbol for water?",
@@ -340,6 +359,12 @@ public class LocalAiEngine implements AiEngine {
                 list.add(new QuizQuestion("Which particle has a negative electric charge?",
                         Arrays.asList("Proton", "Neutron", "Electron", "Photon"), 2,
                         "Electrons carry negative electric charge.", subject));
+                list.add(shortAnswer("What gas do humans need for respiration?",
+                        Arrays.asList("oxygen", "O2"), "Humans use oxygen during respiration.",
+                        subject, "Beginner"));
+                list.add(fillBlank("Water freezes at ____ degrees Celsius.",
+                        Arrays.asList("0", "zero", "0°C", "0 degrees Celsius"),
+                        "At standard pressure, water freezes at 0°C.", subject, "Beginner"));
                 break;
             case SubjectClassifier.PROGRAMMING:
                 list.add(new QuizQuestion("Which data structure works First-In-First-Out (FIFO)?",
@@ -357,6 +382,12 @@ public class LocalAiEngine implements AiEngine {
                 list.add(new QuizQuestion("Which SQL command reads rows from a table?",
                         Arrays.asList("SELECT", "UPDATE", "DELETE", "DROP"), 0,
                         "SELECT retrieves rows without changing them.", subject));
+                list.add(shortAnswer("Which Java keyword creates an object?",
+                        Arrays.asList("new"), "The new keyword allocates and creates an object.",
+                        subject, "Beginner"));
+                list.add(fillBlank("A FIFO data structure is called a ____.",
+                        Arrays.asList("queue"), "A queue processes items in first-in-first-out order.",
+                        subject, "Intermediate"));
                 break;
             case SubjectClassifier.HISTORY:
                 list.add(new QuizQuestion("In which year did World War II end?",
@@ -375,6 +406,12 @@ public class LocalAiEngine implements AiEngine {
                         Arrays.asList("French Revolution", "American Civil War",
                                 "World War I", "Russian Revolution"), 0,
                         "The French Revolution began in 1789.", subject));
+                list.add(shortAnswer("In what year did World War II end?",
+                        Arrays.asList("1945"), "World War II ended in 1945.",
+                        subject, "Beginner"));
+                list.add(fillBlank("The Renaissance began in ____.",
+                        Arrays.asList("Italy"), "The Renaissance began in Italian city-states.",
+                        subject, "Intermediate"));
                 break;
             case SubjectClassifier.LANGUAGES:
                 list.add(new QuizQuestion("Choose the correct sentence:",
@@ -392,6 +429,12 @@ public class LocalAiEngine implements AiEngine {
                 list.add(new QuizQuestion("Which word is an adverb?",
                         Arrays.asList("Quick", "Quickly", "Quicker", "Quickness"), 1,
                         "'Quickly' describes how an action happens.", subject));
+                list.add(shortAnswer("What is the past tense of 'go'?",
+                        Arrays.asList("went"), "'Went' is the simple past form of 'go'.",
+                        subject, "Beginner"));
+                list.add(fillBlank("An adjective describes a ____.",
+                        Arrays.asList("noun"), "An adjective adds information about a noun.",
+                        subject, "Beginner"));
                 break;
             default:
                 list.add(new QuizQuestion("Good problem solving usually starts by...",
@@ -413,6 +456,13 @@ public class LocalAiEngine implements AiEngine {
                         Arrays.asList("Repeat every word", "Capture the main ideas",
                                 "Add unrelated details", "Avoid conclusions"), 1,
                         "A summary condenses the most important ideas.", subject));
+                list.add(shortAnswer("What technique breaks a problem into smaller parts?",
+                        Arrays.asList("decomposition", "problem decomposition"),
+                        "Decomposition makes a complex problem easier to manage.",
+                        subject, "Intermediate"));
+                list.add(fillBlank("A useful summary captures the ____ ideas.",
+                        Arrays.asList("main", "key", "main ideas", "key ideas"),
+                        "A summary focuses on the main or key ideas.", subject, "Beginner"));
                 break;
         }
         return list;
@@ -424,5 +474,21 @@ public class LocalAiEngine implements AiEngine {
         return new QuizQuestion(prompt, Arrays.asList("True", "False"),
                 answer ? 0 : 1, explanation, subject, difficulty,
                 QuizQuestion.Type.TRUE_FALSE);
+    }
+
+    private QuizQuestion shortAnswer(String prompt, List<String> acceptedAnswers,
+                                     String explanation, String subject,
+                                     String difficulty) {
+        return new QuizQuestion(prompt, Collections.emptyList(), -1,
+                explanation, subject, difficulty,
+                QuizQuestion.Type.SHORT_ANSWER, acceptedAnswers);
+    }
+
+    private QuizQuestion fillBlank(String prompt, List<String> acceptedAnswers,
+                                   String explanation, String subject,
+                                   String difficulty) {
+        return new QuizQuestion(prompt, Collections.emptyList(), -1,
+                explanation, subject, difficulty,
+                QuizQuestion.Type.FILL_IN_THE_BLANK, acceptedAnswers);
     }
 }

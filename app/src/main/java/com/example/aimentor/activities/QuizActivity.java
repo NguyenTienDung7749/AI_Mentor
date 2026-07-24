@@ -17,9 +17,12 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.aimentor.R;
 import com.example.aimentor.ai.QuizQuestion;
 import com.example.aimentor.repo.StudyRepository;
+import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -42,6 +45,7 @@ public class QuizActivity extends AppCompatActivity {
     private static final String STATE_RECORDED = "result_recorded";
     private static final String STATE_AWARDED_XP = "awarded_xp";
     private static final String STATE_SELECTED = "selected_index";
+    private static final String STATE_TEXT_ANSWER = "text_answer";
     private static final String STATE_LAST_CORRECT = "last_correct";
 
     private QuizViewModel quizViewModel;
@@ -57,6 +61,7 @@ public class QuizActivity extends AppCompatActivity {
     private int correctCount;
     private int awardedXp;
     private int lastSelectedIndex = -1;
+    private String lastTextAnswer = "";
     private boolean answered;
     private boolean retryRound;
     private boolean resultRecorded;
@@ -66,11 +71,14 @@ public class QuizActivity extends AppCompatActivity {
     private TextView tvProgress, tvQuestionPrompt, tvFeedback, tvQuizType, tvQuizError;
     private RadioGroup rgOptions;
     private RadioButton[] options;
+    private TextInputLayout textAnswerLayout;
+    private TextInputEditText etTextAnswer;
     private MaterialButton btnAction, btnRetryQuiz;
     private View quizLoadingState, quizContent, quizErrorState;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_quiz);
 
@@ -122,6 +130,8 @@ public class QuizActivity extends AppCompatActivity {
         quizErrorState = findViewById(R.id.quizErrorState);
         quizContent = findViewById(R.id.quizContent);
         rgOptions = findViewById(R.id.rgOptions);
+        textAnswerLayout = findViewById(R.id.textAnswerLayout);
+        etTextAnswer = findViewById(R.id.etTextAnswer);
         options = new RadioButton[]{
                 findViewById(R.id.rbOpt0), findViewById(R.id.rbOpt1),
                 findViewById(R.id.rbOpt2), findViewById(R.id.rbOpt3)};
@@ -178,17 +188,23 @@ public class QuizActivity extends AppCompatActivity {
         QuizQuestion question = questions.get(index);
         boolean restoreAnswered = answered;
         int restoredSelection = lastSelectedIndex;
+        String restoredTextAnswer = lastTextAnswer;
         boolean restoredCorrect = lastAnswerCorrect;
 
         answered = false;
         lastSelectedIndex = -1;
+        lastTextAnswer = "";
         tvProgress.setText(getString(retryRound
                         ? R.string.quiz_retry_progress : R.string.quiz_question_progress,
                 index + 1, questions.size(), subject, difficulty));
-        tvQuizType.setText(question.getType() == QuizQuestion.Type.TRUE_FALSE
-                ? R.string.quiz_true_false : R.string.quiz_multiple_choice);
+        tvQuizType.setText(labelForType(question.getType()));
         tvQuestionPrompt.setText(question.getPrompt());
         rgOptions.clearCheck();
+        boolean textAnswer = question.requiresTextAnswer();
+        rgOptions.setVisibility(textAnswer ? View.GONE : View.VISIBLE);
+        textAnswerLayout.setVisibility(textAnswer ? View.VISIBLE : View.GONE);
+        etTextAnswer.setEnabled(true);
+        etTextAnswer.setText("");
 
         List<String> questionOptions = question.getOptions();
         for (int i = 0; i < options.length; i++) {
@@ -203,11 +219,29 @@ public class QuizActivity extends AppCompatActivity {
         tvFeedback.setVisibility(View.GONE);
         btnAction.setText(R.string.check_answer);
 
-        if (restoreAnswered && restoredSelection >= 0
+        if (restoreAnswered) {
+            if (textAnswer) {
+                etTextAnswer.setText(restoredTextAnswer);
+                renderAnsweredState(question, -1, restoredTextAnswer, restoredCorrect);
+            } else if (restoredSelection >= 0
+                    && restoredSelection < questionOptions.size()) {
+                options[restoredSelection].setChecked(true);
+                renderAnsweredState(question, restoredSelection, "", restoredCorrect);
+            }
+        } else if (textAnswer && !restoredTextAnswer.isEmpty()) {
+            etTextAnswer.setText(restoredTextAnswer);
+            etTextAnswer.setSelection(restoredTextAnswer.length());
+        } else if (restoredSelection >= 0
                 && restoredSelection < questionOptions.size()) {
             options[restoredSelection].setChecked(true);
-            renderAnsweredState(question, restoredSelection, restoredCorrect);
         }
+    }
+
+    private int labelForType(QuizQuestion.Type type) {
+        if (type == QuizQuestion.Type.TRUE_FALSE) return R.string.quiz_true_false;
+        if (type == QuizQuestion.Type.SHORT_ANSWER) return R.string.quiz_short_answer;
+        if (type == QuizQuestion.Type.FILL_IN_THE_BLANK) return R.string.quiz_fill_blank;
+        return R.string.quiz_multiple_choice;
     }
 
     private int selectedIndex() {
@@ -221,20 +255,24 @@ public class QuizActivity extends AppCompatActivity {
     private void onAction() {
         if (questions.isEmpty()) return;
         if (!answered) {
-            int selected = selectedIndex();
-            if (selected < 0) {
+            QuizQuestion question = questions.get(index);
+            int selected = question.requiresTextAnswer() ? -1 : selectedIndex();
+            String textAnswer = question.requiresTextAnswer() && etTextAnswer.getText() != null
+                    ? etTextAnswer.getText().toString().trim() : "";
+            if ((!question.requiresTextAnswer() && selected < 0)
+                    || (question.requiresTextAnswer() && textAnswer.isEmpty())) {
                 Toast.makeText(this, R.string.quiz_choose_answer,
                         Toast.LENGTH_SHORT).show();
                 return;
             }
-            QuizQuestion question = questions.get(index);
-            boolean correct = question.isCorrect(selected);
+            boolean correct = question.requiresTextAnswer()
+                    ? question.isCorrect(textAnswer) : question.isCorrect(selected);
             if (correct) {
                 correctCount++;
             } else if (!retryRound && !wrongQuestions.contains(question)) {
                 wrongQuestions.add(question);
             }
-            renderAnsweredState(question, selected, correct);
+            renderAnsweredState(question, selected, textAnswer, correct);
             return;
         }
 
@@ -242,23 +280,30 @@ public class QuizActivity extends AppCompatActivity {
             index++;
             answered = false;
             lastSelectedIndex = -1;
+            lastTextAnswer = "";
             showQuestion();
         } else {
             finishQuiz();
         }
     }
 
-    private void renderAnsweredState(QuizQuestion question, int selected, boolean correct) {
+    private void renderAnsweredState(QuizQuestion question, int selected,
+                                     String textAnswer, boolean correct) {
         answered = true;
         lastSelectedIndex = selected;
+        lastTextAnswer = textAnswer == null ? "" : textAnswer;
         lastAnswerCorrect = correct;
         for (RadioButton option : options) option.setEnabled(false);
+        etTextAnswer.setEnabled(false);
 
         tvFeedback.setVisibility(View.VISIBLE);
-        tvFeedback.setText(getString(correct
-                        ? R.string.quiz_correct_feedback
-                        : R.string.quiz_incorrect_feedback,
-                question.getExplanation()));
+        if (correct) {
+            tvFeedback.setText(getString(
+                    R.string.quiz_correct_feedback, question.getExplanation()));
+        } else {
+            tvFeedback.setText(getString(R.string.quiz_incorrect_feedback_answer,
+                    question.getDisplayAnswer(), question.getExplanation()));
+        }
         tvFeedback.setTextColor(ContextCompat.getColor(this,
                 correct ? R.color.success : R.color.error));
         btnAction.setText(index == questions.size() - 1
@@ -345,6 +390,7 @@ public class QuizActivity extends AppCompatActivity {
         correctCount = 0;
         answered = false;
         lastSelectedIndex = -1;
+        lastTextAnswer = "";
         showQuestion();
     }
 
@@ -361,7 +407,13 @@ public class QuizActivity extends AppCompatActivity {
         outState.putBoolean(STATE_RETRY, retryRound);
         outState.putBoolean(STATE_RECORDED, resultRecorded);
         outState.putInt(STATE_AWARDED_XP, awardedXp);
-        outState.putInt(STATE_SELECTED, lastSelectedIndex);
+        int savedSelection = answered ? lastSelectedIndex : selectedIndex();
+        String savedText = lastTextAnswer;
+        if (!answered && etTextAnswer.getText() != null) {
+            savedText = etTextAnswer.getText().toString();
+        }
+        outState.putInt(STATE_SELECTED, savedSelection);
+        outState.putString(STATE_TEXT_ANSWER, savedText);
         outState.putBoolean(STATE_LAST_CORRECT, lastAnswerCorrect);
     }
 
@@ -386,6 +438,7 @@ public class QuizActivity extends AppCompatActivity {
         resultRecorded = state.getBoolean(STATE_RECORDED, false);
         awardedXp = state.getInt(STATE_AWARDED_XP, 0);
         lastSelectedIndex = state.getInt(STATE_SELECTED, -1);
+        lastTextAnswer = state.getString(STATE_TEXT_ANSWER, "");
         lastAnswerCorrect = state.getBoolean(STATE_LAST_CORRECT, false);
         return true;
     }

@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.aimentor.R;
 import com.example.aimentor.repo.UserRepository;
+import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
 
@@ -29,6 +30,7 @@ public class OnboardingActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_onboarding);
 

@@ -35,9 +35,13 @@ public interface QuestionDao {
             + "WHERE id = :questionId AND userId = :userId")
     int toggleBookmark(long userId, long questionId);
 
-    @Query("UPDATE questions SET reviewed = 1 "
+    @Query("UPDATE questions SET reviewed = 1, reviewedAt = :reviewedAt "
             + "WHERE id = :questionId AND userId = :userId AND reviewed = 0")
-    int markReviewedIfNeeded(long userId, long questionId);
+    int markReviewedIfNeeded(long userId, long questionId, long reviewedAt);
+
+    @Query("UPDATE questions SET reviewDurationMs = reviewDurationMs + :durationMs "
+            + "WHERE id = :questionId AND userId = :userId")
+    int addReviewDuration(long userId, long questionId, long durationMs);
 
     @Query("DELETE FROM questions WHERE userId = :userId")
     void deleteForUser(long userId);

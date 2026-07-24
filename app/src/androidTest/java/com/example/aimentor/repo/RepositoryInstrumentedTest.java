@@ -160,6 +160,13 @@ public class RepositoryInstrumentedTest {
 
         assertTrue(studyRepository.markReviewed(firstUser, firstQuestion));
         assertFalse(studyRepository.markReviewed(firstUser, firstQuestion));
+        assertTrue(studyRepository.recordReviewDuration(
+                firstUser, firstQuestion, 12_000L));
+        assertFalse(studyRepository.recordReviewDuration(
+                firstUser, firstQuestion, 999L));
+        Question reviewed = studyRepository.getQuestion(firstUser, firstQuestion);
+        assertTrue(reviewed.reviewedAt > 0L);
+        assertEquals(12_000L, reviewed.reviewDurationMs);
         assertEquals(10 + Gamification.XP_REVIEW,
                 database.userDao().findById(firstUser).xp);
         assertEquals(50, database.userDao().findById(secondUser).xp);
@@ -305,6 +312,27 @@ public class RepositoryInstrumentedTest {
         assertEquals(7, progress.last7Days.size());
         assertTrue(progress.badges.isEmpty());
         assertFalse(progress.insights.isEmpty());
+    }
+
+    @Test
+    public void progress_buildsRealAccuracyTrendsAndRepeatedTopics() {
+        long userId = insertUser("trends@example.com", 0);
+        insertQuestion(userId, "Explain Android lifecycle", "Programming", false);
+        insertQuestion(userId, "Compare Android lifecycle states", "Programming", false);
+        long now = System.currentTimeMillis();
+        insertQuizAt(userId, 3, 4, now - TimeUnit.DAYS.toMillis(1));
+        insertQuizAt(userId, 1, 4, now - TimeUnit.DAYS.toMillis(10));
+
+        StudyRepository.Progress progress = studyRepository.getProgress(userId);
+
+        assertEquals(75, progress.current7DayAccuracy);
+        assertEquals(25, progress.previous7DayAccuracy);
+        assertEquals(4, progress.current7DayAnswered);
+        assertEquals(4, progress.previous7DayAnswered);
+        assertEquals(50, progress.current30DayAccuracy);
+        assertFalse(progress.repeatedTopics.isEmpty());
+        assertEquals("android", progress.repeatedTopics.get(0).topic);
+        assertEquals(2, progress.repeatedTopics.get(0).questionCount);
     }
 
     @Test
@@ -570,11 +598,16 @@ public class RepositoryInstrumentedTest {
     }
 
     private void insertQuiz(long userId) {
+        insertQuizAt(userId, 1, 1, System.currentTimeMillis());
+    }
+
+    private void insertQuizAt(long userId, int correct, int total, long createdAt) {
         QuizAttempt attempt = new QuizAttempt();
         attempt.userId = userId;
         attempt.subject = SubjectClassifier.GENERAL;
-        attempt.correct = 1;
-        attempt.total = 1;
+        attempt.correct = correct;
+        attempt.total = total;
+        attempt.createdAt = createdAt;
         database.quizAttemptDao().insert(attempt);
     }
 

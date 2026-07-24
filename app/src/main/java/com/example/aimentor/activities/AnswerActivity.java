@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
@@ -23,6 +24,7 @@ import com.example.aimentor.R;
 import com.example.aimentor.ai.AnswerSource;
 import com.example.aimentor.data.Question;
 import com.example.aimentor.repo.StudyRepository;
+import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
 
@@ -49,6 +51,7 @@ public class AnswerActivity extends AppCompatActivity {
     private boolean transientAnswer;
     private int loadGeneration;
     private int actionGeneration;
+    private long visibleSinceElapsed;
 
     public static Intent savedAnswerIntent(Context context, long questionId) {
         Intent intent = new Intent(context, AnswerActivity.class);
@@ -71,6 +74,7 @@ public class AnswerActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_answer);
 
@@ -153,6 +157,24 @@ public class AnswerActivity extends AppCompatActivity {
         loadGeneration++;
         actionGeneration++;
         super.onDestroy();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        visibleSinceElapsed = SystemClock.elapsedRealtime();
+    }
+
+    @Override
+    protected void onStop() {
+        if (!transientAnswer && question != null && question.id > 0
+                && visibleSinceElapsed > 0L) {
+            long duration = SystemClock.elapsedRealtime() - visibleSinceElapsed;
+            studyRepository.recordReviewDurationAsync(
+                    session.getCurrentUserId(), question.id, duration);
+        }
+        visibleSinceElapsed = 0L;
+        super.onStop();
     }
 
     private boolean canRenderLoad(int generation) {

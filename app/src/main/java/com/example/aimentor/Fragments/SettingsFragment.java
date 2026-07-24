@@ -37,6 +37,7 @@ import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.ReminderScheduler;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.Gamification;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
@@ -62,16 +63,19 @@ public class SettingsFragment extends Fragment {
     private StudyRepository studyRepository;
     private SessionManager session;
 
-    private TextView tvName, tvEmail, tvLevelInfo, tvBadges, tvXpProgress;
+    private TextView tvName, tvEmail, tvLevelInfo, tvBadges, tvXpProgress, tvAvatar;
     private TextView tvProgressSummary, tvSubjectBreakdown;
-    private TextView tvWeeklySummary, tvWeeklyEmpty;
+    private TextView tvWeeklySummary, tvWeeklyEmpty, tvReviewSummary;
+    private TextView tvAccuracyTrends, tvRepeatedTopics;
     private ProgressBar progressLevel;
     private LinearLayout weeklyActivityContainer;
-    private Spinner spLevel, spStyle;
+    private Spinner spLevel, spStyle, spAvatar, spAccentTheme;
     private CheckBox cbMath, cbScience, cbProgramming, cbHistory, cbLanguages;
     private SwitchMaterial switchTheme, switchReminder;
     private MaterialButton btnSavePrefs, btnDeleteAccount, btnReminderTime;
-    private TextView tvReminderStatus;
+    private MaterialButton btnSaveAppearance;
+    private TextView tvReminderStatus, tvUnlockStatus;
+    private int currentLevel = 1;
     private int loadGeneration;
     private int mutationGeneration;
     private boolean bindingReminderState;
@@ -109,11 +113,15 @@ public class SettingsFragment extends Fragment {
         session = new SessionManager(requireContext());
 
         tvName = view.findViewById(R.id.tvName);
+        tvAvatar = view.findViewById(R.id.tvAvatar);
         tvEmail = view.findViewById(R.id.tvEmail);
         tvLevelInfo = view.findViewById(R.id.tvLevelInfo);
         tvBadges = view.findViewById(R.id.tvBadges);
         tvXpProgress = view.findViewById(R.id.tvXpProgress);
         tvProgressSummary = view.findViewById(R.id.tvProgressSummary);
+        tvReviewSummary = view.findViewById(R.id.tvReviewSummary);
+        tvAccuracyTrends = view.findViewById(R.id.tvAccuracyTrends);
+        tvRepeatedTopics = view.findViewById(R.id.tvRepeatedTopics);
         tvSubjectBreakdown = view.findViewById(R.id.tvSubjectBreakdown);
         tvWeeklySummary = view.findViewById(R.id.tvWeeklySummary);
         tvWeeklyEmpty = view.findViewById(R.id.tvWeeklyEmpty);
@@ -121,6 +129,10 @@ public class SettingsFragment extends Fragment {
         weeklyActivityContainer = view.findViewById(R.id.weeklyActivityContainer);
         spLevel = view.findViewById(R.id.spLevel);
         spStyle = view.findViewById(R.id.spStyle);
+        spAvatar = view.findViewById(R.id.spAvatar);
+        spAccentTheme = view.findViewById(R.id.spAccentTheme);
+        tvUnlockStatus = view.findViewById(R.id.tvUnlockStatus);
+        btnSaveAppearance = view.findViewById(R.id.btnSaveAppearance);
         cbMath = view.findViewById(R.id.cbMath);
         cbScience = view.findViewById(R.id.cbScience);
         cbProgramming = view.findViewById(R.id.cbProgramming);
@@ -150,6 +162,7 @@ public class SettingsFragment extends Fragment {
         });
 
         btnSavePrefs.setOnClickListener(v -> savePrefs());
+        btnSaveAppearance.setOnClickListener(v -> saveAppearance());
         btnRemind.setOnClickListener(v -> sendReminder());
         switchReminder.setOnCheckedChangeListener((button, checked) -> {
             if (bindingReminderState) return;
@@ -224,6 +237,7 @@ public class SettingsFragment extends Fragment {
     }
 
     private void renderProgress(StudyRepository.Progress p) {
+        currentLevel = p.level;
         tvLevelInfo.setText(getString(R.string.level_summary_with_xp,
                 p.level, p.levelTitle, p.xp));
         progressLevel.setMax(com.example.aimentor.util.Gamification.XP_PER_LEVEL);
@@ -247,8 +261,84 @@ public class SettingsFragment extends Fragment {
         tvProgressSummary.setText(getString(R.string.progress_summary,
                 savedQuestions, quizAttempts, p.totalCorrect,
                 p.totalAnswered, p.accuracyPercent, bookmarks));
+        long reviewMinutes = Math.round(p.totalReviewDurationMs / 60000.0);
+        tvReviewSummary.setText(getString(R.string.review_time_summary,
+                p.reviewedAnswers, reviewMinutes));
+        tvAccuracyTrends.setText(buildAccuracyTrends(p));
+        bindRepeatedTopics(p);
+        bindAppearanceRewards(p.level);
         bindSubjectBreakdown(p);
         bindWeeklyActivity(p);
+    }
+
+    private void bindAppearanceRewards(int level) {
+        List<String> avatars = Gamification.unlockedAvatars(level);
+        List<String> themes = Gamification.unlockedAccentThemes(level);
+        spAvatar.setAdapter(makeAdapter(avatars));
+        spAccentTheme.setAdapter(makeAdapter(themes));
+        selectSpinner(spAvatar, avatars.toArray(new String[0]),
+                session.getSelectedAvatar());
+        selectSpinner(spAccentTheme, themes.toArray(new String[0]),
+                session.getSelectedAccentTheme());
+        tvAvatar.setText(Gamification.avatarSymbol(
+                String.valueOf(spAvatar.getSelectedItem())));
+        tvAvatar.setContentDescription(getString(R.string.selected_avatar_description,
+                String.valueOf(spAvatar.getSelectedItem())));
+        tvUnlockStatus.setText(getString(
+                R.string.next_appearance_unlock, Gamification.nextUnlock(level)));
+    }
+
+    private void saveAppearance() {
+        String avatar = String.valueOf(spAvatar.getSelectedItem());
+        String accent = String.valueOf(spAccentTheme.getSelectedItem());
+        if (!Gamification.unlockedAvatars(currentLevel).contains(avatar)
+                || !Gamification.unlockedAccentThemes(currentLevel).contains(accent)) {
+            Toast.makeText(requireContext(),
+                    R.string.appearance_locked, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        session.setSelectedAvatar(avatar);
+        session.setSelectedAccentTheme(accent);
+        Toast.makeText(requireContext(),
+                R.string.appearance_saved, Toast.LENGTH_SHORT).show();
+        requireActivity().recreate();
+    }
+
+    private String buildAccuracyTrends(StudyRepository.Progress progress) {
+        return trendLine(getString(R.string.last_7_days),
+                progress.current7DayAccuracy, progress.current7DayAnswered,
+                progress.previous7DayAccuracy, progress.previous7DayAnswered)
+                + "\n" + trendLine(getString(R.string.last_30_days),
+                progress.current30DayAccuracy, progress.current30DayAnswered,
+                progress.previous30DayAccuracy, progress.previous30DayAnswered);
+    }
+
+    private String trendLine(String period, int accuracy, int answered,
+                             int previousAccuracy, int previousAnswered) {
+        if (answered == 0) {
+            return getString(R.string.accuracy_trend_empty, period);
+        }
+        if (previousAnswered == 0) {
+            return getString(R.string.accuracy_trend_first,
+                    period, accuracy, answered);
+        }
+        int change = accuracy - previousAccuracy;
+        return getString(R.string.accuracy_trend_comparison,
+                period, accuracy, change >= 0 ? "+" + change : String.valueOf(change));
+    }
+
+    private void bindRepeatedTopics(StudyRepository.Progress progress) {
+        if (progress.repeatedTopics.isEmpty()) {
+            tvRepeatedTopics.setText(R.string.repeated_topics_empty);
+            return;
+        }
+        List<String> topicLines = new ArrayList<>();
+        for (com.example.aimentor.util.LearningAnalytics.TopicFrequency topic
+                : progress.repeatedTopics) {
+            topicLines.add(getString(R.string.repeated_topic_item,
+                    topic.topic, topic.questionCount));
+        }
+        tvRepeatedTopics.setText(android.text.TextUtils.join("  •  ", topicLines));
     }
 
     @Override

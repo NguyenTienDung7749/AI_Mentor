@@ -14,4 +14,14 @@
     <color name="error">#EF9A9A</color>
     <color name="error_container">#512124</color>
     <color name="star">#FFD54F</color>
+    <color name="theme_on_primary">#10111A</color>
+    <color name="ocean_primary">#70D4F3</color>
+    <color name="ocean_primary_dark">#16495A</color>
+    <color name="ocean_container">#16495A</color>
+    <color name="forest_primary">#8ED69C</color>
+    <color name="forest_primary_dark">#254B2E</color>
+    <color name="forest_container">#254B2E</color>
+    <color name="sunset_primary">#FFB596</color>
+    <color name="sunset_primary_dark">#643523</color>
+    <color name="sunset_container">#643523</color>
 </resources>

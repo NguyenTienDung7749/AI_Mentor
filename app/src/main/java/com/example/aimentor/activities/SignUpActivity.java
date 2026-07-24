@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat;
 import com.example.aimentor.R;
 import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.PasswordValidator;
+import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -29,6 +30,7 @@ public class SignUpActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        AppearanceManager.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
 

@@ -23,6 +23,13 @@
                 android:padding="@dimen/card_padding">
 
                 <TextView
+                    android:id="@+id/tvHomeAvatar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:importantForAccessibility="yes"
+                    android:textSize="34sp" />
+
+                <TextView
                     android:id="@+id/tvGreeting"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

@@ -16,6 +16,8 @@ public class SessionManager {
     private static final String KEY_REMINDER_ENABLED = "reminder_enabled";
     private static final String KEY_REMINDER_HOUR = "reminder_hour";
     private static final String KEY_REMINDER_MINUTE = "reminder_minute";
+    private static final String KEY_AVATAR_PREFIX = "avatar_";
+    private static final String KEY_ACCENT_PREFIX = "accent_";
 
     public static final int DEFAULT_REMINDER_HOUR = 19;
     public static final int DEFAULT_REMINDER_MINUTE = 0;
@@ -75,6 +77,28 @@ public class SessionManager {
                 .putInt(KEY_REMINDER_HOUR, clamp(hour, 0, 23))
                 .putInt(KEY_REMINDER_MINUTE, clamp(minute, 0, 59))
                 .apply();
+    }
+
+    public String getSelectedAvatar() {
+        return prefs.getString(userKey(KEY_AVATAR_PREFIX), "Learner");
+    }
+
+    public void setSelectedAvatar(String avatar) {
+        prefs.edit().putString(userKey(KEY_AVATAR_PREFIX),
+                avatar == null ? "Learner" : avatar).apply();
+    }
+
+    public String getSelectedAccentTheme() {
+        return prefs.getString(userKey(KEY_ACCENT_PREFIX), "Indigo");
+    }
+
+    public void setSelectedAccentTheme(String accent) {
+        prefs.edit().putString(userKey(KEY_ACCENT_PREFIX),
+                accent == null ? "Indigo" : accent).apply();
+    }
+
+    private String userKey(String prefix) {
+        return prefix + Math.max(0L, getCurrentUserId());
     }
 
     private int clamp(int value, int minimum, int maximum) {

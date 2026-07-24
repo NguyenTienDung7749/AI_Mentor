@@ -11,6 +11,7 @@ import com.example.aimentor.ai.QuizQuestion;
 import com.example.aimentor.ai.SubjectClassifier;
 import com.example.aimentor.util.ContentModerator;
 import com.example.aimentor.util.Gamification;
+import com.example.aimentor.util.LearningAnalytics;
 import com.example.aimentor.util.PasswordValidator;
 import com.example.aimentor.util.SecurityUtils;
 import com.example.aimentor.util.StudyInputPolicy;
@@ -20,6 +21,8 @@ import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /** JVM unit tests for the pure-Java study logic (run with ./gradlew test). */
@@ -171,16 +174,71 @@ public class StudyLogicTest {
         assertEquals(5, quiz.size());
         boolean hasMultipleChoice = false;
         boolean hasTrueFalse = false;
+        boolean hasShortAnswer = false;
+        boolean hasFillBlank = false;
         for (QuizQuestion q : quiz) {
-            assertTrue(q.getCorrectIndex() >= 0);
-            assertTrue(q.getCorrectIndex() < q.getOptions().size());
+            if (q.requiresTextAnswer()) {
+                assertFalse(q.getAcceptedAnswers().isEmpty());
+                assertEquals(-1, q.getCorrectIndex());
+                assertTrue(q.getOptions().isEmpty());
+                assertTrue(q.isCorrect(q.getAcceptedAnswers().get(0)));
+            } else {
+                assertTrue(q.getCorrectIndex() >= 0);
+                assertTrue(q.getCorrectIndex() < q.getOptions().size());
+            }
             assertFalse(q.getPrompt().isEmpty());
             assertFalse(q.getExplanation().isEmpty());
             hasMultipleChoice |= q.getType() == QuizQuestion.Type.MULTIPLE_CHOICE;
             hasTrueFalse |= q.getType() == QuizQuestion.Type.TRUE_FALSE;
+            hasShortAnswer |= q.getType() == QuizQuestion.Type.SHORT_ANSWER;
+            hasFillBlank |= q.getType() == QuizQuestion.Type.FILL_IN_THE_BLANK;
         }
         assertTrue(hasMultipleChoice);
         assertTrue(hasTrueFalse);
+        assertTrue(hasShortAnswer);
+        assertTrue(hasFillBlank);
+    }
+
+    @Test
+    public void openResponseQuiz_normalizesEquivalentAnswers() {
+        QuizQuestion question = new QuizQuestion(
+                "Water freezes at ____ degrees Celsius.",
+                Collections.emptyList(), -1, "At standard pressure.",
+                SubjectClassifier.SCIENCE, "Beginner",
+                QuizQuestion.Type.FILL_IN_THE_BLANK,
+                Arrays.asList("0°C", "zero"));
+
+        assertTrue(question.requiresTextAnswer());
+        assertTrue(question.isCorrect("  0 °C! "));
+        assertTrue(question.isCorrect("ZERO"));
+        assertFalse(question.isCorrect(""));
+        assertFalse(question.isCorrect("100"));
+        assertEquals("0°C", question.getDisplayAnswer());
+    }
+
+    @Test
+    public void learningAnalytics_countsTopicOncePerQuestion() {
+        List<LearningAnalytics.TopicFrequency> topics =
+                LearningAnalytics.repeatedTopics(Arrays.asList(
+                        "Explain Android Android lifecycle",
+                        "How does Android lifecycle restoration work?",
+                        "What is database normalization?"), 3);
+
+        assertEquals(2, topics.size());
+        assertEquals("android", topics.get(0).topic);
+        assertEquals(2, topics.get(0).questionCount);
+        assertEquals("lifecycle", topics.get(1).topic);
+        assertEquals(2, topics.get(1).questionCount);
+    }
+
+    @Test
+    public void appearanceRewards_unlockAtDefinedLevels() {
+        assertEquals(Collections.singletonList("Learner"),
+                Gamification.unlockedAvatars(1));
+        assertTrue(Gamification.unlockedAvatars(5).contains("Scholar"));
+        assertFalse(Gamification.unlockedAvatars(5).contains("Master"));
+        assertTrue(Gamification.unlockedAccentThemes(8).contains("Sunset"));
+        assertEquals("🏆", Gamification.avatarSymbol("Master"));
     }
 
     private static byte[] hexToBytes(String hex) {

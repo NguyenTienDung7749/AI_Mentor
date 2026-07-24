@@ -23,6 +23,7 @@ import com.example.aimentor.data.User;
 import com.example.aimentor.data.UserDao;
 import com.example.aimentor.util.ContentModerator;
 import com.example.aimentor.util.Gamification;
+import com.example.aimentor.util.LearningAnalytics;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -43,6 +44,7 @@ import java.util.function.Supplier;
 public class StudyRepository {
 
     private static final ExecutorService IO_EXECUTOR = Executors.newFixedThreadPool(2);
+    private static final long MAX_REVIEW_SESSION_MS = 30L * 60L * 1000L;
 
     private final AppDatabase database;
     private final UserDao userDao;
@@ -304,7 +306,8 @@ public class StudyRepository {
         try {
             return database.runInTransaction(() -> {
                 if (userDao.findById(userId) == null) return false;
-                int marked = questionDao.markReviewedIfNeeded(userId, questionId);
+                int marked = questionDao.markReviewedIfNeeded(
+                        userId, questionId, System.currentTimeMillis());
                 if (marked != 1) return false;
                 if (userDao.addXp(userId, Gamification.XP_REVIEW) != 1) {
                     throw new IllegalStateException("Could not award review XP");
@@ -321,6 +324,26 @@ public class StudyRepository {
             @NonNull DataCallback<Boolean> callback) {
         executeAsync(
                 () -> markReviewed(userId, questionId), false, callback);
+    }
+
+    /** Adds genuine foreground reading time without affecting XP or review state. */
+    @WorkerThread
+    public boolean recordReviewDuration(long userId, long questionId, long durationMs) {
+        long safeDuration = Math.min(durationMs, MAX_REVIEW_SESSION_MS);
+        if (userId <= 0 || questionId <= 0 || safeDuration < 1000L) return false;
+        return questionDao.addReviewDuration(
+                userId, questionId, safeDuration) == 1;
+    }
+
+    public void recordReviewDurationAsync(
+            long userId, long questionId, long durationMs) {
+        IO_EXECUTOR.execute(() -> {
+            try {
+                recordReviewDuration(userId, questionId, durationMs);
+            } catch (RuntimeException ignored) {
+                // Reading analytics must never interrupt the answer screen.
+            }
+        });
     }
 
     // ------------------------------------------------------------------ Quiz
@@ -522,12 +545,24 @@ public class StudyRepository {
         public int xpToNext;
         public int activityCountLast7Days;
         public int activeDaysLast7Days;
+        public int reviewedAnswers;
+        public long totalReviewDurationMs;
+        public int current7DayAccuracy;
+        public int previous7DayAccuracy;
+        public int current7DayAnswered;
+        public int previous7DayAnswered;
+        public int current30DayAccuracy;
+        public int previous30DayAccuracy;
+        public int current30DayAnswered;
+        public int previous30DayAnswered;
         public String topSubject = "-";
         public final Map<String, Integer> subjectCounts = new LinkedHashMap<>();
         public final Map<String, Integer> subjectQuizCounts = new LinkedHashMap<>();
         public final List<DailyActivity> last7Days = new ArrayList<>();
         public final List<String> badges = new ArrayList<>();
         public final List<String> insights = new ArrayList<>();
+        public final List<LearningAnalytics.TopicFrequency> repeatedTopics =
+                new ArrayList<>();
     }
 
     public static class DailyActivity {
@@ -555,6 +590,8 @@ public class StudyRepository {
         int topCount = 0;
         for (Question q : all) {
             if (q.bookmarked) p.bookmarkedCount++;
+            if (q.reviewed) p.reviewedAnswers++;
+            p.totalReviewDurationMs += Math.max(0L, q.reviewDurationMs);
             String s = SubjectClassifier.normalize(q.subject);
             int c = (p.subjectCounts.containsKey(s) ? p.subjectCounts.get(s) : 0) + 1;
             p.subjectCounts.put(s, c);
@@ -576,6 +613,11 @@ public class StudyRepository {
         }
         p.accuracyPercent =
                 Gamification.accuracyPercent(p.totalCorrect, p.totalAnswered);
+        buildAccuracyTrends(p, attempts, System.currentTimeMillis());
+        List<String> questionTexts = new ArrayList<>();
+        for (Question question : all) questionTexts.add(question.questionText);
+        p.repeatedTopics.addAll(
+                LearningAnalytics.repeatedTopics(questionTexts, 3));
         buildWeeklyActivity(p, all, attempts);
 
         p.badges.addAll(Gamification.earnedBadges(
@@ -659,6 +701,42 @@ public class StudyRepository {
         }
     }
 
+    private void buildAccuracyTrends(
+            Progress progress, List<QuizAttempt> attempts, long now) {
+        int[] current7 = quizTotals(attempts, now - 7L * DAY_MS, now);
+        int[] previous7 = quizTotals(
+                attempts, now - 14L * DAY_MS, now - 7L * DAY_MS);
+        int[] current30 = quizTotals(attempts, now - 30L * DAY_MS, now);
+        int[] previous30 = quizTotals(
+                attempts, now - 60L * DAY_MS, now - 30L * DAY_MS);
+        progress.current7DayAnswered = current7[1];
+        progress.previous7DayAnswered = previous7[1];
+        progress.current30DayAnswered = current30[1];
+        progress.previous30DayAnswered = previous30[1];
+        progress.current7DayAccuracy =
+                Gamification.accuracyPercent(current7[0], current7[1]);
+        progress.previous7DayAccuracy =
+                Gamification.accuracyPercent(previous7[0], previous7[1]);
+        progress.current30DayAccuracy =
+                Gamification.accuracyPercent(current30[0], current30[1]);
+        progress.previous30DayAccuracy =
+                Gamification.accuracyPercent(previous30[0], previous30[1]);
+    }
+
+    private static final long DAY_MS = 24L * 60L * 60L * 1000L;
+
+    private int[] quizTotals(List<QuizAttempt> attempts, long start, long end) {
+        int correct = 0;
+        int answered = 0;
+        for (QuizAttempt attempt : attempts) {
+            if (attempt.createdAt < start || attempt.createdAt >= end) continue;
+            int total = Math.max(0, attempt.total);
+            answered += total;
+            correct += Math.max(0, Math.min(attempt.correct, total));
+        }
+        return new int[]{correct, answered};
+    }
+
     private void buildInsights(Progress p) {
         if (p.totalQuestions == 0) {
             p.insights.add("Ask your first question to start your learning journey!");
@@ -673,6 +751,11 @@ public class StudyRepository {
         if (p.bookmarkedCount > 0) {
             p.insights.add("You have " + p.bookmarkedCount
                     + " bookmarked answer(s) waiting to be reviewed.");
+        }
+        if (!p.repeatedTopics.isEmpty()) {
+            LearningAnalytics.TopicFrequency topic = p.repeatedTopics.get(0);
+            p.insights.add("Recurring topic: " + topic.topic + " appeared in "
+                    + topic.questionCount + " saved questions.");
         }
     }
 }

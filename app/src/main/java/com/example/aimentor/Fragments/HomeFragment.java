@@ -33,6 +33,7 @@ import com.example.aimentor.data.User;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.Gamification;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -51,7 +52,7 @@ public class HomeFragment extends Fragment {
     private SessionManager session;
     private HomeUiStateViewModel uiState;
 
-    private TextView tvGreeting, tvLevelTitle, tvXp, tvStats, tvInsights;
+    private TextView tvGreeting, tvLevelTitle, tvXp, tvStats, tvInsights, tvHomeAvatar;
     private ProgressBar progressXp;
     private ProgressBar progressAsk;
     private Spinner spSubject;
@@ -98,6 +99,7 @@ public class HomeFragment extends Fragment {
                 .get(HomeUiStateViewModel.class);
 
         tvGreeting = view.findViewById(R.id.tvGreeting);
+        tvHomeAvatar = view.findViewById(R.id.tvHomeAvatar);
         tvLevelTitle = view.findViewById(R.id.tvLevelTitle);
         tvXp = view.findViewById(R.id.tvXp);
         tvStats = view.findViewById(R.id.tvStats);
@@ -344,6 +346,10 @@ public class HomeFragment extends Fragment {
         String name = (user != null && user.name != null && !user.name.isEmpty())
                 ? user.name : getString(R.string.default_student_name);
         tvGreeting.setText(getString(R.string.home_greeting, name));
+        String avatar = session.getSelectedAvatar();
+        tvHomeAvatar.setText(Gamification.avatarSymbol(avatar));
+        tvHomeAvatar.setContentDescription(getString(
+                R.string.selected_avatar_description, avatar));
     }
 
     private void renderProgress(StudyRepository.Progress p) {

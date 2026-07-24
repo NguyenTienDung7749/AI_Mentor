@@ -21,4 +21,25 @@
     </style>
 
     <style name="Theme.AIMentor" parent="Base.Theme.AIMentor" />
+
+    <style name="Theme.AIMentor.Ocean" parent="Base.Theme.AIMentor">
+        <item name="colorPrimary">@color/ocean_primary</item>
+        <item name="colorOnPrimary">@color/theme_on_primary</item>
+        <item name="colorPrimaryContainer">@color/ocean_container</item>
+        <item name="android:statusBarColor">@color/ocean_primary_dark</item>
+    </style>
+
+    <style name="Theme.AIMentor.Forest" parent="Base.Theme.AIMentor">
+        <item name="colorPrimary">@color/forest_primary</item>
+        <item name="colorOnPrimary">@color/theme_on_primary</item>
+        <item name="colorPrimaryContainer">@color/forest_container</item>
+        <item name="android:statusBarColor">@color/forest_primary_dark</item>
+    </style>
+
+    <style name="Theme.AIMentor.Sunset" parent="Base.Theme.AIMentor">
+        <item name="colorPrimary">@color/sunset_primary</item>
+        <item name="colorOnPrimary">@color/theme_on_primary</item>
+        <item name="colorPrimaryContainer">@color/sunset_container</item>
+        <item name="android:statusBarColor">@color/sunset_primary_dark</item>
+    </style>
 </resources>

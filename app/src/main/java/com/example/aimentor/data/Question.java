@@ -25,6 +25,12 @@ public class Question {
     public boolean reused = false;
     public boolean reviewed = false; // student has reviewed this saved answer (awards review XP once)
 
+    @ColumnInfo(defaultValue = "0")
+    public long reviewedAt = 0L;
+
+    @ColumnInfo(defaultValue = "0")
+    public long reviewDurationMs = 0L;
+
     @NonNull
     @ColumnInfo(defaultValue = "'LEGACY'")
     public String answerSource = AnswerSource.LEGACY.name();
