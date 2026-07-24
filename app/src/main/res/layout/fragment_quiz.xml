@@ -3,13 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clipToPadding="false"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/screen_padding">
+        android:paddingHorizontal="@dimen/screen_padding"
+        android:paddingTop="@dimen/space_lg"
+        android:paddingBottom="@dimen/space_xl">
 
         <TextView
             android:id="@+id/tvQuizHeading"
@@ -18,11 +21,18 @@
             android:text="@string/practice_quizzes_title"
             android:textAppearance="@style/TextAppearance.AIMentor.ScreenTitle" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xs"
+            android:text="@string/quiz_screen_subtitle"
+            android:textAppearance="@style/TextAppearance.AIMentor.Supporting" />
+
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.AIMentor.Card.Highlight"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp">
+            android:layout_marginTop="@dimen/space_lg">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -35,18 +45,89 @@
                     android:layout_height="wrap_content"
                     android:text="@string/quiz_progress_heading"
                     android:textColor="?attr/colorOnPrimaryContainer"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tvQuizStats"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:lineSpacingMultiplier="1.12"
-                    android:text="@string/quiz_stats_initial"
-                    android:textColor="?attr/colorOnPrimaryContainer"
-                    android:textSize="16sp" />
+                    android:layout_marginTop="@dimen/space_md"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal"
+                    android:weightSum="3">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvQuizCompleted"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stat_zero"
+                            android:textColor="?attr/colorOnPrimaryContainer"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/quiz_stat_completed"
+                            android:textColor="?attr/colorOnPrimaryContainer"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvQuizAccuracy"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stat_zero_percent"
+                            android:textColor="?attr/colorOnPrimaryContainer"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/quiz_stat_accuracy"
+                            android:textColor="?attr/colorOnPrimaryContainer"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvQuizCorrect"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/quiz_correct_ratio_initial"
+                            android:textColor="?attr/colorOnPrimaryContainer"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/quiz_stat_correct"
+                            android:textColor="?attr/colorOnPrimaryContainer"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -69,38 +150,47 @@
                     android:textAppearance="@style/TextAppearance.AIMentor.SectionTitle" />
 
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="@string/subject"
-                    android:textAppearance="@style/TextAppearance.AIMentor.Label" />
-
-                <Spinner
-                    android:id="@+id/spQuizSubject"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:minHeight="48dp" />
+                    android:layout_marginTop="@dimen/space_xs"
+                    android:text="@string/quiz_setup_supporting"
+                    android:textAppearance="@style/TextAppearance.AIMentor.Supporting" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/quiz_difficulty"
-                    android:textAppearance="@style/TextAppearance.AIMentor.Label" />
-
-                <Spinner
-                    android:id="@+id/spQuizDifficulty"
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.AIMentor.TextInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:minHeight="48dp" />
+                    android:layout_marginTop="@dimen/space_lg"
+                    android:hint="@string/subject"
+                    app:endIconMode="dropdown_menu">
+
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/actQuizSubject"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.AIMentor.TextInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_md"
+                    android:hint="@string/quiz_difficulty"
+                    app:endIconMode="dropdown_menu">
+
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/actQuizDifficulty"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnStartQuiz"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="@dimen/space_lg"
                     android:text="@string/start_quiz"
                     android:textSize="16sp"
                     app:icon="@drawable/ic_sparkle_24"
@@ -111,11 +201,13 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="@dimen/space_lg"
             android:background="@drawable/bg_info_panel"
-            android:padding="14dp"
+            android:drawablePadding="@dimen/space_sm"
+            android:padding="@dimen/space_md"
             android:text="@string/quiz_help"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
+            android:textAppearance="@style/TextAppearance.AIMentor.Supporting"
+            app:drawableStartCompat="@drawable/ic_sparkle_24"
+            app:drawableTint="?attr/colorPrimary" />
     </LinearLayout>
 </ScrollView>

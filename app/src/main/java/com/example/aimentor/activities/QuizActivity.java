@@ -21,6 +21,7 @@ import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.SessionManager;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -75,6 +76,7 @@ public class QuizActivity extends AppCompatActivity {
     private TextInputEditText etTextAnswer;
     private MaterialButton btnAction, btnRetryQuiz;
     private View quizLoadingState, quizContent, quizErrorState;
+    private LinearProgressIndicator quizProgressIndicator;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -126,6 +128,7 @@ public class QuizActivity extends AppCompatActivity {
         tvFeedback = findViewById(R.id.tvFeedback);
         tvQuizType = findViewById(R.id.tvQuizType);
         tvQuizError = findViewById(R.id.tvQuizError);
+        quizProgressIndicator = findViewById(R.id.quizProgressIndicator);
         quizLoadingState = findViewById(R.id.quizLoadingState);
         quizErrorState = findViewById(R.id.quizErrorState);
         quizContent = findViewById(R.id.quizContent);
@@ -197,6 +200,8 @@ public class QuizActivity extends AppCompatActivity {
         tvProgress.setText(getString(retryRound
                         ? R.string.quiz_retry_progress : R.string.quiz_question_progress,
                 index + 1, questions.size(), subject, difficulty));
+        quizProgressIndicator.setMax(questions.size());
+        quizProgressIndicator.setProgressCompat(index + 1, true);
         tvQuizType.setText(labelForType(question.getType()));
         tvQuestionPrompt.setText(question.getPrompt());
         rgOptions.clearCheck();
