@@ -16,11 +16,22 @@
         app:title="@string/answer_title"
         app:titleTextColor="@color/text_primary" />
 
+    <ProgressBar
+        android:id="@+id/progressAnswer"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_gravity="center"
+        android:layout_weight="1"
+        android:contentDescription="@string/answer_loading" />
+
     <ScrollView
+        android:id="@+id/answerContent"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -87,7 +98,8 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="12dp"
-        android:background="@color/surface">
+        android:background="@color/surface"
+        android:visibility="gone">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBookmark"

@@ -30,6 +30,7 @@
     <string name="ask_hint">Type your academic question here…</string>
     <string name="ask_button">Ask AI Mentor</string>
     <string name="preparing_answer">Contacting online AI (offline fallback after 60 seconds)…</string>
+    <string name="answer_loading">Loading saved answer…</string>
     <string name="offline_fallback_notice">Online AI was unavailable, so the app prepared temporary offline guidance. It was not saved.</string>
     <string name="subject">Subject</string>
     <string name="scan_image">Choose image</string>

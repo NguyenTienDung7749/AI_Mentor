@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,7 +36,11 @@ public class AnswerActivity extends AppCompatActivity {
     private SessionManager session;
     private Question question;
     private MaterialButton btnBookmark, btnReviewed;
+    private TextView tvSubject, tvAnswerSource, tvQuestion, tvAnswer;
+    private View answerContent, answerActions;
+    private ProgressBar progressAnswer;
     private boolean transientAnswer;
+    private int loadGeneration;
 
     public static Intent savedAnswerIntent(Context context, long questionId) {
         Intent intent = new Intent(context, AnswerActivity.class);
@@ -66,26 +71,38 @@ public class AnswerActivity extends AppCompatActivity {
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+        bindViews();
 
         transientAnswer = getIntent().getBooleanExtra(EXTRA_TRANSIENT, false);
-        question = transientAnswer
-                ? readTransientQuestion()
-                : studyRepository.getQuestion(
-                        session.getCurrentUserId(),
-                        getIntent().getLongExtra(EXTRA_QUESTION_ID, -1));
-        if (question == null) {
-            Toast.makeText(this, R.string.answer_not_found, Toast.LENGTH_SHORT).show();
-            finish();
-            return;
+        btnBookmark.setOnClickListener(v -> toggleBookmark());
+        btnReviewed.setOnClickListener(v -> markReviewed());
+        if (transientAnswer) {
+            question = readTransientQuestion();
+            if (question == null) {
+                showNotFoundAndFinish();
+                return;
+            }
+            renderQuestion();
+        } else {
+            loadSavedQuestion(null);
         }
+    }
 
-        TextView tvSubject = findViewById(R.id.tvSubject);
-        TextView tvAnswerSource = findViewById(R.id.tvAnswerSource);
-        TextView tvQuestion = findViewById(R.id.tvQuestion);
-        TextView tvAnswer = findViewById(R.id.tvAnswer);
+    private void bindViews() {
+        tvSubject = findViewById(R.id.tvSubject);
+        tvAnswerSource = findViewById(R.id.tvAnswerSource);
+        tvQuestion = findViewById(R.id.tvQuestion);
+        tvAnswer = findViewById(R.id.tvAnswer);
         btnBookmark = findViewById(R.id.btnBookmark);
         btnReviewed = findViewById(R.id.btnReviewed);
+        progressAnswer = findViewById(R.id.progressAnswer);
+        answerContent = findViewById(R.id.answerContent);
+        answerActions = findViewById(R.id.answerActions);
+    }
 
+    private void renderQuestion() {
+        progressAnswer.setVisibility(View.GONE);
+        answerContent.setVisibility(View.VISIBLE);
         tvSubject.setText(getString(R.string.answer_subject_difficulty,
                 question.subject, question.difficulty));
         tvAnswerSource.setText(buildSourceLabel(question));
@@ -93,44 +110,79 @@ public class AnswerActivity extends AppCompatActivity {
         tvAnswer.setText(cleanStoredAnswer(question.answerText));
 
         if (transientAnswer) {
-            findViewById(R.id.answerActions).setVisibility(View.GONE);
+            answerActions.setVisibility(View.GONE);
         } else {
+            answerActions.setVisibility(View.VISIBLE);
             refreshBookmarkButton();
             refreshReviewedButton();
-
-            btnBookmark.setOnClickListener(v -> {
-                studyRepository.toggleBookmark(
-                        session.getCurrentUserId(), question.id);
-                question = studyRepository.getQuestion(
-                        session.getCurrentUserId(), question.id);
-                if (question == null) {
-                    finish();
-                    return;
-                }
-                refreshBookmarkButton();
-                Toast.makeText(this, question.bookmarked
-                                ? R.string.bookmark_added : R.string.bookmark_removed,
-                        Toast.LENGTH_SHORT).show();
-            });
-
-            btnReviewed.setOnClickListener(v -> {
-                boolean awarded = studyRepository.markReviewed(
-                        session.getCurrentUserId(), question.id);
-                question = studyRepository.getQuestion(
-                        session.getCurrentUserId(), question.id);
-                if (question == null) {
-                    finish();
-                    return;
-                }
-                refreshReviewedButton();
-                Toast.makeText(this, awarded
-                                ? R.string.review_awarded : R.string.review_already_done,
-                        Toast.LENGTH_SHORT).show();
-            });
         }
     }
 
+    private void loadSavedQuestion(@Nullable Runnable afterLoad) {
+        int generation = ++loadGeneration;
+        if (question == null) {
+            progressAnswer.setVisibility(View.VISIBLE);
+            answerContent.setVisibility(View.GONE);
+            answerActions.setVisibility(View.GONE);
+        }
+        studyRepository.getQuestionAsync(
+                session.getCurrentUserId(),
+                getIntent().getLongExtra(EXTRA_QUESTION_ID, -1),
+                loadedQuestion -> {
+                    if (!canRenderLoad(generation)) return;
+                    if (loadedQuestion == null) {
+                        showNotFoundAndFinish();
+                        return;
+                    }
+                    question = loadedQuestion;
+                    renderQuestion();
+                    if (afterLoad != null) afterLoad.run();
+                });
+    }
+
+    @Override
+    protected void onDestroy() {
+        loadGeneration++;
+        super.onDestroy();
+    }
+
+    private boolean canRenderLoad(int generation) {
+        return generation == loadGeneration && !isFinishing() && !isDestroyed();
+    }
+
+    private void toggleBookmark() {
+        if (question == null) return;
+        setActionButtonsEnabled(false);
+        studyRepository.toggleBookmark(
+                session.getCurrentUserId(), question.id);
+        loadSavedQuestion(() -> Toast.makeText(this,
+                question.bookmarked
+                        ? R.string.bookmark_added : R.string.bookmark_removed,
+                Toast.LENGTH_SHORT).show());
+    }
+
+    private void markReviewed() {
+        if (question == null) return;
+        setActionButtonsEnabled(false);
+        boolean awarded = studyRepository.markReviewed(
+                session.getCurrentUserId(), question.id);
+        loadSavedQuestion(() -> Toast.makeText(this, awarded
+                        ? R.string.review_awarded : R.string.review_already_done,
+                Toast.LENGTH_SHORT).show());
+    }
+
+    private void setActionButtonsEnabled(boolean enabled) {
+        btnBookmark.setEnabled(enabled);
+        btnReviewed.setEnabled(enabled);
+    }
+
+    private void showNotFoundAndFinish() {
+        Toast.makeText(this, R.string.answer_not_found, Toast.LENGTH_SHORT).show();
+        finish();
+    }
+
     private void refreshBookmarkButton() {
+        btnBookmark.setEnabled(true);
         btnBookmark.setText(question.bookmarked ? R.string.bookmarked : R.string.bookmark);
     }
 

@@ -19,8 +19,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
-import androidx.fragment.app.Fragment;
 import androidx.core.view.ViewCompat;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 
 import com.example.aimentor.R;
 import com.example.aimentor.activities.LoginActivity;
@@ -63,6 +64,7 @@ public class SettingsFragment extends Fragment {
     private Spinner spLevel, spStyle;
     private CheckBox cbMath, cbScience, cbProgramming, cbHistory, cbLanguages;
     private SwitchMaterial switchTheme;
+    private int loadGeneration;
 
     public SettingsFragment() { }
 
@@ -138,12 +140,43 @@ public class SettingsFragment extends Fragment {
     }
 
     private void loadUser() {
-        User user = userRepository.getUser(session.getCurrentUserId());
+        long userId = session.getCurrentUserId();
+        int generation = ++loadGeneration;
+        userRepository.getUserAsync(userId, user -> {
+            if (!canRenderLoad(generation) || user == null) return;
+            renderUser(user);
+            studyRepository.getProgressAsync(user.id, progress -> {
+                if (!canRenderLoad(generation)) return;
+                renderProgress(progress);
+            });
+        });
+    }
+
+    private boolean canRenderLoad(int generation) {
+        return generation == loadGeneration
+                && isAdded()
+                && getView() != null
+                && getViewLifecycleOwner().getLifecycle().getCurrentState()
+                .isAtLeast(Lifecycle.State.STARTED);
+    }
+
+    private void renderUser(User user) {
         if (user == null) return;
         tvName.setText(user.name);
         tvEmail.setText(user.email);
 
-        StudyRepository.Progress p = studyRepository.getProgress(user.id);
+        selectSpinner(spLevel, EDUCATION_VALUES, user.educationLevel);
+        selectSpinner(spStyle, STYLE_VALUES, user.explanationStyle);
+
+        String subjects = user.subjects == null ? "" : user.subjects;
+        cbMath.setChecked(subjects.contains("Mathematics"));
+        cbScience.setChecked(subjects.contains("Science"));
+        cbProgramming.setChecked(subjects.contains("Programming"));
+        cbHistory.setChecked(subjects.contains("History"));
+        cbLanguages.setChecked(subjects.contains("Languages"));
+    }
+
+    private void renderProgress(StudyRepository.Progress p) {
         tvLevelInfo.setText(getString(R.string.level_summary_with_xp,
                 p.level, p.levelTitle, p.xp));
         progressLevel.setMax(com.example.aimentor.util.Gamification.XP_PER_LEVEL);
@@ -169,16 +202,12 @@ public class SettingsFragment extends Fragment {
                 p.totalAnswered, p.accuracyPercent, bookmarks));
         bindSubjectBreakdown(p);
         bindWeeklyActivity(p);
+    }
 
-        selectSpinner(spLevel, EDUCATION_VALUES, user.educationLevel);
-        selectSpinner(spStyle, STYLE_VALUES, user.explanationStyle);
-
-        String subjects = user.subjects == null ? "" : user.subjects;
-        cbMath.setChecked(subjects.contains("Mathematics"));
-        cbScience.setChecked(subjects.contains("Science"));
-        cbProgramming.setChecked(subjects.contains("Programming"));
-        cbHistory.setChecked(subjects.contains("History"));
-        cbLanguages.setChecked(subjects.contains("Languages"));
+    @Override
+    public void onDestroyView() {
+        loadGeneration++;
+        super.onDestroyView();
     }
 
     private void bindSubjectBreakdown(StudyRepository.Progress progress) {

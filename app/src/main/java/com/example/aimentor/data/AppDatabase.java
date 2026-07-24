@@ -13,9 +13,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
  * answers and quiz results stored on the device.
  * Temporary offline guidance is intentionally not persisted.
  *
- * For this MVP {@code allowMainThreadQueries()} is enabled to keep the code
- * simple for a junior team; the data volume per user is small. Moving DB access
- * to a background executor is listed as a future improvement in the report.
+ * Read-heavy screens use repository executors. {@code allowMainThreadQueries()}
+ * remains temporarily enabled only until the authentication and mutation paths
+ * are migrated in Batch 14B; removing it earlier would break those flows.
  */
 @Database(
         entities = {User.class, Question.class, QuizAttempt.class},

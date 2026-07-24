@@ -22,6 +22,7 @@ import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.aimentor.R;
@@ -58,6 +59,7 @@ public class HomeFragment extends Fragment {
     private MaterialButton btnAsk, btnChooseImage, btnTakePhoto;
     private ProgressBar progressOcr;
     private TextView tvAskStatus, tvOcrStatus;
+    private int refreshGeneration;
 
     private final ActivityResultLauncher<PickVisualMediaRequest> imagePicker =
             registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
@@ -292,6 +294,7 @@ public class HomeFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        refreshGeneration++;
         captureUiState();
         super.onDestroyView();
     }
@@ -311,12 +314,32 @@ public class HomeFragment extends Fragment {
 
     private void refresh() {
         long userId = session.getCurrentUserId();
-        User user = userRepository.getUser(userId);
+        int generation = ++refreshGeneration;
+        userRepository.getUserAsync(userId, user -> {
+            if (!canRenderRefresh(generation)) return;
+            renderUser(user);
+        });
+        studyRepository.getProgressAsync(userId, progress -> {
+            if (!canRenderRefresh(generation)) return;
+            renderProgress(progress);
+        });
+    }
+
+    private boolean canRenderRefresh(int generation) {
+        return generation == refreshGeneration
+                && isAdded()
+                && getView() != null
+                && getViewLifecycleOwner().getLifecycle().getCurrentState()
+                .isAtLeast(Lifecycle.State.STARTED);
+    }
+
+    private void renderUser(User user) {
         String name = (user != null && user.name != null && !user.name.isEmpty())
                 ? user.name : getString(R.string.default_student_name);
         tvGreeting.setText(getString(R.string.home_greeting, name));
+    }
 
-        StudyRepository.Progress p = studyRepository.getProgress(userId);
+    private void renderProgress(StudyRepository.Progress p) {
         tvLevelTitle.setText(getString(
                 R.string.level_summary, p.level, p.levelTitle));
         progressXp.setProgress(p.xpIntoLevel);

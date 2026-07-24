@@ -38,6 +38,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Integration coverage for the Room-backed critical flows. Every test uses an
@@ -55,7 +57,6 @@ public class RepositoryInstrumentedTest {
     public void setUp() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase.class)
-                .allowMainThreadQueries()
                 .build();
         engine = new MutableAiEngine();
         studyRepository = new StudyRepository(
@@ -285,6 +286,39 @@ public class RepositoryInstrumentedTest {
         assertEquals(7, progress.last7Days.size());
         assertTrue(progress.badges.isEmpty());
         assertFalse(progress.insights.isEmpty());
+    }
+
+    @Test
+    public void asyncReadCallbacks_deliverRealDataOnMainThread()
+            throws Exception {
+        long userId = insertUser("async-read@example.com", 35);
+        insertQuestion(userId, "Async Room query", "Programming", false);
+        CountDownLatch completed = new CountDownLatch(2);
+        AtomicBoolean progressOnMain = new AtomicBoolean();
+        AtomicBoolean userOnMain = new AtomicBoolean();
+        AtomicReference<StudyRepository.Progress> progress =
+                new AtomicReference<>();
+        AtomicReference<User> user = new AtomicReference<>();
+
+        studyRepository.getProgressAsync(userId, value -> {
+            progress.set(value);
+            progressOnMain.set(
+                    Looper.myLooper() == Looper.getMainLooper());
+            completed.countDown();
+        });
+        userRepository.getUserAsync(userId, value -> {
+            user.set(value);
+            userOnMain.set(
+                    Looper.myLooper() == Looper.getMainLooper());
+            completed.countDown();
+        });
+
+        assertTrue(completed.await(5, TimeUnit.SECONDS));
+        assertTrue(progressOnMain.get());
+        assertTrue(userOnMain.get());
+        assertEquals(1, progress.get().totalQuestions);
+        assertEquals(35, progress.get().xp);
+        assertEquals(userId, user.get().id);
     }
 
     @Test

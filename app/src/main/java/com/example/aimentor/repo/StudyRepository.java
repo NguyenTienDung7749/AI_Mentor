@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 
 /**
  * Core study logic: asking fresh online questions, generating practice
@@ -70,6 +71,25 @@ public class StudyRepository {
 
     public AiEngine getEngine() {
         return engine;
+    }
+
+    public interface DataCallback<T> {
+        void onResult(T value);
+    }
+
+    private <T> void readAsync(
+            @NonNull Supplier<T> query, T fallback,
+            @NonNull DataCallback<T> callback) {
+        IO_EXECUTOR.execute(() -> {
+            T value;
+            try {
+                value = query.get();
+            } catch (RuntimeException readFailed) {
+                value = fallback;
+            }
+            T delivered = value;
+            mainHandler.post(() -> callback.onResult(delivered));
+        });
     }
 
     // ----------------------------------------------------------------- Ask
@@ -198,10 +218,17 @@ public class StudyRepository {
 
     // --------------------------------------------------------------- Library
 
+    @WorkerThread
     public List<Question> getHistory(long userId) {
         return normalizeSubjects(questionDao.getForUser(userId));
     }
 
+    public void getHistoryAsync(
+            long userId, @NonNull DataCallback<List<Question>> callback) {
+        readAsync(() -> getHistory(userId), new ArrayList<>(), callback);
+    }
+
+    @WorkerThread
     public List<Question> search(long userId, String query) {
         if (query == null || query.trim().isEmpty()) return getHistory(userId);
         String needle = query.trim().toLowerCase(Locale.ROOT);
@@ -218,10 +245,23 @@ public class StudyRepository {
         return matches;
     }
 
+    public void searchAsync(
+            long userId, String query,
+            @NonNull DataCallback<List<Question>> callback) {
+        readAsync(() -> search(userId, query), new ArrayList<>(), callback);
+    }
+
+    @WorkerThread
     public List<Question> getBookmarked(long userId) {
         return normalizeSubjects(questionDao.getBookmarked(userId));
     }
 
+    public void getBookmarkedAsync(
+            long userId, @NonNull DataCallback<List<Question>> callback) {
+        readAsync(() -> getBookmarked(userId), new ArrayList<>(), callback);
+    }
+
+    @WorkerThread
     public List<Question> getBySubject(long userId, String subject) {
         List<Question> matches = new ArrayList<>();
         String normalizedSubject = SubjectClassifier.normalize(subject);
@@ -233,9 +273,16 @@ public class StudyRepository {
         return matches;
     }
 
+    @WorkerThread
     public Question getQuestion(long userId, long questionId) {
         return normalizeSubject(
                 questionDao.findByIdForUser(userId, questionId));
+    }
+
+    public void getQuestionAsync(
+            long userId, long questionId,
+            @NonNull DataCallback<Question> callback) {
+        readAsync(() -> getQuestion(userId, questionId), null, callback);
     }
 
     public boolean toggleBookmark(long userId, long questionId) {
@@ -466,6 +513,7 @@ public class StudyRepository {
         }
     }
 
+    @WorkerThread
     public Progress getProgress(long userId) {
         Progress p = new Progress();
         User user = userDao.findById(userId);
@@ -509,6 +557,22 @@ public class StudyRepository {
 
         buildInsights(p);
         return p;
+    }
+
+    public void getProgressAsync(
+            long userId, @NonNull DataCallback<Progress> callback) {
+        readAsync(() -> getProgress(userId), emptyProgress(), callback);
+    }
+
+    private Progress emptyProgress() {
+        Progress progress = new Progress();
+        progress.level = Gamification.levelForXp(0);
+        progress.levelTitle = Gamification.titleForLevel(progress.level);
+        progress.xpIntoLevel = Gamification.xpIntoLevel(0);
+        progress.xpToNext = Gamification.xpToNextLevel(0);
+        buildWeeklyActivity(progress, new ArrayList<>(), new ArrayList<>());
+        buildInsights(progress);
+        return progress;
     }
 
     private List<Question> normalizeSubjects(List<Question> questions) {

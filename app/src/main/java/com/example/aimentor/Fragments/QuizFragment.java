@@ -11,8 +11,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
 import androidx.core.view.ViewCompat;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 
 import com.example.aimentor.R;
 import com.example.aimentor.activities.QuizActivity;
@@ -34,6 +35,7 @@ public class QuizFragment extends Fragment {
     private SessionManager session;
     private Spinner spQuizSubject, spQuizDifficulty;
     private TextView tvQuizStats;
+    private int refreshGeneration;
 
     public QuizFragment() { }
 
@@ -89,9 +91,29 @@ public class QuizFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        StudyRepository.Progress p = studyRepository.getProgress(session.getCurrentUserId());
-        tvQuizStats.setText(getString(R.string.quiz_stats,
-                p.quizzesCompleted, p.accuracyPercent,
-                p.totalCorrect, p.totalAnswered));
+        int generation = ++refreshGeneration;
+        studyRepository.getProgressAsync(
+                session.getCurrentUserId(), progress -> {
+                    if (!canRenderRefresh(generation)) return;
+                    tvQuizStats.setText(getString(R.string.quiz_stats,
+                            progress.quizzesCompleted,
+                            progress.accuracyPercent,
+                            progress.totalCorrect,
+                            progress.totalAnswered));
+                });
+    }
+
+    private boolean canRenderRefresh(int generation) {
+        return generation == refreshGeneration
+                && isAdded()
+                && getView() != null
+                && getViewLifecycleOwner().getLifecycle().getCurrentState()
+                .isAtLeast(Lifecycle.State.STARTED);
+    }
+
+    @Override
+    public void onDestroyView() {
+        refreshGeneration++;
+        super.onDestroyView();
     }
 }

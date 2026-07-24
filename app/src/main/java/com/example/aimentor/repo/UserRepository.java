@@ -1,6 +1,11 @@
 package com.example.aimentor.repo;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
 
 import com.example.aimentor.data.AppDatabase;
 import com.example.aimentor.data.User;
@@ -10,15 +15,22 @@ import com.example.aimentor.util.SecurityUtils;
 import com.example.aimentor.util.Validators;
 
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /** Registration and authentication backed by the local Room database. */
 public class UserRepository {
 
+    private static final ExecutorService IO_EXECUTOR =
+            Executors.newSingleThreadExecutor();
+
     private final AppDatabase database;
     private final UserDao userDao;
+    private final Handler mainHandler;
 
     public UserRepository(Context context) {
-        this(AppDatabase.getInstance(context));
+        this(AppDatabase.getInstance(context),
+                new Handler(Looper.getMainLooper()));
     }
 
     /**
@@ -26,8 +38,13 @@ public class UserRepository {
      * It never replaces the production singleton or the student's real data.
      */
     UserRepository(AppDatabase database) {
+        this(database, new Handler(Looper.getMainLooper()));
+    }
+
+    UserRepository(AppDatabase database, Handler mainHandler) {
         this.database = database;
         this.userDao = database.userDao();
+        this.mainHandler = mainHandler;
     }
 
     public static class Result {
@@ -85,8 +102,27 @@ public class UserRepository {
         return new Result(true, "Welcome back!", user.id);
     }
 
+    public interface UserCallback {
+        void onResult(User user);
+    }
+
+    @WorkerThread
     public User getUser(long id) {
         return userDao.findById(id);
+    }
+
+    public void getUserAsync(
+            long id, @NonNull UserCallback callback) {
+        IO_EXECUTOR.execute(() -> {
+            User user;
+            try {
+                user = getUser(id);
+            } catch (RuntimeException readFailed) {
+                user = null;
+            }
+            User delivered = user;
+            mainHandler.post(() -> callback.onResult(delivered));
+        });
     }
 
     public void saveOnboarding(long userId, String level, String subjects, String style) {

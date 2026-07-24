@@ -14,8 +14,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
 import androidx.core.view.ViewCompat;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -51,6 +52,8 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
     private SwitchMaterial switchBookmarked;
     private RecyclerView rvHistory;
     private TextView tvEmpty, tvSuggest;
+    private int refreshGeneration;
+    private int suggestionGeneration;
 
     public CategoryFragment() { }
 
@@ -113,25 +116,43 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
     public void onResume() {
         super.onResume();
         refresh();
+        refreshSuggestion();
     }
 
     private void refresh() {
         long userId = session.getCurrentUserId();
+        int generation = ++refreshGeneration;
         String query = etSearch.getText() == null ? "" : etSearch.getText().toString().trim();
         boolean bookmarkedOnly = switchBookmarked.isChecked();
         int subjectPosition = spSubjectFilter.getSelectedItemPosition();
         String subjectFilter = FILTER_SUBJECT_VALUES[Math.max(0,
                 Math.min(subjectPosition, FILTER_SUBJECT_VALUES.length - 1))];
 
-        List<Question> base;
+        StudyRepository.DataCallback<List<Question>> callback = base -> {
+            if (!canRenderRefresh(generation)) return;
+            renderQuestions(base, query, bookmarkedOnly, subjectFilter);
+        };
         if (bookmarkedOnly) {
-            base = studyRepository.getBookmarked(userId);
+            studyRepository.getBookmarkedAsync(userId, callback);
         } else if (!query.isEmpty()) {
-            base = studyRepository.search(userId, query);
+            studyRepository.searchAsync(userId, query, callback);
         } else {
-            base = studyRepository.getHistory(userId);
+            studyRepository.getHistoryAsync(userId, callback);
         }
+    }
 
+    private void refreshSuggestion() {
+        int generation = ++suggestionGeneration;
+        studyRepository.getProgressAsync(
+                session.getCurrentUserId(), progress -> {
+                    if (!canRenderSuggestion(generation)) return;
+                    renderSuggestion(progress);
+                });
+    }
+
+    private void renderQuestions(
+            List<Question> base, String query,
+            boolean bookmarkedOnly, String subjectFilter) {
         List<Question> filtered = new ArrayList<>();
         for (Question q : base) {
             if (bookmarkedOnly && !query.isEmpty() && !matchesQuery(q, query)) {
@@ -151,14 +172,38 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
                 ? R.string.empty_filtered_history : R.string.empty_history);
         tvEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
         rvHistory.setVisibility(empty ? View.GONE : View.VISIBLE);
+    }
 
-        StudyRepository.Progress p = studyRepository.getProgress(userId);
+    private void renderSuggestion(StudyRepository.Progress p) {
         if (p.totalQuestions >= 3 && !"-".equals(p.topSubject)) {
             tvSuggest.setVisibility(View.VISIBLE);
             tvSuggest.setText(getString(R.string.suggested_review, p.topSubject));
         } else {
             tvSuggest.setVisibility(View.GONE);
         }
+    }
+
+    private boolean canRenderRefresh(int generation) {
+        return generation == refreshGeneration
+                && isAdded()
+                && getView() != null
+                && getViewLifecycleOwner().getLifecycle().getCurrentState()
+                .isAtLeast(Lifecycle.State.STARTED);
+    }
+
+    private boolean canRenderSuggestion(int generation) {
+        return generation == suggestionGeneration
+                && isAdded()
+                && getView() != null
+                && getViewLifecycleOwner().getLifecycle().getCurrentState()
+                .isAtLeast(Lifecycle.State.STARTED);
+    }
+
+    @Override
+    public void onDestroyView() {
+        refreshGeneration++;
+        suggestionGeneration++;
+        super.onDestroyView();
     }
 
     @Override
