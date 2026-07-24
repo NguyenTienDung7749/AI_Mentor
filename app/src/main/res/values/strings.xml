@@ -23,6 +23,7 @@
     <string name="tab_home">Home</string>
     <string name="tab_library">Library</string>
     <string name="tab_quiz">Quiz</string>
+    <string name="tab_progress">Progress</string>
     <string name="tab_settings">Settings</string>
 
     <!-- Home / Ask -->
@@ -86,9 +87,13 @@
     <string name="delete_account_confirm">Delete permanently</string>
     <string name="delete_account_cancel">Cancel</string>
     <string name="delete_account_success">Account and local study data deleted.</string>
-    <string name="learning_progress">Learning progress</string>
-    <string name="progress_summary">%1$s  •  %2$s\n%3$s  •  %4$d%% accuracy\n%5$s</string>
-    <string name="review_time_summary">%1$s marked reviewed  •  %2$s actual reading time</string>
+    <string name="progress_title">Learning Progress</string>
+    <string name="progress_subtitle">See how your questions, quizzes and review habits are growing over time.</string>
+    <string name="progress_empty_state">Your real activity will appear here after you save an online answer or complete a quiz.</string>
+    <string name="progress_level_heading">CURRENT LEARNING LEVEL</string>
+    <string name="progress_overview">Study overview</string>
+    <string name="progress_stat_saved">Saved answers</string>
+    <string name="progress_review_detail">%1$s  •  %2$s reviewed  •  %3$s reading</string>
     <string name="accuracy_trends">Accuracy trends</string>
     <string name="last_7_days">7 days</string>
     <string name="last_30_days">30 days</string>
@@ -107,10 +112,6 @@
     <string name="activity_count">%1$d</string>
     <string name="daily_activity_description">%1$s: %2$s</string>
     <string name="subject_question_quiz_count">%1$s: %2$s, %3$s</string>
-    <plurals name="saved_question_count">
-        <item quantity="one">%d saved question</item>
-        <item quantity="other">%d saved questions</item>
-    </plurals>
     <plurals name="question_count">
         <item quantity="one">%d question</item>
         <item quantity="other">%d questions</item>
@@ -130,10 +131,6 @@
     <plurals name="active_day_count">
         <item quantity="one">%d active day</item>
         <item quantity="other">%d active days</item>
-    </plurals>
-    <plurals name="quiz_answer_score">
-        <item quantity="one">%1$d / %2$d quiz answer correct</item>
-        <item quantity="other">%1$d / %2$d quiz answers correct</item>
     </plurals>
     <plurals name="reviewed_answer_count">
         <item quantity="one">%d answer</item>
@@ -312,6 +309,8 @@
     </plurals>
 
     <string name="learning_preferences">Learning preferences</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_subtitle">Personalize your mentor, reminders and account preferences.</string>
     <string name="student_placeholder">Student</string>
     <string name="email_placeholder">email</string>
     <string name="initial_level_summary">Level 1 — Beginner (0 XP)</string>

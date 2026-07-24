@@ -12,7 +12,6 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -30,7 +29,6 @@ import androidx.lifecycle.Lifecycle;
 
 import com.example.aimentor.R;
 import com.example.aimentor.activities.LoginActivity;
-import com.example.aimentor.ai.SubjectClassifier;
 import com.example.aimentor.data.User;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.repo.UserRepository;
@@ -43,13 +41,9 @@ import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 public class SettingsFragment extends Fragment {
 
@@ -65,11 +59,7 @@ public class SettingsFragment extends Fragment {
     private SessionManager session;
 
     private TextView tvName, tvEmail, tvLevelInfo, tvBadges, tvXpProgress, tvAvatar;
-    private TextView tvProgressSummary, tvSubjectBreakdown;
-    private TextView tvWeeklySummary, tvWeeklyEmpty, tvReviewSummary;
-    private TextView tvAccuracyTrends, tvRepeatedTopics;
     private ProgressBar progressLevel;
-    private LinearLayout weeklyActivityContainer;
     private Spinner spLevel, spStyle, spAvatar, spAccentTheme;
     private CheckBox cbMath, cbScience, cbProgramming, cbHistory, cbLanguages;
     private SwitchMaterial switchReminder;
@@ -120,15 +110,7 @@ public class SettingsFragment extends Fragment {
         tvLevelInfo = view.findViewById(R.id.tvLevelInfo);
         tvBadges = view.findViewById(R.id.tvBadges);
         tvXpProgress = view.findViewById(R.id.tvXpProgress);
-        tvProgressSummary = view.findViewById(R.id.tvProgressSummary);
-        tvReviewSummary = view.findViewById(R.id.tvReviewSummary);
-        tvAccuracyTrends = view.findViewById(R.id.tvAccuracyTrends);
-        tvRepeatedTopics = view.findViewById(R.id.tvRepeatedTopics);
-        tvSubjectBreakdown = view.findViewById(R.id.tvSubjectBreakdown);
-        tvWeeklySummary = view.findViewById(R.id.tvWeeklySummary);
-        tvWeeklyEmpty = view.findViewById(R.id.tvWeeklyEmpty);
         progressLevel = view.findViewById(R.id.progressLevel);
-        weeklyActivityContainer = view.findViewById(R.id.weeklyActivityContainer);
         spLevel = view.findViewById(R.id.spLevel);
         spStyle = view.findViewById(R.id.spStyle);
         spAvatar = view.findViewById(R.id.spAvatar);
@@ -145,7 +127,7 @@ public class SettingsFragment extends Fragment {
         btnReminderTime = view.findViewById(R.id.btnReminderTime);
         tvReminderStatus = view.findViewById(R.id.tvReminderStatus);
         ViewCompat.setAccessibilityHeading(
-                view.findViewById(R.id.tvPreferencesHeading), true);
+                view.findViewById(R.id.tvSettingsHeading), true);
         btnSavePrefs = view.findViewById(R.id.btnSavePrefs);
         MaterialButton btnRemind = view.findViewById(R.id.btnRemind);
         MaterialButton btnLogout = view.findViewById(R.id.btnLogout);
@@ -275,32 +257,7 @@ public class SettingsFragment extends Fragment {
                 ? getString(R.string.badges_empty)
                 : getString(R.string.badges_summary,
                         android.text.TextUtils.join(", ", p.badges)));
-        String savedQuestions = getResources().getQuantityString(
-                R.plurals.saved_question_count, p.totalQuestions, p.totalQuestions);
-        String quizAttempts = getResources().getQuantityString(
-                R.plurals.quiz_attempt_count, p.quizzesCompleted, p.quizzesCompleted);
-        String bookmarks = getResources().getQuantityString(
-                R.plurals.bookmark_count, p.bookmarkedCount, p.bookmarkedCount);
-        String quizScore = getResources().getQuantityString(
-                R.plurals.quiz_answer_score, p.totalAnswered,
-                p.totalCorrect, p.totalAnswered);
-        tvProgressSummary.setText(getString(R.string.progress_summary,
-                savedQuestions, quizAttempts, quizScore,
-                p.accuracyPercent, bookmarks));
-        int reviewMinutes = (int) Math.min(Integer.MAX_VALUE,
-                Math.round(p.totalReviewDurationMs / 60000.0));
-        String reviewedAnswers = getResources().getQuantityString(
-                R.plurals.reviewed_answer_count,
-                p.reviewedAnswers, p.reviewedAnswers);
-        String readingTime = getResources().getQuantityString(
-                R.plurals.minute_count, reviewMinutes, reviewMinutes);
-        tvReviewSummary.setText(getString(R.string.review_time_summary,
-                reviewedAnswers, readingTime));
-        tvAccuracyTrends.setText(buildAccuracyTrends(p));
-        bindRepeatedTopics(p);
         bindAppearanceRewards(p.level);
-        bindSubjectBreakdown(p);
-        bindWeeklyActivity(p);
     }
 
     private void bindAppearanceRewards(int level) {
@@ -336,137 +293,11 @@ public class SettingsFragment extends Fragment {
         requireActivity().recreate();
     }
 
-    private String buildAccuracyTrends(StudyRepository.Progress progress) {
-        return trendLine(getString(R.string.last_7_days),
-                progress.current7DayAccuracy, progress.current7DayAnswered,
-                progress.previous7DayAccuracy, progress.previous7DayAnswered)
-                + "\n" + trendLine(getString(R.string.last_30_days),
-                progress.current30DayAccuracy, progress.current30DayAnswered,
-                progress.previous30DayAccuracy, progress.previous30DayAnswered);
-    }
-
-    private String trendLine(String period, int accuracy, int answered,
-                             int previousAccuracy, int previousAnswered) {
-        if (answered == 0) {
-            return getString(R.string.accuracy_trend_empty, period);
-        }
-        if (previousAnswered == 0) {
-            String answerCount = getResources().getQuantityString(
-                    R.plurals.quiz_answer_count, answered, answered);
-            return getString(R.string.accuracy_trend_first,
-                    period, accuracy, answerCount);
-        }
-        int change = accuracy - previousAccuracy;
-        return getString(R.string.accuracy_trend_comparison,
-                period, accuracy, change >= 0 ? "+" + change : String.valueOf(change));
-    }
-
-    private void bindRepeatedTopics(StudyRepository.Progress progress) {
-        if (progress.repeatedTopics.isEmpty()) {
-            tvRepeatedTopics.setText(R.string.repeated_topics_empty);
-            return;
-        }
-        List<String> topicLines = new ArrayList<>();
-        for (com.example.aimentor.util.LearningAnalytics.TopicFrequency topic
-                : progress.repeatedTopics) {
-            String questionCount = getResources().getQuantityString(
-                    R.plurals.question_count,
-                    topic.questionCount, topic.questionCount);
-            topicLines.add(getString(R.string.repeated_topic_item,
-                    topic.topic, questionCount));
-        }
-        tvRepeatedTopics.setText(android.text.TextUtils.join("  •  ", topicLines));
-    }
-
     @Override
     public void onDestroyView() {
         loadGeneration++;
         mutationGeneration++;
         super.onDestroyView();
-    }
-
-    private void bindSubjectBreakdown(StudyRepository.Progress progress) {
-        Set<String> subjects = new LinkedHashSet<>();
-        subjects.addAll(progress.subjectCounts.keySet());
-        subjects.addAll(progress.subjectQuizCounts.keySet());
-        List<String> lines = new ArrayList<>();
-        for (String subject : SubjectClassifier.SUBJECTS) {
-            if (!subjects.contains(subject)) continue;
-            int questions = progress.subjectCounts.containsKey(subject)
-                    ? progress.subjectCounts.get(subject) : 0;
-            int quizzes = progress.subjectQuizCounts.containsKey(subject)
-                    ? progress.subjectQuizCounts.get(subject) : 0;
-            String questionCount = getResources().getQuantityString(
-                    R.plurals.question_count, questions, questions);
-            String quizCount = getResources().getQuantityString(
-                    R.plurals.quiz_attempt_count, quizzes, quizzes);
-            lines.add(getString(R.string.subject_question_quiz_count,
-                    subject, questionCount, quizCount));
-        }
-        tvSubjectBreakdown.setText(lines.isEmpty()
-                ? getString(R.string.subject_activity_empty)
-                : android.text.TextUtils.join("\n", lines));
-    }
-
-    private void bindWeeklyActivity(StudyRepository.Progress progress) {
-        weeklyActivityContainer.removeAllViews();
-        String activityCount = getResources().getQuantityString(
-                R.plurals.learning_activity_count, progress.activityCountLast7Days,
-                progress.activityCountLast7Days);
-        String activeDayCount = getResources().getQuantityString(
-                R.plurals.active_day_count, progress.activeDaysLast7Days,
-                progress.activeDaysLast7Days);
-        tvWeeklySummary.setText(getString(
-                R.string.weekly_activity_summary, activityCount, activeDayCount));
-        boolean empty = progress.activityCountLast7Days == 0;
-        tvWeeklyEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
-        weeklyActivityContainer.setVisibility(empty ? View.GONE : View.VISIBLE);
-        if (empty) return;
-
-        int max = 1;
-        for (StudyRepository.DailyActivity day : progress.last7Days) {
-            max = Math.max(max, day.count);
-        }
-        SimpleDateFormat dateFormat =
-                new SimpleDateFormat("EEE d", Locale.getDefault());
-        for (StudyRepository.DailyActivity day : progress.last7Days) {
-            addActivityRow(dateFormat.format(day.dayStart), day.count, max);
-        }
-    }
-
-    private void addActivityRow(String label, int count, int max) {
-        LinearLayout row = new LinearLayout(requireContext());
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        row.setPadding(0, dp(3), 0, dp(3));
-
-        TextView dayLabel = new TextView(requireContext());
-        dayLabel.setText(label);
-        dayLabel.setTextColor(requireContext().getColor(R.color.text_secondary));
-        row.addView(dayLabel, new LinearLayout.LayoutParams(dp(64),
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        ProgressBar bar = new ProgressBar(requireContext(), null,
-                android.R.attr.progressBarStyleHorizontal);
-        bar.setMax(max);
-        bar.setProgress(count);
-        String activityDescription = getResources().getQuantityString(
-                R.plurals.learning_activity_count, count, count);
-        bar.setContentDescription(getString(
-                R.string.daily_activity_description, label, activityDescription));
-        LinearLayout.LayoutParams barParams =
-                new LinearLayout.LayoutParams(0, dp(8), 1f);
-        barParams.setMarginStart(dp(8));
-        barParams.setMarginEnd(dp(8));
-        row.addView(bar, barParams);
-
-        TextView countView = new TextView(requireContext());
-        countView.setText(getString(R.string.activity_count, count));
-        countView.setGravity(android.view.Gravity.END);
-        countView.setTextColor(requireContext().getColor(R.color.text_primary));
-        row.addView(countView, new LinearLayout.LayoutParams(dp(32),
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-        weeklyActivityContainer.addView(row);
     }
 
     private int dp(int value) {

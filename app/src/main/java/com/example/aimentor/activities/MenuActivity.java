@@ -20,7 +20,7 @@ public class MenuActivity extends AppCompatActivity {
 
     private static final int[] TITLE_RES = {
             R.string.tab_home, R.string.tab_library,
-            R.string.tab_quiz, R.string.tab_settings
+            R.string.tab_quiz, R.string.tab_progress, R.string.tab_settings
     };
 
     private BottomNavigationView bottomNavigationView;
@@ -66,7 +66,8 @@ public class MenuActivity extends AppCompatActivity {
     private int indexForMenu(int itemId) {
         if (itemId == R.id.Category_menu) return 1;
         if (itemId == R.id.Quiz_menu) return 2;
-        if (itemId == R.id.Settings_menu) return 3;
+        if (itemId == R.id.Progress_menu) return 3;
+        if (itemId == R.id.Settings_menu) return 4;
         return 0;
     }
 
@@ -81,7 +82,8 @@ public class MenuActivity extends AppCompatActivity {
                 int menuId;
                 if (position == 1) menuId = R.id.Category_menu;
                 else if (position == 2) menuId = R.id.Quiz_menu;
-                else if (position == 3) menuId = R.id.Settings_menu;
+                else if (position == 3) menuId = R.id.Progress_menu;
+                else if (position == 4) menuId = R.id.Settings_menu;
                 else menuId = R.id.home_menu;
                 bottomNavigationView.getMenu().findItem(menuId).setChecked(true);
                 if (getSupportActionBar() != null

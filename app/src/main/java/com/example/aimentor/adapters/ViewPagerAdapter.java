@@ -8,11 +8,12 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.example.aimentor.Fragments.CategoryFragment;
 import com.example.aimentor.Fragments.HomeFragment;
+import com.example.aimentor.Fragments.ProgressFragment;
 import com.example.aimentor.Fragments.QuizFragment;
 import com.example.aimentor.Fragments.SettingsFragment;
 
 public class ViewPagerAdapter extends FragmentStateAdapter {
-    private final int ItemCount = 4;
+    private static final int ITEM_COUNT = 5;
     public ViewPagerAdapter(@NonNull FragmentManager fragmentManager, @NonNull Lifecycle lifecycle) {
         super(fragmentManager, lifecycle);
     }
@@ -30,6 +31,9 @@ public class ViewPagerAdapter extends FragmentStateAdapter {
             return new QuizFragment();
         }
         if (position == 3) {
+            return new ProgressFragment();
+        }
+        if (position == 4) {
             return new SettingsFragment();
         }
         return new HomeFragment();
@@ -37,6 +41,6 @@ public class ViewPagerAdapter extends FragmentStateAdapter {
 
     @Override
     public int getItemCount() {
-        return ItemCount;
+        return ITEM_COUNT;
     }
 }

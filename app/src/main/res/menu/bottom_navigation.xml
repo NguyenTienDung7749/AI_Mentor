@@ -13,6 +13,10 @@
         android:icon="@drawable/ic_nav_quiz"
         android:id="@+id/Quiz_menu"/>
     <item
+        android:title="@string/tab_progress"
+        android:icon="@drawable/ic_nav_progress"
+        android:id="@+id/Progress_menu"/>
+    <item
         android:title="@string/tab_settings"
         android:icon="@drawable/ic_nav_settings"
         android:id="@+id/Settings_menu"/>
