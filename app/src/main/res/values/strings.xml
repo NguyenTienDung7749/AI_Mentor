@@ -14,6 +14,9 @@
     <string name="login_welcome_title">Welcome back</string>
     <string name="login_welcome_subtitle">Continue your questions, quizzes and learning streak.</string>
     <string name="auth_prototype_notice">Classroom prototype • Use fictional study data only</string>
+    <string name="btec_identity_title">BTEC coursework project</string>
+    <string name="btec_identity_supporting">AI-assisted learning prototype</string>
+    <string name="btec_logo_description">BTEC, in alliance with FPT Education</string>
 
     <!-- Onboarding -->
     <string name="onboarding_title">Make your mentor yours</string>
