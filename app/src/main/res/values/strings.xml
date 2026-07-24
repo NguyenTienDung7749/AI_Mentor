@@ -87,17 +87,17 @@
     <string name="delete_account_cancel">Cancel</string>
     <string name="delete_account_success">Account and local study data deleted.</string>
     <string name="learning_progress">Learning progress</string>
-    <string name="progress_summary">%1$s  •  %2$s\n%3$d / %4$d quiz answers correct  •  %5$d%% accuracy\n%6$s</string>
-    <string name="review_time_summary">%1$d answers marked reviewed  •  %2$d min actual reading time</string>
+    <string name="progress_summary">%1$s  •  %2$s\n%3$s  •  %4$d%% accuracy\n%5$s</string>
+    <string name="review_time_summary">%1$s marked reviewed  •  %2$s actual reading time</string>
     <string name="accuracy_trends">Accuracy trends</string>
     <string name="last_7_days">7 days</string>
     <string name="last_30_days">30 days</string>
     <string name="accuracy_trend_empty">%1$s: no quiz answers yet</string>
-    <string name="accuracy_trend_first">%1$s: %2$d%% across %3$d answers (first period)</string>
+    <string name="accuracy_trend_first">%1$s: %2$d%% across %3$s (first period)</string>
     <string name="accuracy_trend_comparison">%1$s: %2$d%% (%3$s points vs previous period)</string>
     <string name="repeated_topics">Repeated study topics</string>
     <string name="repeated_topics_empty">No topic has appeared in multiple saved questions yet.</string>
-    <string name="repeated_topic_item">%1$s (%2$d questions)</string>
+    <string name="repeated_topic_item">%1$s (%2$s)</string>
     <string name="xp_progress">%1$d / %2$d XP in this level • %3$d XP to next</string>
     <string name="subject_activity">Activity by subject</string>
     <string name="subject_activity_empty">No subject activity yet.</string>
@@ -105,7 +105,7 @@
     <string name="weekly_activity_summary">%1$s across %2$s</string>
     <string name="weekly_activity_empty">No saved questions or completed quizzes in the last 7 days.</string>
     <string name="activity_count">%1$d</string>
-    <string name="daily_activity_description">%1$s: %2$d learning activities</string>
+    <string name="daily_activity_description">%1$s: %2$s</string>
     <string name="subject_question_quiz_count">%1$s: %2$s, %3$s</string>
     <plurals name="saved_question_count">
         <item quantity="one">%d saved question</item>
@@ -130,6 +130,22 @@
     <plurals name="active_day_count">
         <item quantity="one">%d active day</item>
         <item quantity="other">%d active days</item>
+    </plurals>
+    <plurals name="quiz_answer_score">
+        <item quantity="one">%1$d / %2$d quiz answer correct</item>
+        <item quantity="other">%1$d / %2$d quiz answers correct</item>
+    </plurals>
+    <plurals name="reviewed_answer_count">
+        <item quantity="one">%d answer</item>
+        <item quantity="other">%d answers</item>
+    </plurals>
+    <plurals name="minute_count">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="quiz_answer_count">
+        <item quantity="one">%d answer</item>
+        <item quantity="other">%d answers</item>
     </plurals>
 
     <!-- Answer -->
@@ -217,7 +233,7 @@
     <string name="level_summary_with_xp">Level %1$d — %2$s (%3$d XP)</string>
     <string name="home_xp_progress">%1$d XP (%2$d to next level)</string>
     <string name="home_stats">Questions asked: %1$d  •  Quiz accuracy: %2$d%%</string>
-    <string name="level_progress_description">Level %1$d progress: %2$d of %3$d XP</string>
+    <string name="level_progress_description">Progress for level %1$d: %2$d of %3$d XP</string>
     <string name="level_up_toast">Level up! Keep learning.</string>
     <string name="level_up_notification_title">Level up!</string>
     <string name="level_up_notification_body">You reached level %1$d. Keep going!</string>
@@ -260,7 +276,6 @@
     <string name="quiz_retry_progress">Retry %1$d of %2$d  •  %3$s  •  %4$s</string>
     <string name="quiz_choose_answer">Please choose an answer.</string>
     <string name="quiz_correct_feedback">Correct! %1$s</string>
-    <string name="quiz_incorrect_feedback">Not quite. %1$s</string>
     <string name="quiz_incorrect_feedback_answer">Not quite. Correct answer: %1$s\n\n%2$s</string>
     <string name="quiz_error_default">Could not prepare a quiz. Check your connection and try again.</string>
     <string name="quiz_save_failed">Could not save this quiz result. Please try again.</string>

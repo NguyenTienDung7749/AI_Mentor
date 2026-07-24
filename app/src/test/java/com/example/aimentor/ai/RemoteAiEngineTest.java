@@ -321,6 +321,39 @@ public class RemoteAiEngineTest {
         assertTrue(requestBody.toString().contains("Why does Mars look red?"));
     }
 
+    @Test
+    public void generateQuiz_parsesAllFourTypesAndSnakeCaseOpenAnswers() {
+        String content = "{\"questions\":["
+                + "{\"type\":\"MULTIPLE_CHOICE\",\"prompt\":\"MCQ?\","
+                + "\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,"
+                + "\"explanation\":\"A is correct.\"},"
+                + "{\"type\":\"TRUE_FALSE\",\"prompt\":\"True or false?\","
+                + "\"options\":[\"True\",\"False\"],\"correctIndex\":1,"
+                + "\"explanation\":\"False is correct.\"},"
+                + "{\"type\":\"SHORT_ANSWER\",\"prompt\":\"Name the keyword.\","
+                + "\"options\":[],\"correct_index\":-1,"
+                + "\"accepted_answers\":[\"new\"],"
+                + "\"explanation\":\"Java uses new.\"},"
+                + "{\"type\":\"FILL_IN_THE_BLANK\",\"prompt\":\"Two plus two is ____.\","
+                + "\"options\":[],\"correct_index\":-1,"
+                + "\"accepted_answers\":[\"4\",\"four\"],"
+                + "\"explanation\":\"Two plus two equals four.\"}]}";
+        server.enqueue(jsonResponse(200, completionBody(content)));
+        RemoteAiEngine engine = engine(1_000, 1_000);
+        QuizGenerationConfig config = new QuizGenerationConfig(
+                SubjectClassifier.PROGRAMMING, "Intermediate", 4,
+                Arrays.asList("Java basics"));
+
+        List<QuizQuestion> questions = engine.generateQuiz(config);
+
+        assertEquals(4, questions.size());
+        assertEquals(QuizQuestion.Type.SHORT_ANSWER, questions.get(2).getType());
+        assertTrue(questions.get(2).isCorrect("NEW"));
+        assertEquals(QuizQuestion.Type.FILL_IN_THE_BLANK,
+                questions.get(3).getType());
+        assertTrue(questions.get(3).isCorrect("four"));
+    }
+
     private RemoteAiEngine engine(long connectTimeoutMs, long readTimeoutMs) {
         return new RemoteAiEngine(server.url("/").toString(),
                 "test-key", connectTimeoutMs, readTimeoutMs);

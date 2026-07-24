@@ -19,10 +19,10 @@ report rather than in the source tree.
 | Reliability | One bounded alternate-model attempt, a 60-second total deadline and rule-based offline fallback |
 | OCR | Photo Picker or camera input, on-device ML Kit OCR and editable extracted text |
 | History | Search, subject filter, bookmarks and reviewed state backed by Room |
-| Quizzes | Topic/history personalisation, adaptive difficulty, multiple choice, true/false, explanations and retrying mistakes |
-| Progress | Real Room statistics, seven-day activity, subject totals, accuracy, XP, levels and badges |
+| Quizzes | Topic/history personalisation, adaptive difficulty, multiple choice, true/false, short answer, fill-in-the-blank, explanations and retrying mistakes |
+| Progress | Real Room statistics, review time, 7/30-day accuracy trends, repeated topics, subject totals, XP, levels and badges |
 | Notifications | User-controlled daily WorkManager reminder, selectable time and a test notification |
-| Presentation | Material UI, light/dark theme, loading/error/empty states and state restoration |
+| Presentation | Material UI, light/dark mode, unlockable avatars/accent themes, loading/error/empty states and state restoration |
 
 Only successful remote answers are saved to Room. Offline fallback content is
 temporary and does not enter history, progress or XP calculations. Submitting a
@@ -98,6 +98,7 @@ Windows PowerShell:
 
 ```powershell
 .\gradlew.bat testDebugUnitTest assembleDebug lintDebug
+.\gradlew.bat verifyReleaseConfiguration assembleRelease
 ```
 
 macOS/Linux:
@@ -111,6 +112,11 @@ The debug APK is generated at:
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
+
+Release builds require a valid local `GROQ_API_KEY`, enable R8 code
+optimisation/obfuscation and remove unused resources. The generated release APK
+is unsigned unless a developer supplies a private signing configuration outside
+the repository.
 
 Open the project in Android Studio, select a device and run the `app`
 configuration. The normal first-use flow is:
@@ -144,6 +150,10 @@ Run instrumented tests with a connected device:
 ```powershell
 .\gradlew.bat connectedDebugAndroidTest
 ```
+
+Use a dedicated test device/profile: the Android Gradle test task may reinstall
+or uninstall the debug package and therefore remove its local accounts and
+Room history.
 
 ## Data and security notes
 

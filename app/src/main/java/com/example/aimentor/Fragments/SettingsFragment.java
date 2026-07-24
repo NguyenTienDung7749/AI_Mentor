@@ -258,12 +258,21 @@ public class SettingsFragment extends Fragment {
                 R.plurals.quiz_attempt_count, p.quizzesCompleted, p.quizzesCompleted);
         String bookmarks = getResources().getQuantityString(
                 R.plurals.bookmark_count, p.bookmarkedCount, p.bookmarkedCount);
+        String quizScore = getResources().getQuantityString(
+                R.plurals.quiz_answer_score, p.totalAnswered,
+                p.totalCorrect, p.totalAnswered);
         tvProgressSummary.setText(getString(R.string.progress_summary,
-                savedQuestions, quizAttempts, p.totalCorrect,
-                p.totalAnswered, p.accuracyPercent, bookmarks));
-        long reviewMinutes = Math.round(p.totalReviewDurationMs / 60000.0);
+                savedQuestions, quizAttempts, quizScore,
+                p.accuracyPercent, bookmarks));
+        int reviewMinutes = (int) Math.min(Integer.MAX_VALUE,
+                Math.round(p.totalReviewDurationMs / 60000.0));
+        String reviewedAnswers = getResources().getQuantityString(
+                R.plurals.reviewed_answer_count,
+                p.reviewedAnswers, p.reviewedAnswers);
+        String readingTime = getResources().getQuantityString(
+                R.plurals.minute_count, reviewMinutes, reviewMinutes);
         tvReviewSummary.setText(getString(R.string.review_time_summary,
-                p.reviewedAnswers, reviewMinutes));
+                reviewedAnswers, readingTime));
         tvAccuracyTrends.setText(buildAccuracyTrends(p));
         bindRepeatedTopics(p);
         bindAppearanceRewards(p.level);
@@ -319,8 +328,10 @@ public class SettingsFragment extends Fragment {
             return getString(R.string.accuracy_trend_empty, period);
         }
         if (previousAnswered == 0) {
+            String answerCount = getResources().getQuantityString(
+                    R.plurals.quiz_answer_count, answered, answered);
             return getString(R.string.accuracy_trend_first,
-                    period, accuracy, answered);
+                    period, accuracy, answerCount);
         }
         int change = accuracy - previousAccuracy;
         return getString(R.string.accuracy_trend_comparison,
@@ -335,8 +346,11 @@ public class SettingsFragment extends Fragment {
         List<String> topicLines = new ArrayList<>();
         for (com.example.aimentor.util.LearningAnalytics.TopicFrequency topic
                 : progress.repeatedTopics) {
+            String questionCount = getResources().getQuantityString(
+                    R.plurals.question_count,
+                    topic.questionCount, topic.questionCount);
             topicLines.add(getString(R.string.repeated_topic_item,
-                    topic.topic, topic.questionCount));
+                    topic.topic, questionCount));
         }
         tvRepeatedTopics.setText(android.text.TextUtils.join("  •  ", topicLines));
     }
@@ -413,8 +427,10 @@ public class SettingsFragment extends Fragment {
                 android.R.attr.progressBarStyleHorizontal);
         bar.setMax(max);
         bar.setProgress(count);
+        String activityDescription = getResources().getQuantityString(
+                R.plurals.learning_activity_count, count, count);
         bar.setContentDescription(getString(
-                R.string.daily_activity_description, label, count));
+                R.string.daily_activity_description, label, activityDescription));
         LinearLayout.LayoutParams barParams =
                 new LinearLayout.LayoutParams(0, dp(8), 1f);
         barParams.setMarginStart(dp(8));

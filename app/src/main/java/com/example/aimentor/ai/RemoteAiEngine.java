@@ -7,6 +7,7 @@ import com.example.aimentor.network.model.ChatMessage;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
+import com.google.gson.annotations.SerializedName;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -631,15 +632,27 @@ public class RemoteAiEngine implements AiEngine {
     }
 
     private static class QuizEnvelope {
+        @SerializedName("questions")
         List<QuizItem> questions;
     }
 
     private static class QuizItem {
+        @SerializedName("type")
         String type;
+
+        @SerializedName("prompt")
         String prompt;
+
+        @SerializedName("options")
         List<String> options;
+
+        @SerializedName(value = "correctIndex", alternate = {"correct_index"})
         int correctIndex;
+
+        @SerializedName(value = "acceptedAnswers", alternate = {"accepted_answers"})
         List<String> acceptedAnswers;
+
+        @SerializedName("explanation")
         String explanation;
     }
 }

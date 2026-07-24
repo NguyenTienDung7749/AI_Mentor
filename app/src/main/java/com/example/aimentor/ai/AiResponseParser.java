@@ -89,17 +89,29 @@ public final class AiResponseParser {
     }
 
     private static class StructuredAnswer {
+        @SerializedName("subject")
         String subject;
+
+        @SerializedName("difficulty")
         String difficulty;
 
         @SerializedName(value = "directAnswer",
                 alternate = {"direct_answer", "answer"})
         String directAnswer;
 
+        @SerializedName("simplified")
         String simplified;
+
+        @SerializedName("steps")
         List<String> steps = new ArrayList<>();
+
+        @SerializedName(value = "keyConcepts", alternate = {"key_concepts"})
         List<String> keyConcepts = new ArrayList<>();
+
+        @SerializedName(value = "commonMistakes", alternate = {"common_mistakes"})
         List<String> commonMistakes = new ArrayList<>();
+
+        @SerializedName(value = "followUps", alternate = {"follow_ups"})
         List<String> followUps = new ArrayList<>();
     }
 }

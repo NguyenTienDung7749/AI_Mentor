@@ -6,9 +6,16 @@ import java.util.List;
 
 /** Request body for POST /chat/completions. */
 public class ChatCompletionRequest {
+    @SerializedName("model")
     public String model;
+
+    @SerializedName("messages")
     public List<ChatMessage> messages;
+
+    @SerializedName("temperature")
     public double temperature;
+
+    @SerializedName("stream")
     public boolean stream;
 
     @SerializedName("max_tokens")

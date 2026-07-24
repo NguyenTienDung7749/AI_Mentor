@@ -4,7 +4,10 @@ import com.google.gson.annotations.SerializedName;
 
 /** A request or response message in the OpenAI-compatible chat format. */
 public class ChatMessage {
+    @SerializedName("role")
     public String role;
+
+    @SerializedName("content")
     public String content;
 
     @SerializedName("reasoning_content")
