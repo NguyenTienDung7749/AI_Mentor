@@ -22,6 +22,7 @@ import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -311,8 +312,11 @@ public class QuizActivity extends AppCompatActivity {
             tvFeedback.setText(getString(R.string.quiz_incorrect_feedback_answer,
                     question.getDisplayAnswer(), question.getExplanation()));
         }
-        tvFeedback.setTextColor(ContextCompat.getColor(this,
-                correct ? R.color.success : R.color.error));
+        int feedbackColor = correct
+                ? ContextCompat.getColor(this, R.color.success)
+                : MaterialColors.getColor(tvFeedback,
+                        com.google.android.material.R.attr.colorError);
+        tvFeedback.setTextColor(feedbackColor);
         btnAction.setText(index == questions.size() - 1
                 ? R.string.finish_quiz : R.string.next_question);
     }

@@ -19,6 +19,7 @@ import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.textfield.TextInputEditText;
 
 public class SignUpActivity extends AppCompatActivity {
@@ -64,29 +65,32 @@ public class SignUpActivity extends AppCompatActivity {
     private void updateStrength(String password) {
         if (password.isEmpty()) {
             tvStrength.setText(R.string.password_requirement);
-            tvStrength.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+            tvStrength.setTextColor(MaterialColors.getColor(tvStrength,
+                    com.google.android.material.R.attr.colorOnSurfaceVariant));
             return;
         }
         PasswordValidator.Strength strength = PasswordValidator.evaluate(password);
-        int colorRes;
+        int color;
         String label;
         switch (strength) {
             case STRONG:
                 label = getString(R.string.password_strength_strong);
-                colorRes = R.color.success;
+                color = ContextCompat.getColor(this, R.color.success);
                 break;
             case MEDIUM:
                 label = getString(R.string.password_strength_medium);
-                colorRes = R.color.primary;
+                color = MaterialColors.getColor(tvStrength,
+                        com.google.android.material.R.attr.colorPrimary);
                 break;
             default:
                 label = getString(R.string.password_strength_weak,
                         PasswordValidator.requirementMessage());
-                colorRes = R.color.error;
+                color = MaterialColors.getColor(tvStrength,
+                        com.google.android.material.R.attr.colorError);
                 break;
         }
         tvStrength.setText(label);
-        tvStrength.setTextColor(ContextCompat.getColor(this, colorRes));
+        tvStrength.setTextColor(color);
     }
 
     private void attemptSignup() {

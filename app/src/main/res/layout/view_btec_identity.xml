@@ -46,6 +46,7 @@
             android:contentDescription="@string/btec_logo_description"
             android:padding="@dimen/space_sm"
             android:scaleType="centerInside"
-            android:src="@drawable/logo_btec" />
+            android:src="@drawable/logo_btec"
+            app:tint="@null" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

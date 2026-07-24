@@ -18,7 +18,6 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
 
 import com.example.aimentor.R;
 import com.example.aimentor.ai.AnswerSource;
@@ -28,6 +27,7 @@ import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.color.MaterialColors;
 
 /** Displays a single question and its saved AI answer (works offline). */
 public class AnswerActivity extends AppCompatActivity {
@@ -251,7 +251,8 @@ public class AnswerActivity extends AppCompatActivity {
 
         SpannableStringBuilder formatted = new SpannableStringBuilder();
         boolean firstContentLine = true;
-        int primary = ContextCompat.getColor(this, R.color.primary);
+        int primary = MaterialColors.getColor(tvAnswer,
+                com.google.android.material.R.attr.colorPrimary);
         for (String rawLine : cleaned.split("\\R", -1)) {
             String line = rawLine.trim();
             if (firstContentLine && isRepeatedMetadata(line)) {

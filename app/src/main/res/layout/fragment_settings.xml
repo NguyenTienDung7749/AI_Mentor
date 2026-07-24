@@ -39,15 +39,15 @@
 
                 <TextView android:id="@+id/tvName" android:layout_width="wrap_content"
                     android:layout_height="wrap_content" android:text="@string/student_placeholder"
-                    android:textColor="@color/text_primary" android:textSize="18sp"
+                    android:textColor="?attr/colorOnSurface" android:textSize="18sp"
                     android:textStyle="bold" />
                 <TextView android:id="@+id/tvEmail" android:layout_width="wrap_content"
                     android:layout_height="wrap_content" android:text="@string/email_placeholder"
-                    android:textColor="@color/text_secondary" android:textSize="14sp" />
+                    android:textColor="?attr/colorOnSurfaceVariant" android:textSize="14sp" />
                 <TextView android:id="@+id/tvLevelInfo" android:layout_width="wrap_content"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
                     android:text="@string/initial_level_summary"
-                    android:textColor="@color/primary" android:textStyle="bold" />
+                    android:textColor="?attr/colorPrimary" android:textStyle="bold" />
                 <ProgressBar
                     android:id="@+id/progressLevel"
                     style="?android:attr/progressBarStyleHorizontal"
@@ -58,11 +58,11 @@
                     android:progress="0" />
                 <TextView android:id="@+id/tvXpProgress" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="4dp"
-                    android:textColor="@color/text_secondary" android:textSize="12sp" />
+                    android:textColor="?attr/colorOnSurfaceVariant" android:textSize="12sp" />
                 <TextView android:id="@+id/tvBadges" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
                     android:text="@string/badges_empty"
-                    android:textColor="@color/text_secondary" android:textSize="13sp" />
+                    android:textColor="?attr/colorOnSurfaceVariant" android:textSize="13sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -88,7 +88,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/avatar"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <HorizontalScrollView
                     android:layout_width="match_parent"
@@ -110,7 +110,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_lg"
                     android:text="@string/accent_theme"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <LinearLayout
                     android:id="@+id/themeRewardGallery"
@@ -123,7 +123,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="13sp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -156,13 +156,13 @@
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:text="@string/education_level"
-            android:textColor="@color/text_secondary" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
         <Spinner android:id="@+id/spLevel" android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:text="@string/subjects_interest"
-            android:textColor="@color/text_secondary" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
         <CheckBox android:id="@+id/cbMath" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="@string/subject_mathematics" />
         <CheckBox android:id="@+id/cbScience" android:layout_width="match_parent"
@@ -176,7 +176,7 @@
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:text="@string/explanation_style"
-            android:textColor="@color/text_secondary" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
         <Spinner android:id="@+id/spStyle" android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
@@ -277,7 +277,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="@string/reminder_schedule_off"
-            android:textColor="@color/text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="13sp" />
 
         <com.google.android.material.button.MaterialButton
@@ -317,7 +317,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="@string/demo_privacy_notice"
-            android:textColor="@color/text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="13sp" />
 
         <com.google.android.material.button.MaterialButton
@@ -334,8 +334,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/delete_account"
-            android:textColor="@color/error"
-            app:strokeColor="@color/error" />
+            android:textColor="?attr/colorError"
+            app:strokeColor="?attr/colorError" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
