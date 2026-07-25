@@ -186,11 +186,16 @@ public class StudyRepository {
         q.questionText = questionText.trim();
         q.subject = generated.getSubject();
         q.difficulty = generated.getDifficulty();
-        q.answerText = generated.toDisplayString(questionText);
+        q.answerText = generated.toDisplayString(
+                questionText, resolvedStyle);
         q.answerSource = answerSource.name();
         q.modelName = generated.getModelName();
         q.responseTimeMs = Math.max(0L, elapsedNanos / 1_000_000L);
 
+        if (answerSource == AnswerSource.REMOTE && generated.isOutOfScope()) {
+            return new AskResult(true, "Academic-scope guidance shown.",
+                    -1L, false, false, answerSource, q);
+        }
         if (answerSource == AnswerSource.REMOTE) {
             return saveRemoteAnswer(userId, q, answerSource);
         }

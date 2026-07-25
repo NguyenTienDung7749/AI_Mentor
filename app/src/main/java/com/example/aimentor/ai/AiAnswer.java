@@ -20,6 +20,7 @@ public class AiAnswer {
     private AnswerSource source = AnswerSource.LOCAL;
     private String modelName = "";
     private boolean visionUncertain;
+    private boolean outOfScope;
 
     public String getSubject() { return subject; }
     public void setSubject(String subject) {
@@ -58,6 +59,11 @@ public class AiAnswer {
         this.visionUncertain = visionUncertain;
     }
 
+    public boolean isOutOfScope() { return outOfScope; }
+    public void setOutOfScope(boolean outOfScope) {
+        this.outOfScope = outOfScope;
+    }
+
     /**
      * Renders the structured answer into a human readable block of text that is
      * shown to the student. The repository decides whether the answer is eligible
@@ -68,7 +74,13 @@ public class AiAnswer {
     }
 
     public String toDisplayString(String questionLanguageHint) {
+        return toDisplayString(questionLanguageHint, "Step-by-step");
+    }
+
+    public String toDisplayString(
+            String questionLanguageHint, String explanationStyle) {
         boolean vietnamese = isVietnamese(questionLanguageHint);
+        if (outOfScope) return preserveFormatting(directAnswer);
         String displayedSubject = vietnamese ? vietnameseSubject(subject) : subject;
         String displayedDifficulty = vietnamese
                 ? vietnameseDifficulty(difficulty) : difficulty;
@@ -76,6 +88,36 @@ public class AiAnswer {
         sb.append(vietnamese ? "Môn học: " : "Subject: ").append(displayedSubject)
           .append(vietnamese ? "   |   Trình độ: " : "   |   Level: ")
           .append(displayedDifficulty).append("\n\n");
+        String style = explanationStyle == null
+                ? "" : explanationStyle.toLowerCase(Locale.ROOT);
+        if (style.contains("short")) {
+            sb.append(vietnamese ? "Trả lời ngắn\n" : "Quick answer\n")
+                    .append(preserveFormatting(directAnswer));
+            if (simplified != null && !simplified.trim().isEmpty()
+                    && !simplified.trim().equals(directAnswer.trim())) {
+                sb.append(vietnamese ? "\n\nÝ chính\n" : "\n\nKey takeaway\n")
+                        .append(preserveFormatting(simplified));
+            }
+            return sb.toString().trim();
+        }
+        if (style.contains("detail")) {
+            sb.append(vietnamese ? "Câu trả lời\n" : "Answer\n")
+                    .append(preserveFormatting(directAnswer)).append("\n");
+            if (simplified != null && !simplified.isEmpty()) {
+                sb.append(vietnamese ? "\nTổng quan dễ hiểu\n" : "\nClear overview\n")
+                        .append(preserveFormatting(simplified)).append("\n");
+            }
+            appendBullets(sb, steps,
+                    vietnamese ? "Phân tích chi tiết" : "Detailed explanation");
+            appendBullets(sb, keyConcepts,
+                    vietnamese ? "Khái niệm quan trọng" : "Key concepts");
+            appendBullets(sb, commonMistakes,
+                    vietnamese ? "Điểm cần lưu ý" : "Important cautions");
+            appendBullets(sb, followUps,
+                    vietnamese ? "Kiểm tra mức độ hiểu" : "Check your understanding");
+            return sb.toString().trim();
+        }
+
         sb.append(vietnamese ? "Câu trả lời\n" : "Answer\n")
                 .append(preserveFormatting(directAnswer)).append("\n");
         if (!steps.isEmpty()) {
@@ -112,6 +154,15 @@ public class AiAnswer {
             }
         }
         return sb.toString().trim();
+    }
+
+    private void appendBullets(
+            StringBuilder output, List<String> values, String heading) {
+        if (values.isEmpty()) return;
+        output.append("\n").append(heading).append("\n");
+        for (String value : values) {
+            output.append("- ").append(preserveFormatting(value)).append("\n");
+        }
     }
 
     private String preserveFormatting(String value) {

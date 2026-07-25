@@ -66,7 +66,7 @@ public class RemoteAiEngineTest {
                 request.getBody().readUtf8()).getAsJsonObject();
         assertEquals("openai/gpt-oss-120b",
                 requestBody.get("model").getAsString());
-        assertEquals(3000, requestBody.get("max_tokens").getAsInt());
+        assertEquals(5000, requestBody.get("max_tokens").getAsInt());
         assertTrue(!requestBody.get("stream").getAsBoolean());
         assertEquals("high",
                 requestBody.get("reasoning_effort").getAsString());

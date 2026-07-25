@@ -53,6 +53,19 @@ public class AiResponseParserTest {
         assertEquals(SubjectClassifier.SCIENCE, answer.getSubject());
     }
 
+    @Test
+    public void parse_outOfScope_marksAnswerForPlainRefusalDisplay() {
+        AiAnswer answer = AiResponseParser.parse(
+                "{\"scope\":\"OUT_OF_SCOPE\","
+                        + "\"directAnswer\":\"I can’t help with questions outside "
+                        + "the academic scope.\"}",
+                SubjectClassifier.GENERAL, "Intermediate");
+
+        assertTrue(answer.isOutOfScope());
+        assertEquals("I can’t help with questions outside the academic scope.",
+                answer.toDisplayString("Find me an anime", "Detailed"));
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void parse_emptyText_isRejected() {
         AiResponseParser.parse(" ", "General", "Intermediate");

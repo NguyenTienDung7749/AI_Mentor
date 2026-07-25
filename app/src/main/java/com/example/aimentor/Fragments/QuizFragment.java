@@ -20,11 +20,13 @@ import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.DropdownAdapters;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.slider.Slider;
 
 public class QuizFragment extends Fragment {
 
     private static final String STATE_SUBJECT_POSITION = "quiz_subject_position";
     private static final String STATE_DIFFICULTY_POSITION = "quiz_difficulty_position";
+    private static final String STATE_QUESTION_COUNT = "quiz_question_count";
     private static final String[] QUIZ_SUBJECT_VALUES = {
             "Personalized (from history)", "Mathematics", "Science",
             "Programming", "History", "Languages", "General"
@@ -37,8 +39,11 @@ public class QuizFragment extends Fragment {
     private SessionManager session;
     private AutoCompleteTextView actQuizSubject, actQuizDifficulty;
     private TextView tvQuizCompleted, tvQuizAccuracy, tvQuizCorrect;
+    private TextView tvQuizQuestionCount;
+    private Slider sliderQuizQuestionCount;
     private int selectedSubjectPosition;
     private int selectedDifficultyPosition;
+    private int selectedQuestionCount = 5;
     private int refreshGeneration;
 
     public QuizFragment() { }
@@ -61,6 +66,8 @@ public class QuizFragment extends Fragment {
         tvQuizCompleted = view.findViewById(R.id.tvQuizCompleted);
         tvQuizAccuracy = view.findViewById(R.id.tvQuizAccuracy);
         tvQuizCorrect = view.findViewById(R.id.tvQuizCorrect);
+        tvQuizQuestionCount = view.findViewById(R.id.tvQuizQuestionCount);
+        sliderQuizQuestionCount = view.findViewById(R.id.sliderQuizQuestionCount);
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvQuizHeading), true);
         MaterialButton btnStartQuiz = view.findViewById(R.id.btnStartQuiz);
@@ -84,10 +91,18 @@ public class QuizFragment extends Fragment {
             selectedDifficultyPosition = Math.max(0, Math.min(
                     savedInstanceState.getInt(STATE_DIFFICULTY_POSITION, 0),
                     QUIZ_DIFFICULTY_VALUES.length - 1));
+            selectedQuestionCount = Math.max(1, Math.min(
+                    savedInstanceState.getInt(STATE_QUESTION_COUNT, 5), 20));
         }
         actQuizSubject.setText(subjectLabels[selectedSubjectPosition], false);
         actQuizDifficulty.setText(
                 difficultyLabels[selectedDifficultyPosition], false);
+        sliderQuizQuestionCount.setValue(selectedQuestionCount);
+        renderQuestionCount();
+        sliderQuizQuestionCount.addOnChangeListener((slider, value, fromUser) -> {
+            selectedQuestionCount = Math.max(1, Math.min(Math.round(value), 20));
+            renderQuestionCount();
+        });
 
         btnStartQuiz.setOnClickListener(v -> {
             Intent intent = new Intent(requireContext(), QuizActivity.class);
@@ -101,6 +116,7 @@ public class QuizFragment extends Fragment {
                     QUIZ_SUBJECT_VALUES[subjectPosition]);
             intent.putExtra(QuizActivity.EXTRA_DIFFICULTY,
                     QUIZ_DIFFICULTY_VALUES[difficultyPosition]);
+            intent.putExtra(QuizActivity.EXTRA_COUNT, selectedQuestionCount);
             startActivity(intent);
         });
     }
@@ -140,5 +156,12 @@ public class QuizFragment extends Fragment {
         super.onSaveInstanceState(outState);
         outState.putInt(STATE_SUBJECT_POSITION, selectedSubjectPosition);
         outState.putInt(STATE_DIFFICULTY_POSITION, selectedDifficultyPosition);
+        outState.putInt(STATE_QUESTION_COUNT, selectedQuestionCount);
+    }
+
+    private void renderQuestionCount() {
+        tvQuizQuestionCount.setText(getResources().getQuantityString(
+                R.plurals.quiz_setup_question_count,
+                selectedQuestionCount, selectedQuestionCount));
     }
 }

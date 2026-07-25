@@ -51,6 +51,8 @@ public final class AiResponseParser {
         answer.setSimplified(defaultIfBlank(data.simplified, ""));
         answer.setVisionUncertain("LOW".equalsIgnoreCase(
                 defaultIfBlank(data.visionConfidence, "HIGH")));
+        answer.setOutOfScope("OUT_OF_SCOPE".equalsIgnoreCase(
+                defaultIfBlank(data.scope, "ACADEMIC")));
         addNonBlank(answer.getSteps(), data.steps);
         addNonBlank(answer.getKeyConcepts(), data.keyConcepts);
         addNonBlank(answer.getCommonMistakes(), data.commonMistakes);
@@ -119,5 +121,8 @@ public final class AiResponseParser {
         @SerializedName(value = "visionConfidence",
                 alternate = {"vision_confidence"})
         String visionConfidence = "HIGH";
+
+        @SerializedName("scope")
+        String scope = "ACADEMIC";
     }
 }

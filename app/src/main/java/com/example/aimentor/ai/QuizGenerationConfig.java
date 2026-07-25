@@ -15,7 +15,7 @@ public class QuizGenerationConfig {
                                 List<String> studyTopics) {
         this.subject = SubjectClassifier.normalize(subject);
         this.difficulty = normalizeDifficulty(difficulty);
-        this.count = Math.max(1, Math.min(count, 10));
+        this.count = Math.max(1, Math.min(count, 20));
         this.studyTopics = studyTopics == null
                 ? Collections.emptyList()
                 : Collections.unmodifiableList(new ArrayList<>(studyTopics));

@@ -43,12 +43,13 @@ public class RemoteAiEngine implements AiEngine {
     static final String VISION_MODEL = "qwen/qwen3.6-27b";
     private static final double TEMPERATURE = 0.5;
     private static final int FAST_MAX_TOKENS = 1200;
-    private static final int DEEP_MAX_TOKENS = 3000;
+    private static final int DEEP_MAX_TOKENS = 5000;
     private static final long DEFAULT_CALL_TIMEOUT_MS = 60_000L;
     private static final Gson GSON = new Gson();
 
     private static final String RESPONSE_SCHEMA =
-            "{\"subject\":\"Mathematics|Science|Programming|History|Languages|General\","
+            "{\"scope\":\"ACADEMIC|OUT_OF_SCOPE\","
+            + "\"subject\":\"Mathematics|Science|Programming|History|Languages|General\","
             + "\"difficulty\":\"Beginner|Intermediate|Advanced\","
             + "\"directAnswer\":\"main answer\","
             + "\"simplified\":\"simple explanation\","
@@ -400,6 +401,16 @@ public class RemoteAiEngine implements AiEngine {
         String normalizedInterests = normalizeInterests(subjects);
         return "You are AI Mentor, a friendly and accurate study assistant. "
                 + languageRule
+                + " Only answer questions whose primary purpose is academic learning, such as "
+                + "school or university subjects, coding, language learning, study skills, "
+                + "research concepts or educational explanations. Entertainment recommendations, "
+                + "shopping, celebrity gossip, casual social requests and similar non-learning "
+                + "requests are OUT_OF_SCOPE. For OUT_OF_SCOPE, set scope to OUT_OF_SCOPE, "
+                + "subject to General, use empty optional fields and reply only with "
+                + (isVietnameseQuestion(question)
+                ? "\"Tôi không thể giúp trả lời câu hỏi ngoài phạm vi học thuật.\" "
+                : "\"I can’t help with questions outside the academic scope.\" ")
+                + "in directAnswer. Otherwise set scope to ACADEMIC. "
                 + " Student learning profile: education level = " + normalizedLevel
                 + "; preferred explanation style = " + normalizedStyle
                 + "; selected subject interests = " + normalizedInterests
@@ -461,8 +472,9 @@ public class RemoteAiEngine implements AiEngine {
                     + "sections that do not add value. ";
         }
         if ("Detailed".equals(style)) {
-            return "Give a thorough explanation with definitions, reasoning, useful context, "
-                    + "an example where relevant, common pitfalls and practice prompts. ";
+            return "Give a thorough thematic explanation with definitions, reasoning, useful "
+                    + "context and examples. Do not force it into numbered sequential steps; "
+                    + "use the steps array as independent detailed explanation points. ";
         }
         if ("Step-by-step".equals(style)) {
             return "Make the explanation explicitly sequential, with numbered logical steps "
@@ -477,7 +489,8 @@ public class RemoteAiEngine implements AiEngine {
                     + "Keep the entire answer concise.";
         }
         if ("Detailed".equals(style)) {
-            return "Populate every field with at least 2 steps, 2 keyConcepts, "
+            return "Populate every field with at least 3 non-sequential explanation points, "
+                    + "2 keyConcepts, "
                     + "1 commonMistake and 2 followUps.";
         }
         return "Populate every field with at least 2 sequential steps, 1 keyConcept, "
@@ -490,6 +503,7 @@ public class RemoteAiEngine implements AiEngine {
                 || answer.getDirectAnswer().trim().isEmpty()) {
             return false;
         }
+        if (answer.isOutOfScope()) return true;
         if ("Short".equals(style)) return true;
         if (answer.getSimplified() == null
                 || answer.getSimplified().trim().isEmpty()
@@ -756,6 +770,8 @@ public class RemoteAiEngine implements AiEngine {
     private Object answerResponseFormat(String model) {
         if (VISION_MODEL.equals(model)) return jsonObjectFormat();
         Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("scope", enumStringSchema(
+                "ACADEMIC", "OUT_OF_SCOPE"));
         properties.put("subject", enumStringSchema(
                 "Mathematics", "Science", "Programming",
                 "History", "Languages", "General"));
@@ -770,7 +786,7 @@ public class RemoteAiEngine implements AiEngine {
         properties.put("visionConfidence",
                 enumStringSchema("HIGH", "LOW"));
         return strictJsonSchema("study_answer", properties,
-                new String[]{"subject", "difficulty", "directAnswer",
+                new String[]{"scope", "subject", "difficulty", "directAnswer",
                         "simplified", "steps", "keyConcepts",
                         "commonMistakes", "followUps", "visionConfidence"});
     }

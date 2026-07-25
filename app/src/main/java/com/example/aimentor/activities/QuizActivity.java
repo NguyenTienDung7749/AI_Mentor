@@ -36,6 +36,7 @@ public class QuizActivity extends AppCompatActivity {
 
     public static final String EXTRA_SUBJECT = "subject";
     public static final String EXTRA_DIFFICULTY = "difficulty";
+    public static final String EXTRA_COUNT = "question_count";
 
     private static final String STATE_QUESTIONS = "questions";
     private static final String STATE_WRONG = "wrong_questions";
@@ -59,6 +60,7 @@ public class QuizActivity extends AppCompatActivity {
     private String difficulty;
     private String requestedSubject;
     private String requestedDifficulty;
+    private int requestedCount = 5;
 
     private int index;
     private int correctCount;
@@ -99,6 +101,8 @@ public class QuizActivity extends AppCompatActivity {
 
         requestedSubject = getIntent().getStringExtra(EXTRA_SUBJECT);
         requestedDifficulty = getIntent().getStringExtra(EXTRA_DIFFICULTY);
+        requestedCount = Math.max(1, Math.min(
+                getIntent().getIntExtra(EXTRA_COUNT, 5), 20));
         gameInitialized =
                 savedInstanceState != null && restoreState(savedInstanceState);
         quizViewModel.getLoadState().observe(this, this::renderLoadState);
@@ -114,7 +118,7 @@ public class QuizActivity extends AppCompatActivity {
         if (gameInitialized) return;
         quizViewModel.loadQuiz(
                 session.getCurrentUserId(), requestedSubject,
-                requestedDifficulty, 5);
+                requestedDifficulty, requestedCount);
     }
 
     private void showLoadingState() {
@@ -216,6 +220,7 @@ public class QuizActivity extends AppCompatActivity {
 
         List<String> questionOptions = question.getOptions();
         for (int i = 0; i < options.length; i++) {
+            options[i].setBackgroundResource(R.drawable.bg_quiz_option);
             if (i < questionOptions.size()) {
                 options[i].setVisibility(View.VISIBLE);
                 options[i].setText(questionOptions.get(i));
@@ -225,6 +230,7 @@ public class QuizActivity extends AppCompatActivity {
             }
         }
         tvFeedback.setVisibility(View.GONE);
+        tvFeedback.setBackgroundResource(R.drawable.bg_info_panel);
         btnAction.setText(R.string.check_answer);
 
         if (restoreAnswered) {
@@ -308,9 +314,23 @@ public class QuizActivity extends AppCompatActivity {
         if (correct) {
             tvFeedback.setText(getString(
                     R.string.quiz_correct_feedback, question.getExplanation()));
+            tvFeedback.setBackgroundResource(R.drawable.bg_quiz_feedback_correct);
         } else {
             tvFeedback.setText(getString(R.string.quiz_incorrect_feedback_answer,
                     question.getDisplayAnswer(), question.getExplanation()));
+            tvFeedback.setBackgroundResource(R.drawable.bg_quiz_feedback_incorrect);
+        }
+        if (!question.requiresTextAnswer()) {
+            if (selected >= 0 && selected < options.length) {
+                options[selected].setBackgroundResource(correct
+                        ? R.drawable.bg_quiz_option_correct
+                        : R.drawable.bg_quiz_option_incorrect);
+            }
+            int correctIndex = question.getCorrectIndex();
+            if (!correct && correctIndex >= 0 && correctIndex < options.length) {
+                options[correctIndex].setBackgroundResource(
+                        R.drawable.bg_quiz_option_correct);
+            }
         }
         int feedbackColor = correct
                 ? ContextCompat.getColor(this, R.color.success)

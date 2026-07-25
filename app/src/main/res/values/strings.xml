@@ -273,6 +273,11 @@
     <string name="quiz_progress_heading">Your quiz progress</string>
     <string name="quiz_setup_heading">Create a practice quiz</string>
     <string name="quiz_setup_supporting">Choose a subject and level, or let your learning history personalize both.</string>
+    <string name="quiz_question_count_label">Questions per quiz</string>
+    <plurals name="quiz_setup_question_count">
+        <item quantity="one">%d question</item>
+        <item quantity="other">%d questions</item>
+    </plurals>
     <string name="quiz_stat_completed">Completed</string>
     <string name="quiz_stat_accuracy">Accuracy</string>
     <string name="quiz_stat_correct">Correct</string>
