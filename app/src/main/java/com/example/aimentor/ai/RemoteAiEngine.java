@@ -178,13 +178,16 @@ public class RemoteAiEngine implements AiEngine {
             return answer(question, educationLevel, explanationStyle,
                     subjectHint, subjects);
         }
-        String systemPrompt = buildSystemPrompt(
-                question, educationLevel, explanationStyle,
-                subjectHint, subjects)
-                + " You are examining one user-provided image. Read formulas, tables, "
-                + "diagrams and small labels carefully. Set visionConfidence to HIGH only "
-                + "when every fact needed for the answer is legible; otherwise set it to LOW "
-                + "and state exactly what cannot be read. Never invent missing image details.";
+        String systemPrompt = "You are AI Mentor, a friendly academic study assistant. "
+                + (isVietnameseQuestion(question)
+                ? "Answer only in Vietnamese. "
+                : "Answer only in English. ")
+                + styleInstruction(normalizeExplanationStyle(explanationStyle))
+                + "Answer in clear plain Markdown, not JSON. For non-academic requests, "
+                + "politely state that you only support academic questions. "
+                + "You are examining one user-provided image. Read formulas, tables, "
+                + "diagrams and small labels carefully. If any fact needed for the answer "
+                + "is unclear, state exactly what cannot be read. Never invent missing details.";
         List<ChatMessage.ContentPart> userContent = Arrays.asList(
                 ChatMessage.ContentPart.image(image.toDataUrl()),
                 ChatMessage.ContentPart.text(defaultIfBlank(question, "")));
@@ -197,9 +200,8 @@ public class RemoteAiEngine implements AiEngine {
         AiAnswer qwenAnswer = null;
         AiServiceException qwenFailure = null;
         try {
-            qwenAnswer = requestAnswer(messages, VISION_MODEL, question,
-                    educationLevel, explanationStyle, subjectHint,
-                    deadlineNanos, true);
+            qwenAnswer = requestVisionAnswer(messages, question,
+                    educationLevel, subjectHint, deadlineNanos);
         } catch (AiServiceException error) {
             qwenFailure = error;
         }
@@ -221,6 +223,43 @@ public class RemoteAiEngine implements AiEngine {
         if (qwenAnswer != null) return qwenAnswer;
         throw qwenFailure == null
                 ? AiServiceException.invalidResponse() : qwenFailure;
+    }
+
+    private AiAnswer requestVisionAnswer(
+            List<ChatMessage> messages, String question,
+            String educationLevel, String subjectHint, long deadlineNanos) {
+        ChatCompletionResponse body = executeCompletion(
+                messages, VISION_MODEL, "Detailed",
+                deadlineNanos, true, null);
+        ChatCompletionResponse.Choice choice = firstChoice(body);
+        if ("length".equalsIgnoreCase(choice.finishReason)) {
+            throw AiServiceException.incompleteResponse();
+        }
+        if (!isAcceptedFinishReason(choice.finishReason)) {
+            throw AiServiceException.invalidResponse();
+        }
+        String content = stripThinking(trimToEmpty(choice.message.textContent()));
+        if (content.isEmpty()) throw AiServiceException.invalidResponse();
+        String detectedSubject = isAutoSubject(subjectHint)
+                ? SubjectClassifier.classify(question) : subjectHint;
+        AiAnswer answer;
+        try {
+            answer = AiResponseParser.parse(content, detectedSubject,
+                    difficultyFor(educationLevel));
+        } catch (IllegalArgumentException error) {
+            throw AiServiceException.invalidResponse();
+        }
+        answer.setSource(AnswerSource.REMOTE);
+        answer.setModelName(defaultIfBlank(body.model, VISION_MODEL));
+        return answer;
+    }
+
+    private String stripThinking(String value) {
+        String clean = trimToEmpty(value);
+        int closing = clean.lastIndexOf("</think>");
+        return closing >= 0
+                ? clean.substring(closing + "</think>".length()).trim()
+                : clean;
     }
 
     private AiAnswer requestGeminiAnswer(
