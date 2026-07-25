@@ -374,8 +374,24 @@ public class RemoteAiEngineTest {
                 request.getBody().readUtf8()).getAsJsonObject();
         assertEquals("qwen/qwen3.6-27b",
                 body.get("model").getAsString());
+        assertTrue(!body.has("response_format"));
         assertTrue(body.getAsJsonArray("messages").get(1)
                 .getAsJsonObject().getAsJsonArray("content").size() == 2);
+    }
+
+    @Test
+    public void answerWithImage_acceptsJsonWrappedInMarkdownFence() {
+        String fenced = "```json\n"
+                + structuredContent("Read from fenced JSON") + "\n```";
+        server.enqueue(jsonResponse(200, completionBody(fenced)));
+        RemoteAiEngine engine = engineWithGemini(1_000, 1_000);
+
+        AiAnswer answer = engine.answerWithImage(
+                "Read this image.",
+                new ImageAttachment("image/jpeg", "AQID"),
+                "University", "Detailed", "General", "");
+
+        assertEquals("Read from fenced JSON", answer.getDirectAnswer());
     }
 
     @Test

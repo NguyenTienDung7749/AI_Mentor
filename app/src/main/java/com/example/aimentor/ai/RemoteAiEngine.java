@@ -329,8 +329,7 @@ public class RemoteAiEngine implements AiEngine {
 
         String answerText = trimToEmpty(choice.message.textContent());
         if (answerText.isEmpty()
-                || !answerText.startsWith("{")
-                || !answerText.endsWith("}")) {
+                || !looksLikeStructuredJson(answerText)) {
             throw AiServiceException.invalidResponse();
         }
 
@@ -771,7 +770,10 @@ public class RemoteAiEngine implements AiEngine {
     }
 
     private Object answerResponseFormat(String model) {
-        if (VISION_MODEL.equals(model)) return jsonObjectFormat();
+        // Groq's Qwen vision endpoint rejects response_format=json_object
+        // for otherwise valid image requests. The prompt still requires JSON,
+        // and the response is validated before parsing.
+        if (VISION_MODEL.equals(model)) return null;
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("scope", enumStringSchema(
                 "ACADEMIC", "OUT_OF_SCOPE"));
@@ -792,6 +794,17 @@ public class RemoteAiEngine implements AiEngine {
                 new String[]{"scope", "subject", "difficulty", "directAnswer",
                         "simplified", "steps", "keyConcepts",
                         "commonMistakes", "followUps", "visionConfidence"});
+    }
+
+    private boolean looksLikeStructuredJson(String value) {
+        String clean = trimToEmpty(value);
+        if (clean.startsWith("```")) {
+            int firstLineEnd = clean.indexOf('\n');
+            int closingFence = clean.lastIndexOf("```");
+            if (firstLineEnd < 0 || closingFence <= firstLineEnd) return false;
+            clean = clean.substring(firstLineEnd + 1, closingFence).trim();
+        }
+        return clean.startsWith("{") && clean.endsWith("}");
     }
 
     private Object quizResponseFormat() {
