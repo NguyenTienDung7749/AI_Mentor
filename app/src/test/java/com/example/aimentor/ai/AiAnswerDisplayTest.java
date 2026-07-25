@@ -13,7 +13,7 @@ public class AiAnswerDisplayTest {
                 "What is gravity?", "Short");
 
         assertTrue(display.contains("Quick answer"));
-        assertTrue(display.contains("Key takeaway"));
+        assertFalse(display.contains("Key takeaway"));
         assertFalse(display.contains("Step-by-step"));
         assertFalse(display.contains("Detailed explanation"));
     }

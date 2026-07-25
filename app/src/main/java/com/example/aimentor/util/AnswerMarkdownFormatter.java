@@ -18,6 +18,8 @@ public final class AnswerMarkdownFormatter {
 
     public static String format(String value) {
         if (value == null || value.trim().isEmpty()) return "";
+        String shortAnswer = formatShortAnswer(value);
+        if (shortAnswer != null) return normalizeMath(shortAnswer);
         StringBuilder markdown = new StringBuilder();
         boolean firstContentLine = true;
         for (String rawLine : value.trim().split("\\R", -1)) {
@@ -38,6 +40,37 @@ public final class AnswerMarkdownFormatter {
             markdown.append(line);
         }
         return normalizeMath(markdown.toString().trim());
+    }
+
+    private static String formatShortAnswer(String value) {
+        StringBuilder body = new StringBuilder();
+        String label = null;
+        boolean collecting = false;
+        for (String rawLine : value.trim().split("\\R", -1)) {
+            String line = rawLine.trim();
+            if (isRepeatedMetadata(line)) continue;
+            if ("Quick answer".equals(line) || "Quick answer:".equals(line)) {
+                label = "Quick answer";
+                collecting = true;
+                continue;
+            }
+            if ("Trả lời ngắn".equals(line) || "Trả lời ngắn:".equals(line)) {
+                label = "Trả lời ngắn";
+                collecting = true;
+                continue;
+            }
+            if (collecting && ("Key takeaway".equals(line)
+                    || "Key takeaway:".equals(line)
+                    || "Ý chính".equals(line)
+                    || "Ý chính:".equals(line))) {
+                break;
+            }
+            if (!collecting) continue;
+            if (body.length() > 0) body.append('\n');
+            body.append(line);
+        }
+        if (label == null || body.toString().trim().isEmpty()) return null;
+        return "**" + label + "**\n\n" + body.toString().trim();
     }
 
     private static String normalizeMath(String markdown) {

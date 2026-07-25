@@ -93,11 +93,6 @@ public class AiAnswer {
         if (style.contains("short")) {
             sb.append(vietnamese ? "Trả lời ngắn\n" : "Quick answer\n")
                     .append(preserveFormatting(directAnswer));
-            if (simplified != null && !simplified.trim().isEmpty()
-                    && !simplified.trim().equals(directAnswer.trim())) {
-                sb.append(vietnamese ? "\n\nÝ chính\n" : "\n\nKey takeaway\n")
-                        .append(preserveFormatting(simplified));
-            }
             return sb.toString().trim();
         }
         if (style.contains("detail")) {

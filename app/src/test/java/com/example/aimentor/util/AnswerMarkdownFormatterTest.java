@@ -26,9 +26,10 @@ public class AnswerMarkdownFormatterTest {
     @Test
     public void format_doesNotDoubleWrapExistingMath() {
         String formatted = AnswerMarkdownFormatter.format(
-                "Answer\nUse $$\\\\sqrt{2}$$.");
+                "Answer\nUse $$A \\xrightarrow{heat} B$$.");
 
-        assertTrue(formatted.contains("\n\n$$\\\\sqrt{2}$$"));
+        assertTrue(formatted.contains(
+                "\n\n$$A \\stackrel{heat}{\\longrightarrow} B$$"));
         assertFalse(formatted.contains("$$$$"));
     }
 
@@ -38,10 +39,9 @@ public class AnswerMarkdownFormatterTest {
                 "Trả lời ngắn\nCây tạo $O_2$.\n\n"
                         + "Ý chính\n$$6CO_2 \\xrightarrow{light} C_6H_12O_6$$.");
 
-        assertTrue(formatted.contains("## Trả lời ngắn"));
-        assertTrue(formatted.contains("### Ý chính"));
+        assertTrue(formatted.contains("**Trả lời ngắn**"));
+        assertFalse(formatted.contains("Ý chính"));
         assertTrue(formatted.contains("$O_2$"));
-        assertTrue(formatted.contains(
-                "\\stackrel{light}{\\longrightarrow}"));
+        assertFalse(formatted.contains("xrightarrow"));
     }
 }
