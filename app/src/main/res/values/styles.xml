@@ -80,8 +80,6 @@
         <item name="android:background">?attr/colorSurface</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.AIMentor.NavigationIndicator</item>
         <item name="itemIconSize">24dp</item>
-        <item name="itemPaddingTop">6dp</item>
-        <item name="itemPaddingBottom">6dp</item>
     </style>
 
     <style name="Widget.AIMentor.NavigationIndicator"
