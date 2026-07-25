@@ -1,12 +1,9 @@
 package com.example.aimentor.ai;
 
-import com.example.aimentor.network.GeminiApiService;
 import com.example.aimentor.network.GroqApiService;
 import com.example.aimentor.network.model.ChatCompletionRequest;
 import com.example.aimentor.network.model.ChatCompletionResponse;
 import com.example.aimentor.network.model.ChatMessage;
-import com.example.aimentor.network.model.GeminiGenerateContentRequest;
-import com.example.aimentor.network.model.GeminiGenerateContentResponse;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
@@ -43,6 +40,7 @@ public class RemoteAiEngine implements AiEngine {
     static final String VISION_MODEL = "qwen/qwen3.6-27b";
     private static final double TEMPERATURE = 0.5;
     private static final int FAST_MAX_TOKENS = 1200;
+    private static final int VISION_MAX_TOKENS = 3000;
     private static final int DEEP_MAX_TOKENS = 5000;
     private static final long DEFAULT_CALL_TIMEOUT_MS = 60_000L;
     private static final Gson GSON = new Gson();
@@ -61,38 +59,21 @@ public class RemoteAiEngine implements AiEngine {
 
     private final String apiKey;
     private final GroqApiService service;
-    private final String geminiApiKey;
-    private final GeminiApiService geminiService;
     private final long totalDeadlineMs;
     private final LocalAiEngine localQuizEngine = new LocalAiEngine();
 
     public RemoteAiEngine(String baseUrl, String apiKey) {
-        this(baseUrl, apiKey, "", "", 15_000L, 60_000L,
-                DEFAULT_CALL_TIMEOUT_MS, createResilientDns());
-    }
-
-    public RemoteAiEngine(String baseUrl, String apiKey,
-                          String geminiBaseUrl, String geminiApiKey) {
-        this(baseUrl, apiKey, geminiBaseUrl, geminiApiKey,
-                15_000L, 60_000L,
+        this(baseUrl, apiKey, 15_000L, 60_000L,
                 DEFAULT_CALL_TIMEOUT_MS, createResilientDns());
     }
 
     RemoteAiEngine(String baseUrl, String apiKey,
                    long connectTimeoutMs, long readTimeoutMs) {
-        this(baseUrl, apiKey, "", "", connectTimeoutMs, readTimeoutMs,
+        this(baseUrl, apiKey, connectTimeoutMs, readTimeoutMs,
                 Math.max(1L, readTimeoutMs), Dns.SYSTEM);
     }
 
     RemoteAiEngine(String baseUrl, String apiKey,
-                   long connectTimeoutMs, long readTimeoutMs,
-                   long callTimeoutMs, Dns dns) {
-        this(baseUrl, apiKey, "", "", connectTimeoutMs, readTimeoutMs,
-                callTimeoutMs, dns);
-    }
-
-    RemoteAiEngine(String baseUrl, String apiKey,
-                   String geminiBaseUrl, String geminiApiKey,
                    long connectTimeoutMs, long readTimeoutMs,
                    long callTimeoutMs, Dns dns) {
         if (apiKey == null || apiKey.trim().isEmpty()) {
@@ -103,7 +84,6 @@ public class RemoteAiEngine implements AiEngine {
         }
 
         this.apiKey = apiKey.trim();
-        this.geminiApiKey = defaultIfBlank(geminiApiKey, "");
         this.totalDeadlineMs = Math.max(1L, callTimeoutMs);
         String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
         OkHttpClient client = new OkHttpClient.Builder()
@@ -121,24 +101,6 @@ public class RemoteAiEngine implements AiEngine {
                         new GsonBuilder().create()))
                 .build();
         this.service = retrofit.create(GroqApiService.class);
-
-        if (this.geminiApiKey.isEmpty()) {
-            this.geminiService = null;
-        } else {
-            String normalizedGeminiUrl = defaultIfBlank(
-                    geminiBaseUrl,
-                    "https://generativelanguage.googleapis.com/");
-            if (!normalizedGeminiUrl.endsWith("/")) {
-                normalizedGeminiUrl += "/";
-            }
-            this.geminiService = new Retrofit.Builder()
-                    .baseUrl(normalizedGeminiUrl)
-                    .client(client)
-                    .addConverterFactory(GsonConverterFactory.create(
-                            new GsonBuilder().create()))
-                    .build()
-                    .create(GeminiApiService.class);
-        }
     }
 
     private static Dns createResilientDns() {
@@ -206,20 +168,6 @@ public class RemoteAiEngine implements AiEngine {
             qwenFailure = error;
         }
 
-        boolean detailed = "Detailed".equals(
-                normalizeExplanationStyle(explanationStyle));
-        boolean rescueEligible = detailed && geminiService != null
-                && (qwenAnswer == null || needsVisionRescue(qwenAnswer));
-        if (rescueEligible) {
-            try {
-                ensureTimeRemaining(deadlineNanos);
-                return requestGeminiAnswer(question, image, educationLevel,
-                        explanationStyle, subjectHint, subjects, deadlineNanos);
-            } catch (AiServiceException geminiFailure) {
-                if (qwenAnswer != null) return qwenAnswer;
-                throw geminiFailure;
-            }
-        }
         if (qwenAnswer != null) return qwenAnswer;
         throw qwenFailure == null
                 ? AiServiceException.invalidResponse() : qwenFailure;
@@ -262,64 +210,6 @@ public class RemoteAiEngine implements AiEngine {
                 : clean;
     }
 
-    private AiAnswer requestGeminiAnswer(
-            String question, ImageAttachment image,
-            String educationLevel, String explanationStyle,
-            String subjectHint, String subjects, long deadlineNanos) {
-        String prompt = buildSystemPrompt(question, educationLevel,
-                explanationStyle, subjectHint, subjects)
-                + " This is a rescue pass after another vision model could not confidently "
-                + "read the image. Inspect the image independently, preserve all mathematical "
-                + "symbols and answer the user's text question. Return the requested JSON now.";
-        GeminiGenerateContentRequest request =
-                new GeminiGenerateContentRequest(prompt, image);
-        Call<GeminiGenerateContentResponse> call =
-                geminiService.generateContent(geminiApiKey, request);
-        call.timeout().timeout(ensureTimeRemaining(deadlineNanos),
-                TimeUnit.NANOSECONDS);
-        Response<GeminiGenerateContentResponse> response;
-        try {
-            response = call.execute();
-        } catch (IOException error) {
-            throw AiServiceException.network(error);
-        }
-        if (!response.isSuccessful()) {
-            throw AiServiceException.http(response.code());
-        }
-        GeminiGenerateContentResponse body = response.body();
-        String content = body == null ? "" : body.firstText();
-        if (content.isEmpty()) throw AiServiceException.invalidResponse();
-        String detectedSubject = isAutoSubject(subjectHint)
-                ? SubjectClassifier.classify(question) : subjectHint;
-        AiAnswer answer;
-        try {
-            answer = AiResponseParser.parse(content, detectedSubject,
-                    difficultyFor(educationLevel));
-        } catch (IllegalArgumentException error) {
-            throw AiServiceException.invalidResponse();
-        }
-        if (!isCompleteForStyle(answer, explanationStyle)) {
-            throw AiServiceException.invalidResponse();
-        }
-        answer.setSource(AnswerSource.REMOTE);
-        answer.setModelName("gemini-3.6-flash");
-        return answer;
-    }
-
-    private boolean needsVisionRescue(AiAnswer answer) {
-        if (answer.isVisionUncertain()) return true;
-        String text = (defaultIfBlank(answer.getDirectAnswer(), "") + " "
-                + defaultIfBlank(answer.getSimplified(), ""))
-                .toLowerCase(Locale.ROOT);
-        return text.contains("cannot read")
-                || text.contains("can’t read")
-                || text.contains("unclear image")
-                || text.contains("image is unclear")
-                || text.contains("không đọc được")
-                || text.contains("ảnh không rõ")
-                || text.contains("thiếu dữ kiện")
-                || text.contains("insufficient information");
-    }
 
     @Override
     public AiAnswer answer(String question, String educationLevel,
@@ -446,8 +336,8 @@ public class RemoteAiEngine implements AiEngine {
                 + "requests are OUT_OF_SCOPE. For OUT_OF_SCOPE, set scope to OUT_OF_SCOPE, "
                 + "subject to General, use empty optional fields and reply only with "
                 + (isVietnameseQuestion(question)
-                ? "\"Tôi không thể giúp trả lời câu hỏi ngoài phạm vi học thuật.\" "
-                : "\"I can’t help with questions outside the academic scope.\" ")
+                ? "\"TÃ´i khÃ´ng thá»ƒ giÃºp tráº£ lá»i cÃ¢u há»i ngoÃ i pháº¡m vi há»c thuáº­t.\" "
+                : "\"I canâ€™t help with questions outside the academic scope.\" ")
                 + "in directAnswer. Otherwise set scope to ACADEMIC. "
                 + " Student learning profile: education level = " + normalizedLevel
                 + "; preferred explanation style = " + normalizedStyle
@@ -722,8 +612,8 @@ public class RemoteAiEngine implements AiEngine {
     private boolean isVietnameseQuestion(String text) {
         if (text == null || text.trim().isEmpty()) return false;
         String lower = text.toLowerCase(Locale.ROOT);
-        if (lower.matches("(?s).*[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệ"
-                + "íìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ].*")) {
+        if (lower.matches("(?s).*[ÄƒÃ¢Ä‘ÃªÃ´Æ¡Æ°Ã¡Ã áº£Ã£áº¡áº¥áº§áº©áº«áº­áº¯áº±áº³áºµáº·Ã©Ã¨áº»áº½áº¹áº¿á»á»ƒá»…á»‡"
+                + "Ã­Ã¬á»‰Ä©á»‹Ã³Ã²á»Ãµá»á»‘á»“á»•á»—á»™á»›á»á»Ÿá»¡á»£ÃºÃ¹á»§Å©á»¥á»©á»«á»­á»¯á»±Ã½á»³á»·á»¹á»µ].*")) {
             return true;
         }
         String padded = " " + lower.replaceAll("[^a-z]+", " ").trim() + " ";
@@ -742,8 +632,8 @@ public class RemoteAiEngine implements AiEngine {
         String padded = " " + text.toLowerCase(Locale.ROOT)
                 .replaceAll("[^\\p{L}]+", " ").trim() + " ";
         String[] vietnameseMarkers = {
-                " là ", " của ", " và ", " không ", " được ",
-                " trong ", " một ", " nhiệt độ ", " câu trả lời "
+                " lÃ  ", " cá»§a ", " vÃ  ", " khÃ´ng ", " Ä‘Æ°á»£c ",
+                " trong ", " má»™t ", " nhiá»‡t Ä‘á»™ ", " cÃ¢u tráº£ lá»i "
         };
         int matches = 0;
         for (String marker : vietnameseMarkers) {
@@ -777,7 +667,7 @@ public class RemoteAiEngine implements AiEngine {
                 selectedModel, messages, TEMPERATURE,
                 maxTokensFor(selectedModel), false,
                 reasoningEffort(selectedModel, explanationStyle),
-                "hidden", responseFormat);
+                reasoningFormat(selectedModel), responseFormat);
         Call<ChatCompletionResponse> call =
                 service.createCompletion("Bearer " + apiKey, request);
         call.timeout().timeout(attemptNanos, TimeUnit.NANOSECONDS);
@@ -797,25 +687,23 @@ public class RemoteAiEngine implements AiEngine {
     }
 
     private String reasoningEffort(String model, String explanationStyle) {
-        // Vision questions must not spend the whole output budget on hidden
-        // reasoning; Qwen otherwise commonly finishes at exactly 5,000 tokens
-        // without producing a usable final answer.
-        if (VISION_MODEL.equals(model)) return "none";
+        if (VISION_MODEL.equals(model)) return null;
         String style = normalizeExplanationStyle(explanationStyle);
         if ("Short".equals(style)) return "low";
         return "Detailed".equals(style) ? "medium" : "high";
     }
 
+    private String reasoningFormat(String model) {
+        return VISION_MODEL.equals(model) ? null : "hidden";
+    }
+
     private int maxTokensFor(String model) {
-        return FAST_MODEL.equals(model)
-                ? FAST_MAX_TOKENS : DEEP_MAX_TOKENS;
+        if (FAST_MODEL.equals(model)) return FAST_MAX_TOKENS;
+        if (VISION_MODEL.equals(model)) return VISION_MAX_TOKENS;
+        return DEEP_MAX_TOKENS;
     }
 
     private Object answerResponseFormat(String model) {
-        // Groq's Qwen vision endpoint rejects response_format=json_object
-        // for otherwise valid image requests. The prompt still requires JSON,
-        // and the response is validated before parsing.
-        if (VISION_MODEL.equals(model)) return null;
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("scope", enumStringSchema(
                 "ACADEMIC", "OUT_OF_SCOPE"));
@@ -870,12 +758,6 @@ public class RemoteAiEngine implements AiEngine {
         root.put("questions", questions);
         return strictJsonSchema("study_quiz", root,
                 new String[]{"questions"});
-    }
-
-    private Map<String, Object> jsonObjectFormat() {
-        Map<String, Object> format = new LinkedHashMap<>();
-        format.put("type", "json_object");
-        return format;
     }
 
     private Map<String, Object> strictJsonSchema(

@@ -355,11 +355,11 @@ public class RemoteAiEngineTest {
     }
 
     @Test
-    public void answerWithImage_qwenHighConfidence_doesNotSpendGeminiRescue()
+    public void answerWithImage_usesQwenOnlyWithoutReasoningFields()
             throws Exception {
         server.enqueue(jsonResponse(200,
                 completionBody(structuredContent("Read from the image"))));
-        RemoteAiEngine engine = engineWithGemini(1_000, 1_000);
+        RemoteAiEngine engine = engine(1_000, 1_000);
 
         AiAnswer answer = engine.answerWithImage(
                 "Solve the equation in this image.",
@@ -374,9 +374,10 @@ public class RemoteAiEngineTest {
                 request.getBody().readUtf8()).getAsJsonObject();
         assertEquals("qwen/qwen3.6-27b",
                 body.get("model").getAsString());
-        assertEquals("none",
-                body.get("reasoning_effort").getAsString());
+        assertEquals(3000, body.get("max_tokens").getAsInt());
         assertTrue(!body.has("response_format"));
+        assertTrue(!body.has("reasoning_effort"));
+        assertTrue(!body.has("reasoning_format"));
         assertTrue(body.getAsJsonArray("messages").get(1)
                 .getAsJsonObject().getAsJsonArray("content").size() == 2);
     }
@@ -386,7 +387,7 @@ public class RemoteAiEngineTest {
         String fenced = "```json\n"
                 + structuredContent("Read from fenced JSON") + "\n```";
         server.enqueue(jsonResponse(200, completionBody(fenced)));
-        RemoteAiEngine engine = engineWithGemini(1_000, 1_000);
+        RemoteAiEngine engine = engine(1_000, 1_000);
 
         AiAnswer answer = engine.answerWithImage(
                 "Read this image.",
@@ -397,24 +398,18 @@ public class RemoteAiEngineTest {
     }
 
     @Test
-    public void answerWithImage_detailedLowConfidence_usesGeminiOnce() {
-        String uncertain = structuredContent("The image may be unclear")
-                .replace("\"followUps\"",
-                        "\"visionConfidence\":\"LOW\",\"followUps\"");
-        server.enqueue(jsonResponse(200, completionBody(uncertain)));
-        server.enqueue(jsonResponse(200, geminiBody(
-                structuredContent("Gemini recovered the formula"))));
-        RemoteAiEngine engine = engineWithGemini(1_000, 1_000);
+    public void answerWithImage_plainMarkdownIsReturnedFromQwen() {
+        server.enqueue(jsonResponse(200, completionBody(
+                "<think>private</think>\nThe formula is $x^2 + 1$.")));
+        RemoteAiEngine engine = engine(1_000, 1_000);
 
         AiAnswer answer = engine.answerWithImage(
                 "Explain this formula.",
                 new ImageAttachment("image/jpeg", "AQID"),
                 "University", "Detailed", "Mathematics", "");
 
-        assertEquals("Gemini recovered the formula",
-                answer.getDirectAnswer());
-        assertEquals("gemini-3.6-flash", answer.getModelName());
-        assertEquals(2, server.getRequestCount());
+        assertEquals("The formula is $x^2 + 1$.", answer.getDirectAnswer());
+        assertEquals(1, server.getRequestCount());
     }
 
     @Test
@@ -455,15 +450,6 @@ public class RemoteAiEngineTest {
                 "test-key", connectTimeoutMs, readTimeoutMs);
     }
 
-    private RemoteAiEngine engineWithGemini(
-            long connectTimeoutMs, long readTimeoutMs) {
-        return new RemoteAiEngine(
-                server.url("/").toString(), "test-key",
-                server.url("/").toString(), "gemini-test-key",
-                connectTimeoutMs, readTimeoutMs,
-                readTimeoutMs, okhttp3.Dns.SYSTEM);
-    }
-
     private AiServiceException expectFailure(RemoteAiEngine engine) {
         try {
             engine.answer("Question", "High School", "Detailed", "Auto");
@@ -501,12 +487,6 @@ public class RemoteAiEngineTest {
                 + "\"keyConcepts\":[\"Key concept\"],"
                 + "\"commonMistakes\":[\"Common mistake\"],"
                 + "\"followUps\":[\"Practice question\"]}";
-    }
-
-    private String geminiBody(String content) {
-        return "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":"
-                + new Gson().toJson(content)
-                + "}]},\"finishReason\":\"STOP\"}]}";
     }
 
     private int maxTokens(RecordedRequest request) {

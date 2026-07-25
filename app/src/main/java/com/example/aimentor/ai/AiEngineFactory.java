@@ -13,11 +13,8 @@ public final class AiEngineFactory {
         if (key.isEmpty()) {
             return new UnavailableAiEngine(new LocalAiEngine());
         }
-        String geminiKey = BuildConfig.GEMINI_API_KEY == null
-                ? "" : BuildConfig.GEMINI_API_KEY.trim();
         return new FallbackAiEngine(
-                new RemoteAiEngine(BuildConfig.GROQ_BASE_URL, key,
-                        BuildConfig.GEMINI_BASE_URL, geminiKey),
+                new RemoteAiEngine(BuildConfig.GROQ_BASE_URL, key),
                 new LocalAiEngine());
     }
 }

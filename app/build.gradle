@@ -8,13 +8,7 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.withInputStream { localProperties.load(it) }
 }
 def groqApiKey = localProperties.getProperty("GROQ_API_KEY", "")
-def geminiApiKey = localProperties.getProperty("GEMINI_API_KEY", "")
 def escapedGroqApiKey = groqApiKey
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\r", "\\r")
-        .replace("\n", "\\n")
-def escapedGeminiApiKey = geminiApiKey
         .replace("\\", "\\\\")
         .replace("\"", "\\\"")
         .replace("\r", "\\r")
@@ -34,8 +28,6 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "GROQ_API_KEY", "\"${escapedGroqApiKey}\""
         buildConfigField "String", "GROQ_BASE_URL", "\"https://api.groq.com/\""
-        buildConfigField "String", "GEMINI_API_KEY", "\"${escapedGeminiApiKey}\""
-        buildConfigField "String", "GEMINI_BASE_URL", "\"https://generativelanguage.googleapis.com/\""
         vectorDrawables {
             useSupportLibrary true
         }
