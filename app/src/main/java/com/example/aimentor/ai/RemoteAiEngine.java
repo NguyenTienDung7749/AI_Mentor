@@ -423,10 +423,13 @@ public class RemoteAiEngine implements AiEngine {
                 + "Return only one valid JSON object without markdown, using this exact schema: "
                 + RESPONSE_SCHEMA
                 + ". " + schemaRequirements(normalizedStyle)
-                + " Preserve mathematical meaning exactly. Write formulas as LaTeX enclosed "
-                + "by double dollar delimiters, for example $$x = \\\\frac{-b \\\\pm "
-                + "\\\\sqrt{b^2-4ac}}{2a}$$. Because the response is JSON, escape each "
-                + "LaTeX backslash correctly. Plain text outside formulas may use simple "
+                + " Preserve mathematical meaning exactly. Use single-dollar LaTeX for short "
+                + "inline expressions, for example $CO_2$ or $x^2$. Put a longer equation on "
+                + "its own line inside double dollars, with a blank line before and after it. "
+                + "Never place prose on the same line as a double-dollar equation. Prefer "
+                + "\\\\rightarrow over unsupported arrow commands and split very long equations "
+                + "into readable blocks. Because the response is JSON, escape each LaTeX "
+                + "backslash correctly. Plain text outside formulas may use simple "
                 + "Markdown emphasis, lists and inline code; never wrap the JSON in a code fence.";
     }
 
