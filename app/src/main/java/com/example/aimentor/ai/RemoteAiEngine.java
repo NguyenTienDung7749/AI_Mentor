@@ -1,9 +1,12 @@
 package com.example.aimentor.ai;
 
+import com.example.aimentor.network.GeminiApiService;
 import com.example.aimentor.network.GroqApiService;
 import com.example.aimentor.network.model.ChatCompletionRequest;
 import com.example.aimentor.network.model.ChatCompletionResponse;
 import com.example.aimentor.network.model.ChatMessage;
+import com.example.aimentor.network.model.GeminiGenerateContentRequest;
+import com.example.aimentor.network.model.GeminiGenerateContentResponse;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
@@ -16,9 +19,11 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Dns;
@@ -33,10 +38,12 @@ import retrofit2.converter.gson.GsonConverterFactory;
 /** Blocking remote implementation. Call only through StudyRepository's IO executor. */
 public class RemoteAiEngine implements AiEngine {
 
-    private static final String FAST_MODEL = "llama-3.1-8b-instant";
-    private static final String SMART_MODEL = "llama-3.3-70b-versatile";
+    static final String FAST_MODEL = "openai/gpt-oss-20b";
+    static final String SMART_MODEL = "openai/gpt-oss-120b";
+    static final String VISION_MODEL = "qwen/qwen3.6-27b";
     private static final double TEMPERATURE = 0.5;
-    private static final int MAX_TOKENS = 1200;
+    private static final int FAST_MAX_TOKENS = 1200;
+    private static final int DEEP_MAX_TOKENS = 3000;
     private static final long DEFAULT_CALL_TIMEOUT_MS = 60_000L;
     private static final Gson GSON = new Gson();
 
@@ -48,32 +55,43 @@ public class RemoteAiEngine implements AiEngine {
             + "\"steps\":[\"step 1\",\"step 2\"],"
             + "\"keyConcepts\":[\"concept 1\",\"concept 2\"],"
             + "\"commonMistakes\":[\"common mistake\"],"
-            + "\"followUps\":[\"practice question 1\",\"practice question 2\"]}";
-
-    private static final String[] SMART_KEYWORDS = {
-            "phân tích", "giải chi tiết", "từng bước", "chứng minh", "so sánh",
-            "đánh giá", "lập kế hoạch", "debug", "sửa code", "exception", "crash",
-            "thuật toán", "kiến trúc", "database", "api", "kotlin", "java",
-            "android", "gradle", "sql", "assignment"
-    };
+            + "\"followUps\":[\"practice question 1\",\"practice question 2\"],"
+            + "\"visionConfidence\":\"HIGH|LOW\"}";
 
     private final String apiKey;
     private final GroqApiService service;
+    private final String geminiApiKey;
+    private final GeminiApiService geminiService;
     private final long totalDeadlineMs;
     private final LocalAiEngine localQuizEngine = new LocalAiEngine();
 
     public RemoteAiEngine(String baseUrl, String apiKey) {
-        this(baseUrl, apiKey, 15_000L, 60_000L,
+        this(baseUrl, apiKey, "", "", 15_000L, 60_000L,
+                DEFAULT_CALL_TIMEOUT_MS, createResilientDns());
+    }
+
+    public RemoteAiEngine(String baseUrl, String apiKey,
+                          String geminiBaseUrl, String geminiApiKey) {
+        this(baseUrl, apiKey, geminiBaseUrl, geminiApiKey,
+                15_000L, 60_000L,
                 DEFAULT_CALL_TIMEOUT_MS, createResilientDns());
     }
 
     RemoteAiEngine(String baseUrl, String apiKey,
                    long connectTimeoutMs, long readTimeoutMs) {
-        this(baseUrl, apiKey, connectTimeoutMs, readTimeoutMs,
+        this(baseUrl, apiKey, "", "", connectTimeoutMs, readTimeoutMs,
                 Math.max(1L, readTimeoutMs), Dns.SYSTEM);
     }
 
     RemoteAiEngine(String baseUrl, String apiKey,
+                   long connectTimeoutMs, long readTimeoutMs,
+                   long callTimeoutMs, Dns dns) {
+        this(baseUrl, apiKey, "", "", connectTimeoutMs, readTimeoutMs,
+                callTimeoutMs, dns);
+    }
+
+    RemoteAiEngine(String baseUrl, String apiKey,
+                   String geminiBaseUrl, String geminiApiKey,
                    long connectTimeoutMs, long readTimeoutMs,
                    long callTimeoutMs, Dns dns) {
         if (apiKey == null || apiKey.trim().isEmpty()) {
@@ -84,6 +102,7 @@ public class RemoteAiEngine implements AiEngine {
         }
 
         this.apiKey = apiKey.trim();
+        this.geminiApiKey = defaultIfBlank(geminiApiKey, "");
         this.totalDeadlineMs = Math.max(1L, callTimeoutMs);
         String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
         OkHttpClient client = new OkHttpClient.Builder()
@@ -101,6 +120,24 @@ public class RemoteAiEngine implements AiEngine {
                         new GsonBuilder().create()))
                 .build();
         this.service = retrofit.create(GroqApiService.class);
+
+        if (this.geminiApiKey.isEmpty()) {
+            this.geminiService = null;
+        } else {
+            String normalizedGeminiUrl = defaultIfBlank(
+                    geminiBaseUrl,
+                    "https://generativelanguage.googleapis.com/");
+            if (!normalizedGeminiUrl.endsWith("/")) {
+                normalizedGeminiUrl += "/";
+            }
+            this.geminiService = new Retrofit.Builder()
+                    .baseUrl(normalizedGeminiUrl)
+                    .client(client)
+                    .addConverterFactory(GsonConverterFactory.create(
+                            new GsonBuilder().create()))
+                    .build()
+                    .create(GeminiApiService.class);
+        }
     }
 
     private static Dns createResilientDns() {
@@ -132,6 +169,119 @@ public class RemoteAiEngine implements AiEngine {
     }
 
     @Override
+    public AiAnswer answerWithImage(
+            String question, ImageAttachment image,
+            String educationLevel, String explanationStyle,
+            String subjectHint, String subjects) {
+        if (image == null) {
+            return answer(question, educationLevel, explanationStyle,
+                    subjectHint, subjects);
+        }
+        String systemPrompt = buildSystemPrompt(
+                question, educationLevel, explanationStyle,
+                subjectHint, subjects)
+                + " You are examining one user-provided image. Read formulas, tables, "
+                + "diagrams and small labels carefully. Set visionConfidence to HIGH only "
+                + "when every fact needed for the answer is legible; otherwise set it to LOW "
+                + "and state exactly what cannot be read. Never invent missing image details.";
+        List<ChatMessage.ContentPart> userContent = Arrays.asList(
+                ChatMessage.ContentPart.image(image.toDataUrl()),
+                ChatMessage.ContentPart.text(defaultIfBlank(question, "")));
+        List<ChatMessage> messages = Arrays.asList(
+                new ChatMessage("system", systemPrompt),
+                new ChatMessage("user", userContent));
+        long deadlineNanos = System.nanoTime()
+                + TimeUnit.MILLISECONDS.toNanos(totalDeadlineMs);
+
+        AiAnswer qwenAnswer = null;
+        AiServiceException qwenFailure = null;
+        try {
+            qwenAnswer = requestAnswer(messages, VISION_MODEL, question,
+                    educationLevel, explanationStyle, subjectHint,
+                    deadlineNanos, true);
+        } catch (AiServiceException error) {
+            qwenFailure = error;
+        }
+
+        boolean detailed = "Detailed".equals(
+                normalizeExplanationStyle(explanationStyle));
+        boolean rescueEligible = detailed && geminiService != null
+                && (qwenAnswer == null || needsVisionRescue(qwenAnswer));
+        if (rescueEligible) {
+            try {
+                ensureTimeRemaining(deadlineNanos);
+                return requestGeminiAnswer(question, image, educationLevel,
+                        explanationStyle, subjectHint, subjects, deadlineNanos);
+            } catch (AiServiceException geminiFailure) {
+                if (qwenAnswer != null) return qwenAnswer;
+                throw geminiFailure;
+            }
+        }
+        if (qwenAnswer != null) return qwenAnswer;
+        throw qwenFailure == null
+                ? AiServiceException.invalidResponse() : qwenFailure;
+    }
+
+    private AiAnswer requestGeminiAnswer(
+            String question, ImageAttachment image,
+            String educationLevel, String explanationStyle,
+            String subjectHint, String subjects, long deadlineNanos) {
+        String prompt = buildSystemPrompt(question, educationLevel,
+                explanationStyle, subjectHint, subjects)
+                + " This is a rescue pass after another vision model could not confidently "
+                + "read the image. Inspect the image independently, preserve all mathematical "
+                + "symbols and answer the user's text question. Return the requested JSON now.";
+        GeminiGenerateContentRequest request =
+                new GeminiGenerateContentRequest(prompt, image);
+        Call<GeminiGenerateContentResponse> call =
+                geminiService.generateContent(geminiApiKey, request);
+        call.timeout().timeout(ensureTimeRemaining(deadlineNanos),
+                TimeUnit.NANOSECONDS);
+        Response<GeminiGenerateContentResponse> response;
+        try {
+            response = call.execute();
+        } catch (IOException error) {
+            throw AiServiceException.network(error);
+        }
+        if (!response.isSuccessful()) {
+            throw AiServiceException.http(response.code());
+        }
+        GeminiGenerateContentResponse body = response.body();
+        String content = body == null ? "" : body.firstText();
+        if (content.isEmpty()) throw AiServiceException.invalidResponse();
+        String detectedSubject = isAutoSubject(subjectHint)
+                ? SubjectClassifier.classify(question) : subjectHint;
+        AiAnswer answer;
+        try {
+            answer = AiResponseParser.parse(content, detectedSubject,
+                    difficultyFor(educationLevel));
+        } catch (IllegalArgumentException error) {
+            throw AiServiceException.invalidResponse();
+        }
+        if (!isCompleteForStyle(answer, explanationStyle)) {
+            throw AiServiceException.invalidResponse();
+        }
+        answer.setSource(AnswerSource.REMOTE);
+        answer.setModelName("gemini-3.6-flash");
+        return answer;
+    }
+
+    private boolean needsVisionRescue(AiAnswer answer) {
+        if (answer.isVisionUncertain()) return true;
+        String text = (defaultIfBlank(answer.getDirectAnswer(), "") + " "
+                + defaultIfBlank(answer.getSimplified(), ""))
+                .toLowerCase(Locale.ROOT);
+        return text.contains("cannot read")
+                || text.contains("can’t read")
+                || text.contains("unclear image")
+                || text.contains("image is unclear")
+                || text.contains("không đọc được")
+                || text.contains("ảnh không rõ")
+                || text.contains("thiếu dữ kiện")
+                || text.contains("insufficient information");
+    }
+
+    @Override
     public AiAnswer answer(String question, String educationLevel,
                            String explanationStyle, String subjectHint,
                            String subjects) {
@@ -140,30 +290,33 @@ public class RemoteAiEngine implements AiEngine {
                         question, educationLevel, explanationStyle,
                         subjectHint, subjects)),
                 new ChatMessage("user", defaultIfBlank(question, "")));
-        String firstModel = selectModel(question);
+        String firstModel = selectModel(explanationStyle);
         String alternateModel = FAST_MODEL.equals(firstModel) ? SMART_MODEL : FAST_MODEL;
         long deadlineNanos = System.nanoTime()
                 + TimeUnit.MILLISECONDS.toNanos(totalDeadlineMs);
 
         try {
             return requestAnswer(messages, firstModel, question, educationLevel,
-                    subjectHint, deadlineNanos, true);
+                    explanationStyle, subjectHint, deadlineNanos, true);
         } catch (AiServiceException firstError) {
             if (!shouldTryAlternate(firstError)) {
                 throw firstError;
             }
             ensureTimeRemaining(deadlineNanos);
             return requestAnswer(messages, alternateModel, question, educationLevel,
-                    subjectHint, deadlineNanos, false);
+                    explanationStyle, subjectHint, deadlineNanos, false);
         }
     }
 
     private AiAnswer requestAnswer(List<ChatMessage> messages, String selectedModel,
                                    String question, String educationLevel,
-                                   String subjectHint, long deadlineNanos,
+                                   String explanationStyle, String subjectHint,
+                                   long deadlineNanos,
                                    boolean firstAttempt) {
         ChatCompletionResponse body = executeCompletion(
-                messages, selectedModel, deadlineNanos, firstAttempt);
+                messages, selectedModel, explanationStyle,
+                deadlineNanos, firstAttempt,
+                answerResponseFormat(selectedModel));
         ChatCompletionResponse.Choice choice = firstChoice(body);
 
         if ("length".equalsIgnoreCase(choice.finishReason)) {
@@ -173,7 +326,7 @@ public class RemoteAiEngine implements AiEngine {
             throw AiServiceException.invalidResponse();
         }
 
-        String answerText = trimToEmpty(choice.message.content);
+        String answerText = trimToEmpty(choice.message.textContent());
         if (answerText.isEmpty()
                 || !answerText.startsWith("{")
                 || !answerText.endsWith("}")) {
@@ -189,11 +342,7 @@ public class RemoteAiEngine implements AiEngine {
         } catch (IllegalArgumentException e) {
             throw AiServiceException.invalidResponse();
         }
-        if (answer.getSimplified() == null || answer.getSimplified().trim().isEmpty()
-                || answer.getSteps().isEmpty()
-                || answer.getKeyConcepts().isEmpty()
-                || answer.getCommonMistakes().isEmpty()
-                || answer.getFollowUps().isEmpty()
+        if (!isCompleteForStyle(answer, explanationStyle)
                 || (!isVietnameseQuestion(question)
                 && looksLikeVietnameseAnswer(answerText))) {
             throw AiServiceException.invalidResponse();
@@ -227,24 +376,12 @@ public class RemoteAiEngine implements AiEngine {
 
     @Override
     public String name() {
-        return "Groq AI (automatic model)";
+        return "Groq AI";
     }
 
-    private String selectModel(String question) {
-        String text = defaultIfBlank(question, "");
-        String normalized = text.toLowerCase(Locale.ROOT);
-        if (text.length() >= 200
-                || text.split("\\R", -1).length >= 4
-                || text.contains("```")
-                || looksLikeError(normalized)) {
-            return SMART_MODEL;
-        }
-        for (String keyword : SMART_KEYWORDS) {
-            if (containsKeyword(normalized, keyword)) {
-                return SMART_MODEL;
-            }
-        }
-        return FAST_MODEL;
+    private String selectModel(String explanationStyle) {
+        return "Short".equals(normalizeExplanationStyle(explanationStyle))
+                ? FAST_MODEL : SMART_MODEL;
     }
 
     private String buildSystemPrompt(
@@ -274,10 +411,12 @@ public class RemoteAiEngine implements AiEngine {
                 + " Keep subject and difficulty as the exact English enum values shown. "
                 + "Return only one valid JSON object without markdown, using this exact schema: "
                 + RESPONSE_SCHEMA
-                + ". Populate every field. Include at least 2 steps, 2 keyConcepts, "
-                + "1 commonMistake and 2 followUps. Keep directAnswer to one short paragraph; "
-                + "put detailed explanations in the other fields. Never use Markdown symbols "
-                + "such as **, __, #, backticks or Markdown headings inside any value.";
+                + ". " + schemaRequirements(normalizedStyle)
+                + " Preserve mathematical meaning exactly. Write formulas as LaTeX enclosed "
+                + "by double dollar delimiters, for example $$x = \\\\frac{-b \\\\pm "
+                + "\\\\sqrt{b^2-4ac}}{2a}$$. Because the response is JSON, escape each "
+                + "LaTeX backslash correctly. Plain text outside formulas may use simple "
+                + "Markdown emphasis, lists and inline code; never wrap the JSON in a code fence.";
     }
 
     private String normalizeEducationLevel(String value) {
@@ -318,15 +457,49 @@ public class RemoteAiEngine implements AiEngine {
 
     private String styleInstruction(String style) {
         if ("Short".equals(style)) {
-            return "Keep every section concise while still populating the required fields. ";
+            return "Answer directly in 2 to 5 sentences or compact bullets. Omit optional "
+                    + "sections that do not add value. ";
         }
         if ("Detailed".equals(style)) {
-            return "Give thorough explanations, definitions and useful supporting context. ";
+            return "Give a thorough explanation with definitions, reasoning, useful context, "
+                    + "an example where relevant, common pitfalls and practice prompts. ";
         }
         if ("Step-by-step".equals(style)) {
-            return "Make the steps explicitly sequential and easy to follow. ";
+            return "Make the explanation explicitly sequential, with numbered logical steps "
+                    + "that a learner can reproduce. ";
         }
         return "Use a balanced level of detail and clear sequential reasoning. ";
+    }
+
+    private String schemaRequirements(String style) {
+        if ("Short".equals(style)) {
+            return "Populate directAnswer and use empty arrays for unnecessary sections. "
+                    + "Keep the entire answer concise.";
+        }
+        if ("Detailed".equals(style)) {
+            return "Populate every field with at least 2 steps, 2 keyConcepts, "
+                    + "1 commonMistake and 2 followUps.";
+        }
+        return "Populate every field with at least 2 sequential steps, 1 keyConcept, "
+                + "1 commonMistake and 1 followUp.";
+    }
+
+    private boolean isCompleteForStyle(AiAnswer answer, String explanationStyle) {
+        String style = normalizeExplanationStyle(explanationStyle);
+        if (answer.getDirectAnswer() == null
+                || answer.getDirectAnswer().trim().isEmpty()) {
+            return false;
+        }
+        if ("Short".equals(style)) return true;
+        if (answer.getSimplified() == null
+                || answer.getSimplified().trim().isEmpty()
+                || answer.getSteps().size() < 2
+                || answer.getKeyConcepts().isEmpty()
+                || answer.getCommonMistakes().isEmpty()
+                || answer.getFollowUps().isEmpty()) {
+            return false;
+        }
+        return true;
     }
 
     private String buildQuizSystemPrompt(QuizGenerationConfig config, String topicContext) {
@@ -378,7 +551,9 @@ public class RemoteAiEngine implements AiEngine {
             List<ChatMessage> messages, String selectedModel,
             QuizGenerationConfig config, long deadlineNanos, boolean firstAttempt) {
         ChatCompletionResponse body = executeCompletion(
-                messages, selectedModel, deadlineNanos, firstAttempt);
+                messages, selectedModel, "Detailed",
+                deadlineNanos, firstAttempt,
+                quizResponseFormat());
         ChatCompletionResponse.Choice choice = firstChoice(body);
         if ("length".equalsIgnoreCase(choice.finishReason)) {
             throw AiServiceException.incompleteResponse();
@@ -386,7 +561,7 @@ public class RemoteAiEngine implements AiEngine {
         if (!isAcceptedFinishReason(choice.finishReason)) {
             throw AiServiceException.invalidResponse();
         }
-        String content = trimToEmpty(choice.message.content);
+        String content = trimToEmpty(choice.message.textContent());
         if (!content.startsWith("{") || !content.endsWith("}")) {
             throw AiServiceException.invalidResponse();
         }
@@ -522,33 +697,6 @@ public class RemoteAiEngine implements AiEngine {
         return false;
     }
 
-    private boolean looksLikeError(String text) {
-        return text.contains("stack trace")
-                || text.contains("traceback")
-                || text.contains("caused by:")
-                || text.contains("fatal error")
-                || text.contains("error:")
-                || text.contains("failed:")
-                || containsKeyword(text, "lỗi")
-                || text.matches("(?s).*\\bat\\s+[\\w.$]+\\([^\\r\\n]+:\\d+\\).*");
-    }
-
-    private boolean containsKeyword(String text, String keyword) {
-        int from = 0;
-        while (from < text.length()) {
-            int index = text.indexOf(keyword, from);
-            if (index < 0) return false;
-            int end = index + keyword.length();
-            boolean startBoundary = index == 0
-                    || !Character.isLetterOrDigit(text.charAt(index - 1));
-            boolean endBoundary = end == text.length()
-                    || !Character.isLetterOrDigit(text.charAt(end));
-            if (startBoundary && endBoundary) return true;
-            from = index + 1;
-        }
-        return false;
-    }
-
     private boolean shouldTryAlternate(AiServiceException error) {
         if (error.getKind() == AiServiceException.Kind.NETWORK
                 || error.getKind() == AiServiceException.Kind.TIMEOUT
@@ -562,15 +710,19 @@ public class RemoteAiEngine implements AiEngine {
     }
 
     private ChatCompletionResponse executeCompletion(
-            List<ChatMessage> messages, String selectedModel, long deadlineNanos,
-            boolean firstAttempt) {
+            List<ChatMessage> messages, String selectedModel,
+            String explanationStyle, long deadlineNanos,
+            boolean firstAttempt, Object responseFormat) {
         long remainingNanos = ensureTimeRemaining(deadlineNanos);
         long attemptNanos = firstAttempt
                 ? Math.min(remainingNanos,
                 TimeUnit.MILLISECONDS.toNanos(Math.max(1L, totalDeadlineMs * 3L / 4L)))
                 : remainingNanos;
         ChatCompletionRequest request = new ChatCompletionRequest(
-                selectedModel, messages, TEMPERATURE, MAX_TOKENS, false);
+                selectedModel, messages, TEMPERATURE,
+                maxTokensFor(selectedModel), false,
+                reasoningEffort(selectedModel, explanationStyle),
+                "hidden", responseFormat);
         Call<ChatCompletionResponse> call =
                 service.createCompletion("Bearer " + apiKey, request);
         call.timeout().timeout(attemptNanos, TimeUnit.NANOSECONDS);
@@ -587,6 +739,109 @@ public class RemoteAiEngine implements AiEngine {
         ChatCompletionResponse body = response.body();
         firstChoice(body);
         return body;
+    }
+
+    private String reasoningEffort(String model, String explanationStyle) {
+        if (VISION_MODEL.equals(model)) return "default";
+        String style = normalizeExplanationStyle(explanationStyle);
+        if ("Short".equals(style)) return "low";
+        return "Detailed".equals(style) ? "medium" : "high";
+    }
+
+    private int maxTokensFor(String model) {
+        return FAST_MODEL.equals(model)
+                ? FAST_MAX_TOKENS : DEEP_MAX_TOKENS;
+    }
+
+    private Object answerResponseFormat(String model) {
+        if (VISION_MODEL.equals(model)) return jsonObjectFormat();
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("subject", enumStringSchema(
+                "Mathematics", "Science", "Programming",
+                "History", "Languages", "General"));
+        properties.put("difficulty", enumStringSchema(
+                "Beginner", "Intermediate", "Advanced"));
+        properties.put("directAnswer", typeSchema("string"));
+        properties.put("simplified", typeSchema("string"));
+        properties.put("steps", stringArraySchema());
+        properties.put("keyConcepts", stringArraySchema());
+        properties.put("commonMistakes", stringArraySchema());
+        properties.put("followUps", stringArraySchema());
+        properties.put("visionConfidence",
+                enumStringSchema("HIGH", "LOW"));
+        return strictJsonSchema("study_answer", properties,
+                new String[]{"subject", "difficulty", "directAnswer",
+                        "simplified", "steps", "keyConcepts",
+                        "commonMistakes", "followUps", "visionConfidence"});
+    }
+
+    private Object quizResponseFormat() {
+        Map<String, Object> questionProperties = new LinkedHashMap<>();
+        questionProperties.put("type", enumStringSchema(
+                "MULTIPLE_CHOICE", "TRUE_FALSE",
+                "SHORT_ANSWER", "FILL_IN_THE_BLANK"));
+        questionProperties.put("prompt", typeSchema("string"));
+        questionProperties.put("options", stringArraySchema());
+        questionProperties.put("correctIndex", typeSchema("integer"));
+        questionProperties.put("acceptedAnswers", stringArraySchema());
+        questionProperties.put("explanation", typeSchema("string"));
+        Map<String, Object> questionSchema = objectSchema(
+                questionProperties,
+                new String[]{"type", "prompt", "options", "correctIndex",
+                        "acceptedAnswers", "explanation"});
+        Map<String, Object> questions = new LinkedHashMap<>();
+        questions.put("type", "array");
+        questions.put("items", questionSchema);
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("questions", questions);
+        return strictJsonSchema("study_quiz", root,
+                new String[]{"questions"});
+    }
+
+    private Map<String, Object> jsonObjectFormat() {
+        Map<String, Object> format = new LinkedHashMap<>();
+        format.put("type", "json_object");
+        return format;
+    }
+
+    private Map<String, Object> strictJsonSchema(
+            String name, Map<String, Object> properties, String[] required) {
+        Map<String, Object> jsonSchema = new LinkedHashMap<>();
+        jsonSchema.put("name", name);
+        jsonSchema.put("strict", true);
+        jsonSchema.put("schema", objectSchema(properties, required));
+        Map<String, Object> format = new LinkedHashMap<>();
+        format.put("type", "json_schema");
+        format.put("json_schema", jsonSchema);
+        return format;
+    }
+
+    private Map<String, Object> objectSchema(
+            Map<String, Object> properties, String[] required) {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("required", Arrays.asList(required));
+        schema.put("additionalProperties", false);
+        return schema;
+    }
+
+    private Map<String, Object> typeSchema(String type) {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", type);
+        return schema;
+    }
+
+    private Map<String, Object> enumStringSchema(String... values) {
+        Map<String, Object> schema = typeSchema("string");
+        schema.put("enum", Arrays.asList(values));
+        return schema;
+    }
+
+    private Map<String, Object> stringArraySchema() {
+        Map<String, Object> schema = typeSchema("array");
+        schema.put("items", typeSchema("string"));
+        return schema;
     }
 
     private long ensureTimeRemaining(long deadlineNanos) {

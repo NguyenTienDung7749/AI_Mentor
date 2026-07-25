@@ -21,12 +21,32 @@ public class ChatCompletionRequest {
     @SerializedName("max_tokens")
     public int maxTokens;
 
+    @SerializedName("reasoning_effort")
+    public String reasoningEffort;
+
+    @SerializedName("reasoning_format")
+    public String reasoningFormat;
+
+    @SerializedName("response_format")
+    public Object responseFormat;
+
     public ChatCompletionRequest(String model, List<ChatMessage> messages,
                                  double temperature, int maxTokens, boolean stream) {
+        this(model, messages, temperature, maxTokens, stream,
+                null, null, null);
+    }
+
+    public ChatCompletionRequest(String model, List<ChatMessage> messages,
+                                 double temperature, int maxTokens, boolean stream,
+                                 String reasoningEffort, String reasoningFormat,
+                                 Object responseFormat) {
         this.model = model;
         this.messages = messages;
         this.temperature = temperature;
         this.maxTokens = maxTokens;
         this.stream = stream;
+        this.reasoningEffort = reasoningEffort;
+        this.reasoningFormat = reasoningFormat;
+        this.responseFormat = responseFormat;
     }
 }

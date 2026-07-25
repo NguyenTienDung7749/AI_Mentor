@@ -90,7 +90,7 @@ public class RepositoryInstrumentedTest {
         StudyRepository.AskResult offline = studyRepository.ask(
                 userId, "Explain inertia.", "Science");
 
-        assertTrue(offline.success);
+        assertFalse(offline.success);
         assertFalse(offline.saved);
         assertEquals(-1L, offline.questionId);
         assertEquals(1, database.questionDao().countForUser(userId));

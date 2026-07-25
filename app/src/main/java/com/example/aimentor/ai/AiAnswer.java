@@ -19,6 +19,7 @@ public class AiAnswer {
     private final List<String> followUps = new ArrayList<>();
     private AnswerSource source = AnswerSource.LOCAL;
     private String modelName = "";
+    private boolean visionUncertain;
 
     public String getSubject() { return subject; }
     public void setSubject(String subject) {
@@ -49,6 +50,14 @@ public class AiAnswer {
         this.modelName = modelName == null ? "" : modelName.trim();
     }
 
+    public boolean isVisionUncertain() {
+        return visionUncertain;
+    }
+
+    public void setVisionUncertain(boolean visionUncertain) {
+        this.visionUncertain = visionUncertain;
+    }
+
     /**
      * Renders the structured answer into a human readable block of text that is
      * shown to the student. The repository decides whether the answer is eligible
@@ -68,22 +77,22 @@ public class AiAnswer {
           .append(vietnamese ? "   |   Trình độ: " : "   |   Level: ")
           .append(displayedDifficulty).append("\n\n");
         sb.append(vietnamese ? "Câu trả lời\n" : "Answer\n")
-                .append(cleanMarkdown(directAnswer)).append("\n");
+                .append(preserveFormatting(directAnswer)).append("\n");
         if (!steps.isEmpty()) {
             sb.append(vietnamese ? "\nGiải thích từng bước\n" : "\nStep-by-step\n");
             for (int i = 0; i < steps.size(); i++) {
                 sb.append(i + 1).append(". ")
-                        .append(cleanMarkdown(steps.get(i))).append("\n");
+                        .append(preserveFormatting(steps.get(i))).append("\n");
             }
         }
         if (simplified != null && !simplified.isEmpty()) {
             sb.append(vietnamese ? "\nNói một cách đơn giản\n" : "\nIn simple terms\n")
-                    .append(cleanMarkdown(simplified)).append("\n");
+                    .append(preserveFormatting(simplified)).append("\n");
         }
         if (!keyConcepts.isEmpty()) {
             sb.append(vietnamese ? "\nKhái niệm chính\n" : "\nKey concepts\n");
             for (String c : keyConcepts) {
-                sb.append("- ").append(cleanMarkdown(c)).append("\n");
+                sb.append("- ").append(preserveFormatting(c)).append("\n");
             }
         }
         if (!commonMistakes.isEmpty()) {
@@ -91,7 +100,7 @@ public class AiAnswer {
                     ? "\nNhững lỗi thường gặp cần tránh\n"
                     : "\nCommon mistakes to avoid\n");
             for (String c : commonMistakes) {
-                sb.append("- ").append(cleanMarkdown(c)).append("\n");
+                sb.append("- ").append(preserveFormatting(c)).append("\n");
             }
         }
         if (!followUps.isEmpty()) {
@@ -99,19 +108,15 @@ public class AiAnswer {
                     ? "\nCâu hỏi luyện tập thêm\n"
                     : "\nFollow-up questions to practise\n");
             for (String c : followUps) {
-                sb.append("- ").append(cleanMarkdown(c)).append("\n");
+                sb.append("- ").append(preserveFormatting(c)).append("\n");
             }
         }
         return sb.toString().trim();
     }
 
-    private String cleanMarkdown(String value) {
+    private String preserveFormatting(String value) {
         if (value == null) return "";
-        return value.replace("**", "")
-                .replace("__", "")
-                .replace("`", "")
-                .replaceAll("(?m)^\\s{0,3}#{1,6}\\s*", "")
-                .trim();
+        return value.trim();
     }
 
     private boolean isVietnamese(String text) {

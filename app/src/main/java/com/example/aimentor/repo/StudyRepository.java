@@ -11,6 +11,7 @@ import com.example.aimentor.ai.AiAnswer;
 import com.example.aimentor.ai.AiEngine;
 import com.example.aimentor.ai.AiEngineFactory;
 import com.example.aimentor.ai.AnswerSource;
+import com.example.aimentor.ai.ImageAttachment;
 import com.example.aimentor.ai.QuizQuestion;
 import com.example.aimentor.ai.QuizGenerationConfig;
 import com.example.aimentor.ai.SubjectClassifier;
@@ -38,8 +39,7 @@ import java.util.function.Supplier;
 /**
  * Core study logic: asking fresh online questions, generating practice
  * quizzes, recording results, awarding XP and computing progress statistics.
- * Only successful remote answers are persisted; offline fallback answers are
- * transient and never enter the student's library.
+ * Only successful remote answers are persisted.
  */
 public class StudyRepository {
 
@@ -128,13 +128,21 @@ public class StudyRepository {
      */
     public void askAsync(long userId, String questionText, String subjectHint,
                          @NonNull AskCallback callback) {
+        askAsync(userId, questionText, subjectHint,
+                "", null, callback);
+    }
+
+    public void askAsync(long userId, String questionText, String subjectHint,
+                         String explanationStyle, ImageAttachment image,
+                         @NonNull AskCallback callback) {
         IO_EXECUTOR.execute(() -> {
             AskResult result;
             try {
-                result = ask(userId, questionText, subjectHint);
+                result = ask(userId, questionText, subjectHint,
+                        explanationStyle, image);
             } catch (RuntimeException ignored) {
                 result = new AskResult(false,
-                        "Unable to prepare an answer. Please try again.",
+                        "Couldn’t connect to AI Mentor. Check your internet connection and try again.",
                         -1, false, false, AnswerSource.LEGACY, null);
             }
             AskResult deliveredResult = result;
@@ -144,6 +152,12 @@ public class StudyRepository {
 
     @WorkerThread
     public AskResult ask(long userId, String questionText, String subjectHint) {
+        return ask(userId, questionText, subjectHint, "", null);
+    }
+
+    @WorkerThread
+    public AskResult ask(long userId, String questionText, String subjectHint,
+                         String explanationStyle, ImageAttachment image) {
         ContentModerator.Result mod = ContentModerator.check(questionText);
         if (!mod.allowed) {
             return new AskResult(false, mod.reason, -1, false, false,
@@ -156,9 +170,14 @@ public class StudyRepository {
         }
 
         long startedAt = System.nanoTime();
-        AiAnswer generated = engine.answer(questionText,
-                user.educationLevel, user.explanationStyle, subjectHint,
-                user.subjects);
+        String resolvedStyle = explanationStyle == null
+                || explanationStyle.trim().isEmpty()
+                ? user.explanationStyle : explanationStyle.trim();
+        AiAnswer generated = image == null
+                ? engine.answer(questionText, user.educationLevel,
+                resolvedStyle, subjectHint, user.subjects)
+                : engine.answerWithImage(questionText, image,
+                user.educationLevel, resolvedStyle, subjectHint, user.subjects);
         long elapsedNanos = System.nanoTime() - startedAt;
 
         AnswerSource answerSource = generated.getSource();
@@ -176,10 +195,9 @@ public class StudyRepository {
             return saveRemoteAnswer(userId, q, answerSource);
         }
 
-        q.id = -1L;
-        return new AskResult(true,
-                "Offline guidance is temporary and was not saved.",
-                -1L, false, false, answerSource, q);
+        return new AskResult(false,
+                "Couldn’t connect to AI Mentor. Check your internet connection and try again.",
+                -1L, false, false, answerSource, null);
     }
 
     /**

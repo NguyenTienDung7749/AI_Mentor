@@ -2,14 +2,8 @@ package com.example.aimentor.activities;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
-import android.text.style.ForegroundColorSpan;
-import android.text.style.RelativeSizeSpan;
-import android.text.style.StyleSpan;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -24,10 +18,14 @@ import com.example.aimentor.ai.AnswerSource;
 import com.example.aimentor.data.Question;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.AppearanceManager;
+import com.example.aimentor.util.AnswerMarkdownFormatter;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.color.MaterialColors;
+
+import io.noties.markwon.Markwon;
+import io.noties.markwon.ext.latex.JLatexMathPlugin;
+import io.noties.markwon.inlineparser.MarkwonInlineParserPlugin;
 
 /** Displays a single question and its saved AI answer (works offline). */
 public class AnswerActivity extends AppCompatActivity {
@@ -53,6 +51,7 @@ public class AnswerActivity extends AppCompatActivity {
     private int loadGeneration;
     private int actionGeneration;
     private long visibleSinceElapsed;
+    private Markwon markwon;
 
     public static Intent savedAnswerIntent(Context context, long questionId) {
         Intent intent = new Intent(context, AnswerActivity.class);
@@ -107,6 +106,12 @@ public class AnswerActivity extends AppCompatActivity {
         tvAnswerSource = findViewById(R.id.tvAnswerSource);
         tvQuestion = findViewById(R.id.tvQuestion);
         tvAnswer = findViewById(R.id.tvAnswer);
+        markwon = Markwon.builder(this)
+                .usePlugin(MarkwonInlineParserPlugin.create())
+                .usePlugin(JLatexMathPlugin.create(
+                        tvAnswer.getTextSize(),
+                        builder -> builder.inlinesEnabled(true)))
+                .build();
         btnBookmark = findViewById(R.id.btnBookmark);
         btnReviewed = findViewById(R.id.btnReviewed);
         progressAnswer = findViewById(R.id.progressAnswer);
@@ -121,7 +126,8 @@ public class AnswerActivity extends AppCompatActivity {
                 question.subject, question.difficulty));
         tvAnswerSource.setText(buildSourceLabel(question));
         tvQuestion.setText(question.questionText);
-        tvAnswer.setText(formatAnswerText(question.answerText));
+        markwon.setMarkdown(tvAnswer,
+                AnswerMarkdownFormatter.format(question.answerText));
 
         if (transientAnswer) {
             answerActions.setVisibility(View.GONE);
@@ -235,74 +241,6 @@ public class AnswerActivity extends AppCompatActivity {
     private void refreshReviewedButton() {
         btnReviewed.setEnabled(!question.reviewed);
         btnReviewed.setText(question.reviewed ? R.string.reviewed : R.string.mark_reviewed);
-    }
-
-    private String cleanStoredAnswer(String value) {
-        if (value == null) return "";
-        return value.replace("**", "")
-                .replace("__", "")
-                .replace("`", "")
-                .replaceAll("(?m)^\\s{0,3}#{1,6}\\s*", "");
-    }
-
-    private CharSequence formatAnswerText(String value) {
-        String cleaned = cleanStoredAnswer(value).trim();
-        if (cleaned.isEmpty()) return "";
-
-        SpannableStringBuilder formatted = new SpannableStringBuilder();
-        boolean firstContentLine = true;
-        int primary = MaterialColors.getColor(tvAnswer,
-                com.google.android.material.R.attr.colorPrimary);
-        for (String rawLine : cleaned.split("\\R", -1)) {
-            String line = rawLine.trim();
-            if (firstContentLine && isRepeatedMetadata(line)) {
-                firstContentLine = false;
-                continue;
-            }
-            if (!line.isEmpty()) firstContentLine = false;
-            if (line.startsWith("- ")) {
-                line = "• " + line.substring(2).trim();
-            }
-
-            int start = formatted.length();
-            if (formatted.length() > 0) formatted.append('\n');
-            formatted.append(line);
-            int end = formatted.length();
-            if (isSectionHeading(line)) {
-                formatted.setSpan(new StyleSpan(Typeface.BOLD),
-                        start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                formatted.setSpan(new ForegroundColorSpan(primary),
-                        start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                formatted.setSpan(new RelativeSizeSpan(1.08f),
-                        start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            }
-        }
-        while (formatted.length() > 0
-                && formatted.charAt(formatted.length() - 1) == '\n') {
-            formatted.delete(formatted.length() - 1, formatted.length());
-        }
-        return formatted;
-    }
-
-    private boolean isRepeatedMetadata(String line) {
-        return line.startsWith("Subject:") || line.startsWith("Môn học:");
-    }
-
-    private boolean isSectionHeading(String line) {
-        String heading = line.endsWith(":")
-                ? line.substring(0, line.length() - 1).trim() : line;
-        return "Answer".equals(heading)
-                || "Câu trả lời".equals(heading)
-                || "Step-by-step".equals(heading)
-                || "Giải thích từng bước".equals(heading)
-                || "In simple terms".equals(heading)
-                || "Nói một cách đơn giản".equals(heading)
-                || "Key concepts".equals(heading)
-                || "Khái niệm chính".equals(heading)
-                || "Common mistakes to avoid".equals(heading)
-                || "Những lỗi thường gặp cần tránh".equals(heading)
-                || "Follow-up questions to practise".equals(heading)
-                || "Câu hỏi luyện tập thêm".equals(heading);
     }
 
     private Question readTransientQuestion() {

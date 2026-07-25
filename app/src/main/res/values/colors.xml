@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="white">#FFFFFFFF</color>
+    <color name="mentor_gradient_start">#5B4BFF</color>
+    <color name="mentor_gradient_mid">#8B3DFF</color>
+    <color name="mentor_gradient_end">#00AEEB</color>
+    <color name="mentor_gradient_track">#52FFFFFF</color>
+    <color name="mentor_gradient_glass">#2EFFFFFF</color>
 
     <!-- Scholar Indigo: default Material 3 palette. -->
     <color name="primary">#4F46E5</color>

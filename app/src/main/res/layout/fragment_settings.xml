@@ -316,7 +316,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="@string/demo_privacy_notice"
+            android:text="@string/privacy_notice"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="13sp" />
 

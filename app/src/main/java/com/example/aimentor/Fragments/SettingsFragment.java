@@ -39,6 +39,7 @@ import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.ReminderScheduler;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.Gamification;
+import com.example.aimentor.util.DropdownAdapters;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.card.MaterialCardView;
@@ -185,10 +186,7 @@ public class SettingsFragment extends Fragment {
     }
 
     private ArrayAdapter<String> makeAdapter(List<String> items) {
-        ArrayAdapter<String> a = new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_spinner_item, items);
-        a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        return a;
+        return DropdownAdapters.create(requireContext(), items);
     }
 
     private void bindThemeMode() {

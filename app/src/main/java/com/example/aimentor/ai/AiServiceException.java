@@ -60,8 +60,8 @@ public class AiServiceException extends RuntimeException {
     }
 
     public boolean isRetryable() {
-        // A full-call timeout is not retried because doing so doubles the
-        // visible wait. The hybrid engine immediately provides offline help.
+        // A full-call timeout is not retried because the entire visible
+        // request already shares one deadline.
         return kind == Kind.NETWORK
                 || (kind == Kind.HTTP
                 && (httpStatus == 408 || httpStatus == 429 || httpStatus >= 500));

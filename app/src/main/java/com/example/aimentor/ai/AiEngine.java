@@ -5,9 +5,8 @@ import java.util.List;
 /**
  * Strategy interface for answer / quiz generation.
  *
- * {@link AiEngineFactory} selects a remote engine with offline fallback when a
- * local demo key is configured and otherwise selects {@link LocalAiEngine}.
- * Callers depend only on this interface.
+ * {@link AiEngineFactory} selects the configured remote engine. Callers depend
+ * only on this interface.
  */
 public interface AiEngine {
 
@@ -22,6 +21,15 @@ public interface AiEngine {
                             String explanationStyle, String subjectHint,
                             String subjects) {
         return answer(question, educationLevel, explanationStyle, subjectHint);
+    }
+
+    /** Generate an answer using one locally prepared image and a text question. */
+    default AiAnswer answerWithImage(
+            String question, ImageAttachment image,
+            String educationLevel, String explanationStyle,
+            String subjectHint, String subjects) {
+        throw AiServiceException.configuration(
+                "Image questions are not supported by the configured AI engine.");
     }
 
     /** Generate a set of practice questions for a subject. */

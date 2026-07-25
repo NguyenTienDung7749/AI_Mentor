@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.TextView;
 
@@ -19,6 +18,7 @@ import com.example.aimentor.R;
 import com.example.aimentor.activities.QuizActivity;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.DropdownAdapters;
 import com.google.android.material.button.MaterialButton;
 
 public class QuizFragment extends Fragment {
@@ -67,17 +67,15 @@ public class QuizFragment extends Fragment {
 
         String[] subjectLabels =
                 getResources().getStringArray(R.array.quiz_subject_choices);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_list_item_1, subjectLabels);
-        actQuizSubject.setAdapter(adapter);
+        actQuizSubject.setAdapter(DropdownAdapters.create(
+                requireContext(), subjectLabels));
         actQuizSubject.setOnItemClickListener((parent, selected, position, id) ->
                 selectedSubjectPosition = position);
 
         String[] difficultyLabels =
                 getResources().getStringArray(R.array.quiz_difficulty_choices);
-        ArrayAdapter<String> difficultyAdapter = new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_list_item_1, difficultyLabels);
-        actQuizDifficulty.setAdapter(difficultyAdapter);
+        actQuizDifficulty.setAdapter(DropdownAdapters.create(
+                requireContext(), difficultyLabels));
         actQuizDifficulty.setOnItemClickListener((parent, selected, position, id) ->
                 selectedDifficultyPosition = position);
 

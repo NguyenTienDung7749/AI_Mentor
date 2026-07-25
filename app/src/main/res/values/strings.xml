@@ -13,9 +13,7 @@
     <string name="have_account">Already have an account? Log in</string>
     <string name="login_welcome_title">Welcome back</string>
     <string name="login_welcome_subtitle">Continue your questions, quizzes and learning streak.</string>
-    <string name="auth_prototype_notice">Classroom prototype • Use fictional study data only</string>
-    <string name="btec_identity_title">BTEC coursework project</string>
-    <string name="btec_identity_supporting">AI-assisted learning prototype</string>
+    <string name="auth_privacy_note">Your study history is stored privately on this device.</string>
     <string name="btec_logo_description">BTEC, in alliance with FPT Education</string>
 
     <!-- Onboarding -->
@@ -25,7 +23,7 @@
     <string name="onboarding_level_help">Choose the level that best matches your current course.</string>
     <string name="onboarding_subject_help">Pick any subjects you want to prioritise. You can change these later.</string>
     <string name="onboarding_style_help">Choose how much detail you prefer in a typical answer.</string>
-    <string name="onboarding_ready_note">Your choices are stored with this local classroom profile.</string>
+    <string name="onboarding_ready_note">You can update these preferences any time in Settings.</string>
     <string name="education_level">Education level</string>
     <string name="subjects_interest">Subjects of interest</string>
     <string name="explanation_style">Preferred explanation style</string>
@@ -41,17 +39,15 @@
     <!-- Home / Ask -->
     <string name="ask_hint">Type your academic question here…</string>
     <string name="ask_button">Ask AI Mentor</string>
-    <string name="preparing_answer">Contacting online AI (offline fallback after 60 seconds)…</string>
+    <string name="preparing_answer">Contacting Online AI…</string>
     <string name="answer_loading">Loading saved answer…</string>
-    <string name="offline_fallback_notice">Online AI was unavailable, so the app prepared temporary offline guidance. It was not saved.</string>
     <string name="subject">Subject</string>
-    <string name="scan_image">Gallery</string>
     <string name="take_photo">Take photo</string>
-    <string name="ocr_recognizing">Reading text from the image…</string>
-    <string name="ocr_ready">Text extracted. Review and edit it before asking AI.</string>
-    <string name="ocr_ready_truncated">Text extracted and shortened to 6,000 characters. Review and edit it before asking AI.</string>
-    <string name="ocr_no_text">No readable text was found. Try a clearer image.</string>
-    <string name="ocr_failed">Could not read this image. Please try another one.</string>
+    <string name="image_preparing">Preparing image securely…</string>
+    <string name="image_ready">One image attached. Add your question, then ask AI Mentor.</string>
+    <string name="image_failed">Could not prepare this image. Please choose another one.</string>
+    <string name="attached_study_image">Attached study image</string>
+    <string name="remove_attached_image">Remove attached image</string>
     <string name="camera_failed">Could not open the camera.</string>
 
     <!-- Library -->
@@ -91,7 +87,7 @@
     <string name="send_test_reminder">Send test reminder now</string>
     <string name="logout">Log out</string>
     <string name="privacy_and_data">Privacy and data</string>
-    <string name="demo_privacy_notice">Classroom prototype: use fictional study data only. Questions and learning preferences (education level, explanation style and subject interests) are sent to Groq to personalize answers. Successful online questions and answers are stored locally; email and password are not sent. OCR runs on-device, offline fallback answers are not saved, and app data is excluded from Android backup.</string>
+    <string name="privacy_notice">Questions, selected images and learning preferences may be sent securely to configured AI providers to prepare personalized answers. Successful answers and study progress are stored on this device; your email and password are never sent to an AI provider. App data is excluded from Android backup.</string>
     <string name="delete_account">Delete account and local data</string>
     <string name="delete_account_title">Permanently delete this account?</string>
     <string name="delete_account_message">Enter your password to delete this local account, its saved answers, quiz results, progress, XP and badges. This cannot be undone.</string>
@@ -224,7 +220,7 @@
     </string-array>
 
     <string name="create_account_title">Create your account</string>
-    <string name="create_account_subtitle">Create a local classroom profile and start building your study history.</string>
+    <string name="create_account_subtitle">Create your learning profile and start building a personal study history.</string>
     <string name="password_requirement">Use at least 8 characters with letters and numbers.</string>
     <string name="password_strength_strong">Strong password</string>
     <string name="password_strength_medium">Medium strength password</string>
@@ -233,8 +229,11 @@
     <string name="account_created">Account created! Let’s set up your profile.</string>
 
     <string name="ask_section_title">Ask a question</string>
-    <string name="ask_section_subtitle">Get a clear explanation, work from a photo, or continue a topic you are studying.</string>
-    <string name="add_from_notes">Add from your notes</string>
+    <string name="ask_section_subtitle">Choose how you want to learn, then ask with text or one supporting image.</string>
+    <string name="add_visual_context">Visual context (optional, one image)</string>
+    <string name="attach_image">Attach image</string>
+    <string name="response_style">Response style</string>
+    <string name="style_step_compact">Step by step</string>
     <string name="home_dashboard_eyebrow">Your study space</string>
     <string name="home_snapshot_title">Learning snapshot</string>
     <string name="home_questions_stat">Saved answers</string>

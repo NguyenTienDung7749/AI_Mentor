@@ -1,6 +1,7 @@
 package com.example.aimentor.Fragments;
 
 import android.content.Intent;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
@@ -9,7 +10,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AutoCompleteTextView;
-import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,14 +28,17 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.aimentor.R;
 import com.example.aimentor.activities.AnswerActivity;
-import com.example.aimentor.ai.AnswerSource;
+import com.example.aimentor.ai.ImageAttachment;
 import com.example.aimentor.ai.SubjectClassifier;
 import com.example.aimentor.data.User;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.Gamification;
+import com.example.aimentor.util.DropdownAdapters;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -45,6 +50,9 @@ public class HomeFragment extends Fragment {
             "Auto", SubjectClassifier.MATH, SubjectClassifier.SCIENCE,
             SubjectClassifier.PROGRAMMING, SubjectClassifier.HISTORY,
             SubjectClassifier.LANGUAGES, SubjectClassifier.GENERAL
+    };
+    private static final String[] STYLE_VALUES = {
+            "Short", "Detailed", "Step-by-step"
     };
 
     private StudyRepository studyRepository;
@@ -59,14 +67,18 @@ public class HomeFragment extends Fragment {
     private AutoCompleteTextView spSubject;
     private TextInputEditText etQuestion;
     private MaterialButton btnAsk, btnChooseImage, btnTakePhoto;
-    private ProgressBar progressOcr;
-    private TextView tvAskStatus, tvOcrStatus;
+    private MaterialButtonToggleGroup responseStyleGroup;
+    private MaterialCardView cardImageAttachment;
+    private ImageView ivImageAttachment;
+    private ImageButton btnRemoveImage;
+    private ProgressBar progressImage;
+    private TextView tvAskStatus, tvImageStatus;
     private int refreshGeneration;
 
     private final ActivityResultLauncher<PickVisualMediaRequest> imagePicker =
             registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
                 if (uri != null && uiState != null) {
-                    uiState.recognizeText(uri, false);
+                    uiState.attachImage(uri, false);
                 }
             });
 
@@ -75,7 +87,7 @@ public class HomeFragment extends Fragment {
                 if (uiState == null) return;
                 Uri pendingCameraUri = uiState.getPendingCameraUri();
                 if (success && pendingCameraUri != null) {
-                    uiState.recognizeText(pendingCameraUri, true);
+                    uiState.attachImage(pendingCameraUri, true);
                 } else {
                     uiState.deletePendingCameraFile();
                 }
@@ -113,19 +125,20 @@ public class HomeFragment extends Fragment {
         btnAsk = view.findViewById(R.id.btnAsk);
         btnChooseImage = view.findViewById(R.id.btnChooseImage);
         btnTakePhoto = view.findViewById(R.id.btnTakePhoto);
+        responseStyleGroup = view.findViewById(R.id.responseStyleGroup);
+        cardImageAttachment = view.findViewById(R.id.cardImageAttachment);
+        ivImageAttachment = view.findViewById(R.id.ivImageAttachment);
+        btnRemoveImage = view.findViewById(R.id.btnRemoveImage);
         progressAsk = view.findViewById(R.id.progressAsk);
-        progressOcr = view.findViewById(R.id.progressOcr);
+        progressImage = view.findViewById(R.id.progressImage);
         tvAskStatus = view.findViewById(R.id.tvAskStatus);
-        tvOcrStatus = view.findViewById(R.id.tvOcrStatus);
+        tvImageStatus = view.findViewById(R.id.tvImageStatus);
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvAskHeading), true);
 
         String[] subjectLabels = getResources().getStringArray(R.array.subject_choices);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_spinner_item,
-                subjectLabels);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spSubject.setAdapter(adapter);
+        spSubject.setAdapter(DropdownAdapters.create(
+                requireContext(), subjectLabels));
 
         String restoredDraft = uiState.getQuestionDraft();
         etQuestion.setText(restoredDraft);
@@ -148,24 +161,33 @@ public class HomeFragment extends Fragment {
         spSubject.setOnItemClickListener((parent, selectedView, position, id) ->
                 uiState.setSubjectPosition(position));
 
+        int restoredStyle = uiState.getStylePosition();
+        checkStyleButton(restoredStyle);
+        responseStyleGroup.addOnButtonCheckedListener(
+                (group, checkedId, isChecked) -> {
+                    if (isChecked) uiState.setStylePosition(
+                            stylePositionForButton(checkedId));
+                });
+
         btnAsk.setOnClickListener(v -> ask());
         btnChooseImage.setOnClickListener(v -> chooseImage());
         btnTakePhoto.setOnClickListener(v -> takePhoto());
+        btnRemoveImage.setOnClickListener(v -> uiState.clearImage());
         uiState.getAskState().observe(
                 getViewLifecycleOwner(), this::renderAskState);
-        uiState.getOcrState().observe(
-                getViewLifecycleOwner(), this::renderOcrState);
+        uiState.getImageState().observe(
+                getViewLifecycleOwner(), this::renderImageState);
     }
 
     private void chooseImage() {
-        if (uiState.isAsking() || uiState.isScanning()) return;
+        if (uiState.isAsking() || uiState.isPreparingImage()) return;
         imagePicker.launch(new PickVisualMediaRequest.Builder()
                 .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
                 .build());
     }
 
     private void takePhoto() {
-        if (uiState.isAsking() || uiState.isScanning()) return;
+        if (uiState.isAsking() || uiState.isPreparingImage()) return;
         try {
             cameraLauncher.launch(uiState.prepareCameraCapture());
         } catch (RuntimeException | IOException error) {
@@ -176,22 +198,29 @@ public class HomeFragment extends Fragment {
     }
 
     private void updateInputActions() {
-        boolean enabled = !uiState.isAsking() && !uiState.isScanning();
+        boolean enabled = !uiState.isAsking() && !uiState.isPreparingImage();
         btnAsk.setEnabled(enabled);
         btnChooseImage.setEnabled(enabled);
         btnTakePhoto.setEnabled(enabled);
+        btnRemoveImage.setEnabled(enabled);
+        for (int i = 0; i < responseStyleGroup.getChildCount(); i++) {
+            responseStyleGroup.getChildAt(i).setEnabled(enabled);
+        }
     }
 
     private void ask() {
-        if (uiState.isAsking() || uiState.isScanning()) return;
+        if (uiState.isAsking() || uiState.isPreparingImage()) return;
 
         String question = etQuestion.getText() == null ? "" : etQuestion.getText().toString().trim();
         int selectedSubject = uiState.getSubjectPosition();
         String subjectHint = SUBJECT_VALUES[Math.max(0,
                 Math.min(selectedSubject, SUBJECT_VALUES.length - 1))];
 
-        uiState.ask(
-                session.getCurrentUserId(), question, subjectHint);
+        int stylePosition = Math.max(0,
+                Math.min(uiState.getStylePosition(), STYLE_VALUES.length - 1));
+        ImageAttachment image = uiState.getImageAttachment();
+        uiState.ask(session.getCurrentUserId(), question, subjectHint,
+                STYLE_VALUES[stylePosition], image);
     }
 
     private void renderAskState(HomeUiStateViewModel.AskUiState state) {
@@ -223,11 +252,7 @@ public class HomeFragment extends Fragment {
         }
         etQuestion.setText("");
         uiState.setQuestionDraft("");
-        uiState.resetOcrState();
-        if (result.source == AnswerSource.LOCAL_FALLBACK) {
-            Toast.makeText(requireContext(), R.string.offline_fallback_notice,
-                    Toast.LENGTH_LONG).show();
-        }
+        uiState.clearImage();
         if (result.leveledUp) {
             Toast.makeText(requireContext(), R.string.level_up_toast,
                     Toast.LENGTH_SHORT).show();
@@ -250,55 +275,50 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    private void renderOcrState(HomeUiStateViewModel.OcrUiState state) {
-        HomeUiStateViewModel.OcrStatus status = state == null
-                ? HomeUiStateViewModel.OcrStatus.IDLE : state.status;
-        progressOcr.setVisibility(
-                status == HomeUiStateViewModel.OcrStatus.LOADING
+    private void renderImageState(HomeUiStateViewModel.ImageUiState state) {
+        HomeUiStateViewModel.ImageStatus status = state == null
+                ? HomeUiStateViewModel.ImageStatus.IDLE : state.status;
+        progressImage.setVisibility(
+                status == HomeUiStateViewModel.ImageStatus.LOADING
                         ? View.VISIBLE : View.GONE);
         switch (status) {
             case LOADING:
-                tvOcrStatus.setText(R.string.ocr_recognizing);
-                tvOcrStatus.setVisibility(View.VISIBLE);
+                cardImageAttachment.setVisibility(View.GONE);
+                tvImageStatus.setText(R.string.image_preparing);
+                tvImageStatus.setVisibility(View.VISIBLE);
                 break;
             case READY:
-                tvOcrStatus.setText(state != null && state.truncated
-                        ? R.string.ocr_ready_truncated : R.string.ocr_ready);
-                tvOcrStatus.setVisibility(View.VISIBLE);
-                break;
-            case EMPTY:
-                tvOcrStatus.setText(R.string.ocr_no_text);
-                tvOcrStatus.setVisibility(View.VISIBLE);
+                if (state != null && state.previewBytes != null) {
+                    ivImageAttachment.setImageBitmap(
+                            BitmapFactory.decodeByteArray(state.previewBytes,
+                                    0, state.previewBytes.length));
+                    cardImageAttachment.setVisibility(View.VISIBLE);
+                }
+                tvImageStatus.setText(R.string.image_ready);
+                tvImageStatus.setVisibility(View.VISIBLE);
                 break;
             case ERROR:
-                tvOcrStatus.setText(R.string.ocr_failed);
-                tvOcrStatus.setVisibility(View.VISIBLE);
+                cardImageAttachment.setVisibility(View.GONE);
+                tvImageStatus.setText(R.string.image_failed);
+                tvImageStatus.setVisibility(View.VISIBLE);
                 break;
             case IDLE:
             default:
-                tvOcrStatus.setVisibility(View.GONE);
+                cardImageAttachment.setVisibility(View.GONE);
+                ivImageAttachment.setImageDrawable(null);
+                tvImageStatus.setVisibility(View.GONE);
                 break;
         }
         updateInputActions();
 
         if (state == null || !state.eventPending) return;
-        if (status == HomeUiStateViewModel.OcrStatus.READY) {
-            etQuestion.setText(state.extractedText);
-            etQuestion.setSelection(state.extractedText.length());
+        if (status == HomeUiStateViewModel.ImageStatus.READY) {
             etQuestion.requestFocus();
-            if (state.truncated) {
-                Toast.makeText(requireContext(),
-                        R.string.ocr_ready_truncated,
-                        Toast.LENGTH_LONG).show();
-            }
-        } else if (status == HomeUiStateViewModel.OcrStatus.EMPTY) {
-            Toast.makeText(requireContext(), R.string.ocr_no_text,
-                    Toast.LENGTH_LONG).show();
-        } else if (status == HomeUiStateViewModel.OcrStatus.ERROR) {
-            Toast.makeText(requireContext(), R.string.ocr_failed,
+        } else if (status == HomeUiStateViewModel.ImageStatus.ERROR) {
+            Toast.makeText(requireContext(), R.string.image_failed,
                     Toast.LENGTH_LONG).show();
         }
-        uiState.consumeOcrEvent();
+        uiState.consumeImageEvent();
     }
 
     @Override
@@ -349,6 +369,30 @@ public class HomeFragment extends Fragment {
         tvHomeAvatar.setText(Gamification.avatarSymbol(avatar));
         tvHomeAvatar.setContentDescription(getString(
                 R.string.selected_avatar_description, avatar));
+        if (user != null && !uiState.hasStyleSelection()) {
+            int position = stylePosition(user.explanationStyle);
+            uiState.setStylePosition(position);
+            checkStyleButton(position);
+        }
+    }
+
+    private int stylePosition(String style) {
+        if (style != null && style.equalsIgnoreCase("Short")) return 0;
+        if (style != null && style.equalsIgnoreCase("Detailed")) return 1;
+        return 2;
+    }
+
+    private int stylePositionForButton(int buttonId) {
+        if (buttonId == R.id.btnStyleShort) return 0;
+        if (buttonId == R.id.btnStyleDetailed) return 1;
+        return 2;
+    }
+
+    private void checkStyleButton(int position) {
+        int safe = Math.max(0, Math.min(position, STYLE_VALUES.length - 1));
+        responseStyleGroup.check(safe == 0
+                ? R.id.btnStyleShort
+                : safe == 1 ? R.id.btnStyleDetailed : R.id.btnStyleStep);
     }
 
     private void renderProgress(StudyRepository.Progress p) {

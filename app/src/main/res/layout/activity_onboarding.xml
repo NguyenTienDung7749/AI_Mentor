@@ -90,12 +90,6 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <include
-                layout="@layout/view_btec_identity"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_md" />
-
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.AIMentor.Card"
                 android:layout_width="match_parent"

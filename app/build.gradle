@@ -8,7 +8,13 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.withInputStream { localProperties.load(it) }
 }
 def groqApiKey = localProperties.getProperty("GROQ_API_KEY", "")
+def geminiApiKey = localProperties.getProperty("GEMINI_API_KEY", "")
 def escapedGroqApiKey = groqApiKey
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\r", "\\r")
+        .replace("\n", "\\n")
+def escapedGeminiApiKey = geminiApiKey
         .replace("\\", "\\\\")
         .replace("\"", "\\\"")
         .replace("\r", "\\r")
@@ -28,6 +34,8 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "GROQ_API_KEY", "\"${escapedGroqApiKey}\""
         buildConfigField "String", "GROQ_BASE_URL", "\"https://api.groq.com/\""
+        buildConfigField "String", "GEMINI_API_KEY", "\"${escapedGeminiApiKey}\""
+        buildConfigField "String", "GEMINI_BASE_URL", "\"https://generativelanguage.googleapis.com/\""
         vectorDrawables {
             useSupportLibrary true
         }
@@ -51,7 +59,7 @@ android {
 
 def verifyReleaseConfiguration = tasks.register("verifyReleaseConfiguration") {
     group = "verification"
-    description = "Fails a release build when the classroom Groq configuration is missing."
+    description = "Fails a release build when the Groq configuration is missing."
     doLast {
         if (groqApiKey.trim().isEmpty()) {
             throw new GradleException(
@@ -84,8 +92,11 @@ dependencies {
     implementation libs.okhttp
     implementation libs.okhttp.dnsoverhttps
     implementation libs.gson
-    implementation libs.mlkit.text.recognition
     implementation libs.work.runtime
+    implementation libs.markwon.core
+    implementation libs.markwon.latex
+    implementation libs.markwon.inline.parser
+    implementation libs.exifinterface
     annotationProcessor libs.room.compiler
     testImplementation libs.junit
     testImplementation libs.mockwebserver

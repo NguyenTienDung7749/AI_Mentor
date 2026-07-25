@@ -64,9 +64,12 @@ public class RemoteAiEngineTest {
         assertEquals("/openai/v1/chat/completions", request.getPath());
         JsonObject requestBody = JsonParser.parseString(
                 request.getBody().readUtf8()).getAsJsonObject();
-        assertEquals("llama-3.1-8b-instant", requestBody.get("model").getAsString());
-        assertEquals(1200, requestBody.get("max_tokens").getAsInt());
+        assertEquals("openai/gpt-oss-120b",
+                requestBody.get("model").getAsString());
+        assertEquals(3000, requestBody.get("max_tokens").getAsInt());
         assertTrue(!requestBody.get("stream").getAsBoolean());
+        assertEquals("high",
+                requestBody.get("reasoning_effort").getAsString());
         String systemPrompt = requestBody.getAsJsonArray("messages")
                 .get(0).getAsJsonObject().get("content").getAsString();
         assertTrue(systemPrompt.contains("education level = High School"));
@@ -316,9 +319,84 @@ public class RemoteAiEngineTest {
         assertTrue(request != null);
         JsonObject requestBody = JsonParser.parseString(
                 request.getBody().readUtf8()).getAsJsonObject();
-        assertEquals("llama-3.3-70b-versatile",
+        assertEquals("openai/gpt-oss-120b",
                 requestBody.get("model").getAsString());
         assertTrue(requestBody.toString().contains("Why does Mars look red?"));
+    }
+
+    @Test
+    public void answer_short_uses20bAndLowReasoning() throws Exception {
+        server.enqueue(jsonResponse(200,
+                completionBody("{\"subject\":\"General\","
+                        + "\"difficulty\":\"Intermediate\","
+                        + "\"directAnswer\":\"A concise answer.\","
+                        + "\"simplified\":\"\",\"steps\":[],"
+                        + "\"keyConcepts\":[],\"commonMistakes\":[],"
+                        + "\"followUps\":[],\"visionConfidence\":\"HIGH\"}")));
+        RemoteAiEngine engine = engine(1_000, 1_000);
+
+        AiAnswer answer = engine.answer(
+                "What is gravity?", "High School", "Short", "Science");
+
+        assertEquals("A concise answer.", answer.getDirectAnswer());
+        RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
+        assertTrue(request != null);
+        JsonObject body = JsonParser.parseString(
+                request.getBody().readUtf8()).getAsJsonObject();
+        assertEquals("openai/gpt-oss-20b",
+                body.get("model").getAsString());
+        assertEquals("low", body.get("reasoning_effort").getAsString());
+        assertEquals("json_schema",
+                body.getAsJsonObject("response_format")
+                        .get("type").getAsString());
+        assertTrue(body.getAsJsonObject("response_format")
+                .getAsJsonObject("json_schema")
+                .get("strict").getAsBoolean());
+    }
+
+    @Test
+    public void answerWithImage_qwenHighConfidence_doesNotSpendGeminiRescue()
+            throws Exception {
+        server.enqueue(jsonResponse(200,
+                completionBody(structuredContent("Read from the image"))));
+        RemoteAiEngine engine = engineWithGemini(1_000, 1_000);
+
+        AiAnswer answer = engine.answerWithImage(
+                "Solve the equation in this image.",
+                new ImageAttachment("image/jpeg", "AQID"),
+                "University", "Detailed", "Mathematics", "");
+
+        assertEquals("Read from the image", answer.getDirectAnswer());
+        assertEquals(1, server.getRequestCount());
+        RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
+        assertTrue(request != null);
+        JsonObject body = JsonParser.parseString(
+                request.getBody().readUtf8()).getAsJsonObject();
+        assertEquals("qwen/qwen3.6-27b",
+                body.get("model").getAsString());
+        assertTrue(body.getAsJsonArray("messages").get(1)
+                .getAsJsonObject().getAsJsonArray("content").size() == 2);
+    }
+
+    @Test
+    public void answerWithImage_detailedLowConfidence_usesGeminiOnce() {
+        String uncertain = structuredContent("The image may be unclear")
+                .replace("\"followUps\"",
+                        "\"visionConfidence\":\"LOW\",\"followUps\"");
+        server.enqueue(jsonResponse(200, completionBody(uncertain)));
+        server.enqueue(jsonResponse(200, geminiBody(
+                structuredContent("Gemini recovered the formula"))));
+        RemoteAiEngine engine = engineWithGemini(1_000, 1_000);
+
+        AiAnswer answer = engine.answerWithImage(
+                "Explain this formula.",
+                new ImageAttachment("image/jpeg", "AQID"),
+                "University", "Detailed", "Mathematics", "");
+
+        assertEquals("Gemini recovered the formula",
+                answer.getDirectAnswer());
+        assertEquals("gemini-3.6-flash", answer.getModelName());
+        assertEquals(2, server.getRequestCount());
     }
 
     @Test
@@ -359,6 +437,15 @@ public class RemoteAiEngineTest {
                 "test-key", connectTimeoutMs, readTimeoutMs);
     }
 
+    private RemoteAiEngine engineWithGemini(
+            long connectTimeoutMs, long readTimeoutMs) {
+        return new RemoteAiEngine(
+                server.url("/").toString(), "test-key",
+                server.url("/").toString(), "gemini-test-key",
+                connectTimeoutMs, readTimeoutMs,
+                readTimeoutMs, okhttp3.Dns.SYSTEM);
+    }
+
     private AiServiceException expectFailure(RemoteAiEngine engine) {
         try {
             engine.answer("Question", "High School", "Detailed", "Auto");
@@ -396,6 +483,12 @@ public class RemoteAiEngineTest {
                 + "\"keyConcepts\":[\"Key concept\"],"
                 + "\"commonMistakes\":[\"Common mistake\"],"
                 + "\"followUps\":[\"Practice question\"]}";
+    }
+
+    private String geminiBody(String content) {
+        return "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":"
+                + new Gson().toJson(content)
+                + "}]},\"finishReason\":\"STOP\"}]}";
     }
 
     private int maxTokens(RecordedRequest request) {

@@ -49,6 +49,8 @@ public final class AiResponseParser {
                 defaultIfBlank(fallbackDifficulty, "Intermediate")));
         answer.setDirectAnswer(data.directAnswer.trim());
         answer.setSimplified(defaultIfBlank(data.simplified, ""));
+        answer.setVisionUncertain("LOW".equalsIgnoreCase(
+                defaultIfBlank(data.visionConfidence, "HIGH")));
         addNonBlank(answer.getSteps(), data.steps);
         addNonBlank(answer.getKeyConcepts(), data.keyConcepts);
         addNonBlank(answer.getCommonMistakes(), data.commonMistakes);
@@ -113,5 +115,9 @@ public final class AiResponseParser {
 
         @SerializedName(value = "followUps", alternate = {"follow_ups"})
         List<String> followUps = new ArrayList<>();
+
+        @SerializedName(value = "visionConfidence",
+                alternate = {"vision_confidence"})
+        String visionConfidence = "HIGH";
     }
 }

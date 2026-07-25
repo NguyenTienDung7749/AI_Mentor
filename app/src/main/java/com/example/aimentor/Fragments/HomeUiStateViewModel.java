@@ -9,29 +9,24 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.SavedStateHandle;
 
+import com.example.aimentor.ai.ImageAttachment;
 import com.example.aimentor.repo.StudyRepository;
-import com.example.aimentor.util.StudyInputPolicy;
-import com.google.mlkit.vision.common.InputImage;
-import com.google.mlkit.vision.text.TextRecognition;
-import com.google.mlkit.vision.text.TextRecognizer;
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import com.example.aimentor.util.ImageAttachmentPreparer;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * Owns Home input and long-running Ask/OCR operations across configuration
- * changes. Fragments only render this state, so callbacks never target an old
- * view and one user action cannot start duplicate work after rotation.
+ * Owns the Home composer and its long-running operations across configuration
+ * changes, including one in-memory image attachment.
  */
 public class HomeUiStateViewModel extends AndroidViewModel {
 
     private static final String KEY_DRAFT = "home_draft";
     private static final String KEY_SUBJECT = "home_subject";
-    private static final String KEY_OCR_STATE = "home_ocr_state";
-    private static final String KEY_OCR_TEXT = "home_ocr_text";
-    private static final String KEY_OCR_EVENT_PENDING = "home_ocr_event_pending";
-    private static final String KEY_OCR_TRUNCATED = "home_ocr_truncated";
+    private static final String KEY_STYLE = "home_style";
     private static final String KEY_CAMERA_URI = "home_camera_uri";
     private static final String KEY_CAMERA_FILE = "home_camera_file";
 
@@ -41,8 +36,7 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         final AskStatus status;
         final StudyRepository.AskResult result;
 
-        private AskUiState(
-                AskStatus status, StudyRepository.AskResult result) {
+        private AskUiState(AskStatus status, StudyRepository.AskResult result) {
             this.status = status;
             this.result = result;
         }
@@ -60,51 +54,48 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         }
     }
 
-    enum OcrStatus { IDLE, LOADING, READY, EMPTY, ERROR }
+    enum ImageStatus { IDLE, LOADING, READY, ERROR }
 
-    static final class OcrUiState {
-        final OcrStatus status;
-        final String extractedText;
+    static final class ImageUiState {
+        final ImageStatus status;
+        final byte[] previewBytes;
         final boolean eventPending;
-        final boolean truncated;
 
-        private OcrUiState(
-                OcrStatus status, String extractedText,
-                boolean eventPending, boolean truncated) {
+        private ImageUiState(
+                ImageStatus status, byte[] previewBytes, boolean eventPending) {
             this.status = status;
-            this.extractedText = extractedText == null ? "" : extractedText;
+            this.previewBytes = previewBytes;
             this.eventPending = eventPending;
-            this.truncated = truncated;
         }
 
-        static OcrUiState idle() {
-            return new OcrUiState(OcrStatus.IDLE, "", false, false);
+        static ImageUiState idle() {
+            return new ImageUiState(ImageStatus.IDLE, null, false);
         }
 
-        static OcrUiState loading() {
-            return new OcrUiState(OcrStatus.LOADING, "", false, false);
+        static ImageUiState loading() {
+            return new ImageUiState(ImageStatus.LOADING, null, false);
         }
 
-        static OcrUiState terminal(
-                OcrStatus status, String extractedText, boolean eventPending) {
-            return terminal(status, extractedText, eventPending, false);
+        static ImageUiState ready(byte[] previewBytes) {
+            return new ImageUiState(ImageStatus.READY, previewBytes, true);
         }
 
-        static OcrUiState terminal(
-                OcrStatus status, String extractedText,
-                boolean eventPending, boolean truncated) {
-            return new OcrUiState(
-                    status, extractedText, eventPending, truncated);
+        static ImageUiState error() {
+            return new ImageUiState(ImageStatus.ERROR, null, true);
         }
     }
 
     private final SavedStateHandle savedState;
     private final StudyRepository studyRepository;
+    private final ExecutorService imageExecutor =
+            Executors.newSingleThreadExecutor();
     private final MutableLiveData<AskUiState> askState =
             new MutableLiveData<>(AskUiState.idle());
-    private final MutableLiveData<OcrUiState> ocrState;
+    private final MutableLiveData<ImageUiState> imageState =
+            new MutableLiveData<>(ImageUiState.idle());
 
-    private TextRecognizer activeRecognizer;
+    private ImageAttachment imageAttachment;
+    private int imageGeneration;
     private boolean cleared;
 
     public HomeUiStateViewModel(
@@ -112,7 +103,7 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         this(application, savedState, new StudyRepository(application));
     }
 
-    /** Test seam for verifying operation deduplication without network calls. */
+    /** Test seam for verifying operation de-duplication without network calls. */
     HomeUiStateViewModel(
             @NonNull Application application,
             SavedStateHandle savedState,
@@ -120,33 +111,14 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         super(application);
         this.savedState = savedState;
         this.studyRepository = studyRepository;
-        OcrStatus restored = restoredOcrStatus();
-        String restoredText = restoredOcrText();
-        boolean restoredEventPending =
-                Boolean.TRUE.equals(savedState.get(KEY_OCR_EVENT_PENDING));
-        boolean restoredTruncated =
-                Boolean.TRUE.equals(savedState.get(KEY_OCR_TRUNCATED));
-        // A process restart cannot retain the ML Kit task itself.
-        OcrUiState initial;
-        if (restored == OcrStatus.LOADING) {
-            initial = OcrUiState.terminal(OcrStatus.ERROR, "", true);
-        } else if (restored == OcrStatus.IDLE) {
-            initial = OcrUiState.idle();
-        } else {
-            initial = OcrUiState.terminal(
-                    restored, restoredText,
-                    restoredEventPending, restoredTruncated);
-        }
-        this.ocrState = new MutableLiveData<>(initial);
-        persistOcrState(initial);
     }
 
     LiveData<AskUiState> getAskState() {
         return askState;
     }
 
-    LiveData<OcrUiState> getOcrState() {
-        return ocrState;
+    LiveData<ImageUiState> getImageState() {
+        return imageState;
     }
 
     boolean isAsking() {
@@ -154,17 +126,23 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         return current != null && current.status == AskStatus.LOADING;
     }
 
-    boolean isScanning() {
-        OcrUiState current = ocrState.getValue();
-        return current != null && current.status == OcrStatus.LOADING;
+    boolean isPreparingImage() {
+        ImageUiState current = imageState.getValue();
+        return current != null && current.status == ImageStatus.LOADING;
     }
 
     boolean ask(long userId, String question, String subjectHint) {
-        if (isAsking() || isScanning() || cleared) return false;
+        return ask(userId, question, subjectHint, "", imageAttachment);
+    }
+
+    boolean ask(long userId, String question, String subjectHint,
+                String explanationStyle, ImageAttachment image) {
+        if (isAsking() || isPreparingImage() || cleared) return false;
         askState.setValue(AskUiState.loading());
-        studyRepository.askAsync(userId, question, subjectHint, result -> {
-            if (!cleared) askState.setValue(AskUiState.result(result));
-        });
+        studyRepository.askAsync(userId, question, subjectHint,
+                explanationStyle, image, result -> {
+                    if (!cleared) askState.setValue(AskUiState.result(result));
+                });
         return true;
     }
 
@@ -175,66 +153,56 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         }
     }
 
-    boolean recognizeText(@NonNull Uri imageUri, boolean deleteAfterReading) {
-        if (isAsking() || isScanning() || cleared) return false;
-        setOcrState(OcrUiState.loading());
-
-        InputImage image;
-        try {
-            image = InputImage.fromFilePath(getApplication(), imageUri);
-        } catch (IOException | RuntimeException error) {
-            if (deleteAfterReading) deletePendingCameraFile();
-            setOcrState(OcrUiState.terminal(OcrStatus.ERROR, "", true));
-            return true;
-        }
-
-        TextRecognizer recognizer = TextRecognition.getClient(
-                TextRecognizerOptions.DEFAULT_OPTIONS);
-        activeRecognizer = recognizer;
-        recognizer.process(image)
-                .addOnSuccessListener(result -> {
-                    if (cleared) return;
-                    StudyInputPolicy.LimitedText extracted =
-                            StudyInputPolicy.limitOcrText(result.getText());
-                    setOcrState(extracted.text.isEmpty()
-                            ? OcrUiState.terminal(OcrStatus.EMPTY, "", true)
-                            : OcrUiState.terminal(
-                                    OcrStatus.READY, extracted.text,
-                                    true, extracted.truncated));
-                })
-                .addOnFailureListener(error -> {
-                    if (!cleared) {
-                        setOcrState(OcrUiState.terminal(
-                                OcrStatus.ERROR, "", true));
-                    }
-                })
-                .addOnCompleteListener(task -> {
-                    if (activeRecognizer == recognizer) {
-                        recognizer.close();
-                        activeRecognizer = null;
-                    }
-                    if (deleteAfterReading) deletePendingCameraFile();
-                });
+    boolean attachImage(@NonNull Uri imageUri, boolean deleteAfterReading) {
+        if (isAsking() || isPreparingImage() || cleared) return false;
+        int generation = ++imageGeneration;
+        imageState.setValue(ImageUiState.loading());
+        imageExecutor.execute(() -> {
+            ImageAttachmentPreparer.Result result = null;
+            try {
+                result = ImageAttachmentPreparer.prepare(
+                        getApplication(), imageUri);
+            } catch (IOException | RuntimeException ignored) {
+                // UI receives a sanitized state; no image content is logged.
+            } finally {
+                if (deleteAfterReading) deletePendingCameraFile();
+            }
+            if (cleared || generation != imageGeneration) return;
+            if (result == null) {
+                imageAttachment = null;
+                imageState.postValue(ImageUiState.error());
+            } else {
+                imageAttachment = result.attachment;
+                imageState.postValue(ImageUiState.ready(result.previewBytes));
+            }
+        });
         return true;
     }
 
-    void consumeOcrEvent() {
-        OcrUiState current = ocrState.getValue();
-        if (current == null || !current.eventPending) return;
-        setOcrState(OcrUiState.terminal(
-                current.status, "", false, current.truncated));
+    ImageAttachment getImageAttachment() {
+        return imageAttachment;
     }
 
-    void resetOcrState() {
-        setOcrState(OcrUiState.idle());
+    void consumeImageEvent() {
+        ImageUiState current = imageState.getValue();
+        if (current == null || !current.eventPending) return;
+        imageState.setValue(new ImageUiState(
+                current.status, current.previewBytes, false));
+    }
+
+    void clearImage() {
+        imageGeneration++;
+        imageAttachment = null;
+        imageState.setValue(ImageUiState.idle());
+        deletePendingCameraFile();
     }
 
     Uri prepareCameraCapture() throws IOException {
         deletePendingCameraFile();
         File imageDirectory =
-                new File(getApplication().getCacheDir(), "ocr");
+                new File(getApplication().getCacheDir(), "question-images");
         if (!imageDirectory.exists() && !imageDirectory.mkdirs()) {
-            throw new IOException("Unable to create OCR cache directory");
+            throw new IOException("Unable to create image cache directory");
         }
         File imageFile =
                 File.createTempFile("study_question_", ".jpg", imageDirectory);
@@ -286,40 +254,25 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         savedState.set(KEY_SUBJECT, value);
     }
 
-    private void setOcrState(OcrUiState value) {
-        persistOcrState(value);
-        ocrState.setValue(value);
+    int getStylePosition() {
+        Integer value = savedState.get(KEY_STYLE);
+        return value == null ? 2 : value;
     }
 
-    private void persistOcrState(OcrUiState value) {
-        savedState.set(KEY_OCR_STATE, value.status.name());
-        savedState.set(KEY_OCR_TEXT, value.extractedText);
-        savedState.set(KEY_OCR_EVENT_PENDING, value.eventPending);
-        savedState.set(KEY_OCR_TRUNCATED, value.truncated);
+    boolean hasStyleSelection() {
+        return savedState.contains(KEY_STYLE);
     }
 
-    private OcrStatus restoredOcrStatus() {
-        String value = savedState.get(KEY_OCR_STATE);
-        if (value == null) return OcrStatus.IDLE;
-        try {
-            return OcrStatus.valueOf(value);
-        } catch (IllegalArgumentException ignored) {
-            return OcrStatus.IDLE;
-        }
-    }
-
-    private String restoredOcrText() {
-        String value = savedState.get(KEY_OCR_TEXT);
-        return value == null ? "" : value;
+    void setStylePosition(int value) {
+        savedState.set(KEY_STYLE, value);
     }
 
     @Override
     protected void onCleared() {
         cleared = true;
-        if (activeRecognizer != null) {
-            activeRecognizer.close();
-            activeRecognizer = null;
-        }
+        imageGeneration++;
+        imageExecutor.shutdownNow();
+        imageAttachment = null;
         deletePendingCameraFile();
         super.onCleared();
     }

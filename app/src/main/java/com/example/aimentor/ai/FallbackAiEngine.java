@@ -9,10 +9,12 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.io.InterruptedIOException;
+import java.io.IOException;
 
 /**
- * Uses the remote engine first and returns deterministic offline guidance when
- * the provider cannot produce a safe, complete answer.
+ * Enforces one visible 60-second deadline for online answers and retains the
+ * local engine only for quiz availability when the provider is unavailable.
  */
 public class FallbackAiEngine implements AiEngine {
 
@@ -65,26 +67,65 @@ public class FallbackAiEngine implements AiEngine {
                     question, educationLevel, explanationStyle,
                     subjectHint, subjects));
         } catch (RejectedExecutionException ignored) {
-            // A previous platform DNS call may still be blocked. Do not queue
-            // more remote work behind it; provide offline help immediately.
-            return offlineFallback(question, educationLevel,
-                    explanationStyle, subjectHint, subjects);
+            throw AiServiceException.network(
+                    new IOException("The online AI worker is busy."));
         }
 
         try {
             return remoteTask.get(remoteDeadlineMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException ignored) {
             remoteTask.cancel(true);
-            return offlineFallback(question, educationLevel,
-                    explanationStyle, subjectHint, subjects);
+            throw AiServiceException.network(
+                    new InterruptedIOException("The online AI deadline expired."));
         } catch (InterruptedException ignored) {
             remoteTask.cancel(true);
             Thread.currentThread().interrupt();
-            return offlineFallback(question, educationLevel,
-                    explanationStyle, subjectHint, subjects);
-        } catch (ExecutionException ignored) {
-            return offlineFallback(question, educationLevel,
-                    explanationStyle, subjectHint, subjects);
+            throw AiServiceException.network(
+                    new InterruptedIOException("The online AI request was interrupted."));
+        } catch (ExecutionException failure) {
+            Throwable cause = failure.getCause();
+            if (cause instanceof AiServiceException) {
+                throw (AiServiceException) cause;
+            }
+            throw AiServiceException.network(
+                    cause instanceof IOException
+                            ? (IOException) cause : new IOException(cause));
+        }
+    }
+
+    @Override
+    public AiAnswer answerWithImage(
+            String question, ImageAttachment image,
+            String educationLevel, String explanationStyle,
+            String subjectHint, String subjects) {
+        Future<AiAnswer> remoteTask;
+        try {
+            remoteTask = remoteExecutor.submit(() -> remoteEngine.answerWithImage(
+                    question, image, educationLevel, explanationStyle,
+                    subjectHint, subjects));
+        } catch (RejectedExecutionException ignored) {
+            throw AiServiceException.network(
+                    new IOException("The online AI worker is busy."));
+        }
+        try {
+            return remoteTask.get(remoteDeadlineMs, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException ignored) {
+            remoteTask.cancel(true);
+            throw AiServiceException.network(
+                    new InterruptedIOException("The online AI deadline expired."));
+        } catch (InterruptedException ignored) {
+            remoteTask.cancel(true);
+            Thread.currentThread().interrupt();
+            throw AiServiceException.network(
+                    new InterruptedIOException("The online AI request was interrupted."));
+        } catch (ExecutionException failure) {
+            Throwable cause = failure.getCause();
+            if (cause instanceof AiServiceException) {
+                throw (AiServiceException) cause;
+            }
+            throw AiServiceException.network(
+                    cause instanceof IOException
+                            ? (IOException) cause : new IOException(cause));
         }
     }
 
@@ -108,16 +149,6 @@ public class FallbackAiEngine implements AiEngine {
 
     @Override
     public String name() {
-        return remoteEngine.name() + " + offline fallback";
-    }
-
-    private AiAnswer offlineFallback(String question, String educationLevel,
-                                     String explanationStyle, String subjectHint,
-                                     String subjects) {
-        AiAnswer fallback = localEngine.answer(question, educationLevel,
-                explanationStyle, subjectHint, subjects);
-        fallback.setSource(AnswerSource.LOCAL_FALLBACK);
-        fallback.setModelName(localEngine.name());
-        return fallback;
+        return remoteEngine.name();
     }
 }

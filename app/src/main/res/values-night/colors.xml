@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="mentor_gradient_start">#4738CE</color>
+    <color name="mentor_gradient_mid">#6F2AC8</color>
+    <color name="mentor_gradient_end">#006D91</color>
+    <color name="mentor_gradient_track">#45FFFFFF</color>
+    <color name="mentor_gradient_glass">#29FFFFFF</color>
     <!-- Scholar Indigo dark palette. -->
     <color name="primary">#C3C0FF</color>
     <color name="primary_dark">#24234D</color>

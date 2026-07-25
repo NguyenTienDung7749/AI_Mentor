@@ -4,7 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 /**
- * Tracks the local prototype session and non-sensitive UI preferences, including
+ * Tracks the local session and non-sensitive UI preferences, including
  * theme and reminder settings. Passwords and API credentials are never written
  * to SharedPreferences.
  */
@@ -61,8 +61,8 @@ public class SessionManager {
     }
 
     /**
-     * Returns System/Light/Dark while preserving the old boolean preference for
-     * students who upgrade from an earlier classroom build.
+     * Returns System/Light/Dark while preserving the legacy boolean preference
+     * for users upgrading from an earlier build.
      */
     public int getThemeMode() {
         if (prefs.contains(KEY_THEME_MODE)) {

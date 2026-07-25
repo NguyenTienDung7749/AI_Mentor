@@ -25,52 +25,31 @@
             android:paddingTop="@dimen/auth_vertical_padding"
             android:paddingBottom="@dimen/space_xl">
 
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.AIMentor.Card.Highlight"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+            <ImageView
+                android:layout_width="140dp"
+                android:layout_height="120dp"
+                android:adjustViewBounds="true"
+                android:contentDescription="@string/btec_logo_description"
+                android:scaleType="fitCenter"
+                android:src="@drawable/logo_btec" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="@dimen/card_padding">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_sm"
+                android:text="@string/app_name"
+                android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                android:textColor="?attr/colorPrimary"
+                android:textStyle="bold" />
 
-                    <ImageView
-                        android:layout_width="64dp"
-                        android:layout_height="64dp"
-                        android:background="@drawable/bg_brand_mark"
-                        android:importantForAccessibility="no"
-                        android:padding="@dimen/space_lg"
-                        android:src="@drawable/ic_sparkle_24"
-                        app:tint="?attr/colorOnPrimary" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/space_lg"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/app_name"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                            android:textColor="?attr/colorOnPrimaryContainer"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/space_xs"
-                            android:text="@string/app_tagline"
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                            android:textColor="?attr/colorOnPrimaryContainer" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_xs"
+                android:gravity="center"
+                android:text="@string/app_tagline"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.AIMentor.Card"
@@ -153,18 +132,12 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <include
-                layout="@layout/view_btec_identity"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_lg" />
-
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_lg"
                 android:gravity="center"
-                android:text="@string/auth_prototype_notice"
+                android:text="@string/auth_privacy_note"
                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                 android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>

@@ -43,8 +43,8 @@ public abstract class AppDatabase extends RoomDatabase {
     };
 
     /**
-     * One-time reset requested for the assignment demo. It removes legacy,
-     * cached and offline question history while preserving users and quizzes.
+     * One-time cleanup for legacy, cached and offline question history while
+     * preserving users and quizzes.
      */
     public static final Migration MIGRATION_2_3 = new Migration(2, 3) {
         @Override

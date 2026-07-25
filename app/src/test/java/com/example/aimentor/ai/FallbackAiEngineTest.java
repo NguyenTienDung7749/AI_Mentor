@@ -38,18 +38,19 @@ public class FallbackAiEngineTest {
     }
 
     @Test
-    public void answer_remoteFailure_returnsClearlyMarkedOfflineFallback() {
+    public void answer_remoteFailure_isReportedWithoutOfflineAnswer() {
         TestEngine remote = new TestEngine("remote", true);
         TestEngine local = new TestEngine("local", false);
         FallbackAiEngine engine = new FallbackAiEngine(remote, local);
 
-        AiAnswer answer = engine.answer("Question", "High School", "Detailed", "Auto");
-
-        assertEquals("local answer", answer.getDirectAnswer());
-        assertEquals(AnswerSource.LOCAL_FALLBACK, answer.getSource());
-        assertEquals("local", answer.getModelName());
+        try {
+            engine.answer("Question", "High School", "Detailed", "Auto");
+            throw new AssertionError("Expected online failure");
+        } catch (AiServiceException error) {
+            assertEquals(AiServiceException.Kind.HTTP, error.getKind());
+        }
         assertEquals(1, remote.answerCalls);
-        assertEquals(1, local.answerCalls);
+        assertEquals(0, local.answerCalls);
     }
 
     @Test
@@ -72,7 +73,7 @@ public class FallbackAiEngineTest {
     }
 
     @Test
-    public void answer_remoteWorkerHangs_returnsFallbackAtIndependentDeadline() {
+    public void answer_remoteWorkerHangs_reportsTimeoutAtIndependentDeadline() {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         TestEngine remote = new TestEngine("remote", false, 2_000L);
         TestEngine local = new TestEngine("local", false);
@@ -81,13 +82,17 @@ public class FallbackAiEngineTest {
         long startedAt = System.nanoTime();
 
         try {
-            AiAnswer answer = engine.answer(
-                    "Question", "High School", "Detailed", "Auto");
-            long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
-
-            assertEquals(AnswerSource.LOCAL_FALLBACK, answer.getSource());
-            assertEquals(1, local.answerCalls);
-            assertTrueDeadline(elapsedMs);
+            try {
+                engine.answer("Question", "High School",
+                        "Detailed", "Auto");
+                throw new AssertionError("Expected timeout");
+            } catch (AiServiceException error) {
+                long elapsedMs =
+                        (System.nanoTime() - startedAt) / 1_000_000L;
+                assertEquals(AiServiceException.Kind.TIMEOUT, error.getKind());
+                assertEquals(0, local.answerCalls);
+                assertTrueDeadline(elapsedMs);
+            }
         } finally {
             executor.shutdownNow();
         }

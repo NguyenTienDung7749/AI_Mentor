@@ -7,7 +7,6 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.TextView;
 
@@ -25,6 +24,7 @@ import com.example.aimentor.adapters.QuestionAdapter;
 import com.example.aimentor.data.Question;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.DropdownAdapters;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -88,9 +88,8 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
 
         String[] filterLabels =
                 getResources().getStringArray(R.array.subject_filter_choices);
-        ArrayAdapter<String> filterAdapter = new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_list_item_1, filterLabels);
-        actSubjectFilter.setAdapter(filterAdapter);
+        actSubjectFilter.setAdapter(DropdownAdapters.create(
+                requireContext(), filterLabels));
         actSubjectFilter.setOnItemClickListener((parent, selected, position, id) -> {
             selectedSubjectPosition = position;
             refresh();

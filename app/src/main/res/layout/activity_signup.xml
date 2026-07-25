@@ -188,18 +188,12 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <include
-                layout="@layout/view_btec_identity"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_lg" />
-
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_lg"
                 android:gravity="center"
-                android:text="@string/auth_prototype_notice"
+                android:text="@string/auth_privacy_note"
                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                 android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
