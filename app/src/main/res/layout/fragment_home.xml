@@ -246,9 +246,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_xl"
-            app:cardElevation="0dp"
-            app:strokeColor="?attr/colorPrimary"
-            app:strokeWidth="2dp">
+            app:cardElevation="2dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -263,17 +263,18 @@
                     android:orientation="horizontal">
 
                     <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_brand_mark"
                         android:contentDescription="@null"
-                        android:padding="5dp"
+                        android:padding="12dp"
                         android:src="@drawable/ic_sparkle_24"
-                        app:tint="?attr/colorPrimary" />
+                        app:tint="?attr/colorOnPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/space_sm"
+                        android:layout_marginStart="@dimen/space_md"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
@@ -303,10 +304,10 @@
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/spSubject"
+                        style="@style/Widget.AIMentor.DropdownText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="none"
-                        android:minHeight="56dp" />
+                        android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
@@ -332,9 +333,12 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:checkable="true"
+                        android:maxLines="1"
                         android:minWidth="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
                         android:text="@string/style_short"
-                        android:textSize="12sp" />
+                        android:textSize="11sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnStyleDetailed"
@@ -343,9 +347,12 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:checkable="true"
+                        android:maxLines="1"
                         android:minWidth="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
                         android:text="@string/style_detailed"
-                        android:textSize="12sp" />
+                        android:textSize="11sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnStyleStep"
@@ -354,9 +361,12 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:checkable="true"
+                        android:maxLines="1"
                         android:minWidth="0dp"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp"
                         android:text="@string/style_step_compact"
-                        android:textSize="12sp" />
+                        android:textSize="11sp" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
 
                 <com.google.android.material.textfield.TextInputLayout

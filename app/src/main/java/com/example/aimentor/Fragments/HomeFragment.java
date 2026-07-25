@@ -137,8 +137,7 @@ public class HomeFragment extends Fragment {
                 view.findViewById(R.id.tvAskHeading), true);
 
         String[] subjectLabels = getResources().getStringArray(R.array.subject_choices);
-        spSubject.setAdapter(DropdownAdapters.create(
-                requireContext(), subjectLabels));
+        DropdownAdapters.bind(spSubject, subjectLabels);
 
         String restoredDraft = uiState.getQuestionDraft();
         etQuestion.setText(restoredDraft);

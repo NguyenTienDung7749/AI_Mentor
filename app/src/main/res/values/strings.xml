@@ -231,9 +231,9 @@
     <string name="ask_section_title">Ask a question</string>
     <string name="ask_section_subtitle">Choose how you want to learn, then ask with text or one supporting image.</string>
     <string name="add_visual_context">Visual context (optional, one image)</string>
-    <string name="attach_image">Attach image</string>
+    <string name="attach_image">Add image</string>
     <string name="response_style">Response style</string>
-    <string name="style_step_compact">Step by step</string>
+    <string name="style_step_compact">Step-by-step</string>
     <string name="home_dashboard_eyebrow">Your study space</string>
     <string name="home_snapshot_title">Learning snapshot</string>
     <string name="home_questions_stat">Saved answers</string>
@@ -260,6 +260,7 @@
     <string name="home_xp_initial">0 XP</string>
 
     <string name="library_title">Your Library</string>
+    <string name="library_eyebrow">Your learning vault</string>
     <string name="library_subtitle">Find, revisit and bookmark answers saved from online AI.</string>
     <string name="library_subject_filter">Subject</string>
     <string name="bookmarked_filter">Saved</string>

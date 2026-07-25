@@ -67,15 +67,13 @@ public class QuizFragment extends Fragment {
 
         String[] subjectLabels =
                 getResources().getStringArray(R.array.quiz_subject_choices);
-        actQuizSubject.setAdapter(DropdownAdapters.create(
-                requireContext(), subjectLabels));
+        DropdownAdapters.bind(actQuizSubject, subjectLabels);
         actQuizSubject.setOnItemClickListener((parent, selected, position, id) ->
                 selectedSubjectPosition = position);
 
         String[] difficultyLabels =
                 getResources().getStringArray(R.array.quiz_difficulty_choices);
-        actQuizDifficulty.setAdapter(DropdownAdapters.create(
-                requireContext(), difficultyLabels));
+        DropdownAdapters.bind(actQuizDifficulty, difficultyLabels);
         actQuizDifficulty.setOnItemClickListener((parent, selected, position, id) ->
                 selectedDifficultyPosition = position);
 

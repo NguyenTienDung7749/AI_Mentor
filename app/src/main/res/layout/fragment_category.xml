@@ -7,21 +7,54 @@
     android:paddingHorizontal="@dimen/screen_padding"
     android:paddingTop="@dimen/space_lg">
 
-    <TextView
-        android:id="@+id/tvLibraryHeading"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/library_title"
-        android:textAppearance="@style/TextAppearance.AIMentor.ScreenTitle" />
-
-    <TextView
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_xs"
-        android:text="@string/library_subtitle"
-        android:textAppearance="@style/TextAppearance.AIMentor.Supporting" />
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="@dimen/hero_corner_radius"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_mentor_gradient"
+            android:orientation="vertical"
+            android:padding="@dimen/card_padding">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.08"
+                android:text="@string/library_eyebrow"
+                android:textAllCaps="true"
+                android:textColor="@color/white"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvLibraryHeading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_sm"
+                android:text="@string/library_title"
+                android:textColor="@color/white"
+                android:textSize="25sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_xs"
+                android:alpha="0.9"
+                android:text="@string/library_subtitle"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.AIMentor.TextInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_lg"
@@ -54,6 +87,7 @@
 
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/actSubjectFilter"
+                style="@style/Widget.AIMentor.DropdownText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="none"
@@ -85,26 +119,44 @@
         app:drawableStartCompat="@drawable/ic_sparkle_24"
         app:drawableTint="?attr/colorPrimary" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvHistory"
+    <FrameLayout
+        android:id="@+id/libraryContent"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="@dimen/space_md"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingBottom="@dimen/space_sm" />
+        android:layout_weight="1">
 
-    <TextView
-        android:id="@+id/tvEmpty"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:drawablePadding="@dimen/space_md"
-        android:gravity="center"
-        android:padding="@dimen/space_xl"
-        android:text="@string/empty_history"
-        android:textAppearance="@style/TextAppearance.AIMentor.Supporting"
-        android:visibility="gone"
-        app:drawableTint="?attr/colorPrimary"
-        app:drawableTopCompat="@drawable/ic_nav_library" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvHistory"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="@dimen/space_sm" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardLibraryEmpty"
+            style="@style/Widget.AIMentor.Card.Highlight"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="@dimen/space_sm"
+            android:visibility="gone"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
+
+            <TextView
+                android:id="@+id/tvEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawablePadding="@dimen/space_md"
+                android:gravity="center"
+                android:padding="@dimen/space_xl"
+                android:text="@string/empty_history"
+                android:textColor="?attr/colorOnPrimaryContainer"
+                android:textSize="15sp"
+                android:visibility="visible"
+                app:drawableTint="?attr/colorPrimary"
+                app:drawableTopCompat="@drawable/ic_nav_library" />
+        </com.google.android.material.card.MaterialCardView>
+    </FrameLayout>
 </LinearLayout>

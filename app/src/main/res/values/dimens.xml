@@ -14,4 +14,6 @@
     <dimen name="hero_corner_radius">28dp</dimen>
     <dimen name="auth_screen_padding">20dp</dimen>
     <dimen name="auth_vertical_padding">28dp</dimen>
+    <dimen name="dropdown_content_padding">20dp</dimen>
+    <dimen name="dropdown_item_padding">24dp</dimen>
 </resources>

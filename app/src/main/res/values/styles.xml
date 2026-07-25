@@ -3,8 +3,8 @@
     <style name="Widget.AIMentor.Card" parent="Widget.Material3.CardView.Elevated">
         <item name="cardBackgroundColor">?attr/colorSurface</item>
         <item name="cardCornerRadius">@dimen/card_corner_radius</item>
-        <item name="cardElevation">1dp</item>
-        <item name="strokeColor">?attr/colorOutline</item>
+        <item name="cardElevation">2dp</item>
+        <item name="strokeColor">?attr/colorOutlineVariant</item>
         <item name="strokeWidth">1dp</item>
     </style>
 
@@ -39,10 +39,22 @@
 
     <style name="Widget.AIMentor.TextInput" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="boxBackgroundColor">?attr/colorSurface</item>
+        <item name="boxStrokeColor">?attr/colorPrimary</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
         <item name="boxCornerRadiusTopStart">@dimen/control_corner_radius</item>
         <item name="boxCornerRadiusTopEnd">@dimen/control_corner_radius</item>
         <item name="boxCornerRadiusBottomStart">@dimen/control_corner_radius</item>
         <item name="boxCornerRadiusBottomEnd">@dimen/control_corner_radius</item>
+    </style>
+
+    <style name="Widget.AIMentor.DropdownText" parent="">
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:paddingStart">@dimen/dropdown_content_padding</item>
+        <item name="android:paddingEnd">@dimen/space_md</item>
+        <item name="android:textSize">16sp</item>
     </style>
 
     <style name="TextAppearance.AIMentor.ScreenTitle" parent="TextAppearance.Material3.HeadlineSmall">
@@ -68,8 +80,8 @@
         <item name="android:background">?attr/colorSurface</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.AIMentor.NavigationIndicator</item>
         <item name="itemIconSize">24dp</item>
-        <item name="itemPaddingTop">10dp</item>
-        <item name="itemPaddingBottom">10dp</item>
+        <item name="itemPaddingTop">6dp</item>
+        <item name="itemPaddingBottom">6dp</item>
     </style>
 
     <style name="Widget.AIMentor.NavigationIndicator"

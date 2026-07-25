@@ -53,6 +53,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
     private Chip chipBookmarked;
     private RecyclerView rvHistory;
     private TextView tvEmpty, tvSuggest;
+    private View cardLibraryEmpty;
     private int selectedSubjectPosition;
     private int refreshGeneration;
     private int suggestionGeneration;
@@ -78,6 +79,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         chipBookmarked = view.findViewById(R.id.chipBookmarked);
         rvHistory = view.findViewById(R.id.rvHistory);
         tvEmpty = view.findViewById(R.id.tvEmpty);
+        cardLibraryEmpty = view.findViewById(R.id.cardLibraryEmpty);
         tvSuggest = view.findViewById(R.id.tvSuggest);
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvLibraryHeading), true);
@@ -88,8 +90,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
 
         String[] filterLabels =
                 getResources().getStringArray(R.array.subject_filter_choices);
-        actSubjectFilter.setAdapter(DropdownAdapters.create(
-                requireContext(), filterLabels));
+        DropdownAdapters.bind(actSubjectFilter, filterLabels);
         actSubjectFilter.setOnItemClickListener((parent, selected, position, id) -> {
             selectedSubjectPosition = position;
             refresh();
@@ -173,7 +174,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
                 || !subjectFilter.isEmpty();
         tvEmpty.setText(filtering
                 ? R.string.empty_filtered_history : R.string.empty_history);
-        tvEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+        cardLibraryEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
         rvHistory.setVisibility(empty ? View.GONE : View.VISIBLE);
     }
 
