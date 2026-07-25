@@ -797,7 +797,10 @@ public class RemoteAiEngine implements AiEngine {
     }
 
     private String reasoningEffort(String model, String explanationStyle) {
-        if (VISION_MODEL.equals(model)) return "default";
+        // Vision questions must not spend the whole output budget on hidden
+        // reasoning; Qwen otherwise commonly finishes at exactly 5,000 tokens
+        // without producing a usable final answer.
+        if (VISION_MODEL.equals(model)) return "none";
         String style = normalizeExplanationStyle(explanationStyle);
         if ("Short".equals(style)) return "low";
         return "Detailed".equals(style) ? "medium" : "high";

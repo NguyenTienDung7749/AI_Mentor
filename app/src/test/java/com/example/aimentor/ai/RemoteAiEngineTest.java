@@ -374,6 +374,8 @@ public class RemoteAiEngineTest {
                 request.getBody().readUtf8()).getAsJsonObject();
         assertEquals("qwen/qwen3.6-27b",
                 body.get("model").getAsString());
+        assertEquals("none",
+                body.get("reasoning_effort").getAsString());
         assertTrue(!body.has("response_format"));
         assertTrue(body.getAsJsonArray("messages").get(1)
                 .getAsJsonObject().getAsJsonArray("content").size() == 2);
