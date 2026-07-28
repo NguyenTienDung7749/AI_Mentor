@@ -8,7 +8,13 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.withInputStream { localProperties.load(it) }
 }
 def groqApiKey = localProperties.getProperty("GROQ_API_KEY", "")
+def mistralApiKey = localProperties.getProperty("MISTRAL_API_KEY", "")
 def escapedGroqApiKey = groqApiKey
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\r", "\\r")
+        .replace("\n", "\\n")
+def escapedMistralApiKey = mistralApiKey
         .replace("\\", "\\\\")
         .replace("\"", "\\\"")
         .replace("\r", "\\r")
@@ -28,6 +34,8 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "GROQ_API_KEY", "\"${escapedGroqApiKey}\""
         buildConfigField "String", "GROQ_BASE_URL", "\"https://api.groq.com/\""
+        buildConfigField "String", "MISTRAL_API_KEY", "\"${escapedMistralApiKey}\""
+        buildConfigField "String", "MISTRAL_BASE_URL", "\"https://api.mistral.ai/\""
         vectorDrawables {
             useSupportLibrary true
         }

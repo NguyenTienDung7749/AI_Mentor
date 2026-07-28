@@ -37,9 +37,9 @@ public class ChatMessage {
         public final String text;
 
         @SerializedName("image_url")
-        public final ImageUrl imageUrl;
+        public final Object imageUrl;
 
-        private ContentPart(String type, String text, ImageUrl imageUrl) {
+        private ContentPart(String type, String text, Object imageUrl) {
             this.type = type;
             this.text = text;
             this.imageUrl = imageUrl;
@@ -50,16 +50,7 @@ public class ChatMessage {
         }
 
         public static ContentPart image(String dataUrl) {
-            return new ContentPart("image_url", null, new ImageUrl(dataUrl));
-        }
-    }
-
-    public static final class ImageUrl {
-        @SerializedName("url")
-        public final String url;
-
-        ImageUrl(String url) {
-            this.url = url;
+            return new ContentPart("image_url", null, dataUrl);
         }
     }
 }

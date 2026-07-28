@@ -13,8 +13,11 @@ public final class AiEngineFactory {
         if (key.isEmpty()) {
             return new UnavailableAiEngine(new LocalAiEngine());
         }
+        String mistralKey = BuildConfig.MISTRAL_API_KEY == null
+                ? "" : BuildConfig.MISTRAL_API_KEY.trim();
         return new FallbackAiEngine(
-                new RemoteAiEngine(BuildConfig.GROQ_BASE_URL, key),
+                new RemoteAiEngine(BuildConfig.GROQ_BASE_URL, key,
+                        BuildConfig.MISTRAL_BASE_URL, mistralKey),
                 new LocalAiEngine());
     }
 }

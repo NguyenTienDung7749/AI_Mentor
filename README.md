@@ -65,15 +65,22 @@ Create or update the root `local.properties` file:
 ```properties
 sdk.dir=/absolute/path/to/Android/Sdk
 GROQ_API_KEY=replace-with-your-own-groq-key
+MISTRAL_API_KEY=replace-with-your-own-mistral-key
 ```
 
 `local.properties` is ignored by Git. Never put a real key in Java, XML,
 screenshots, issues, reports or commits.
 
-The debug prototype reads the key into `BuildConfig` and calls:
+The debug prototype reads keys into `BuildConfig`. Text-only questions use:
 
 ```text
 https://api.groq.com/openai/v1/chat/completions
+```
+
+Questions with one attached image use:
+
+```text
+https://api.mistral.ai/v1/chat/completions
 ```
 
 This is acceptable only for a controlled classroom prototype using fictional

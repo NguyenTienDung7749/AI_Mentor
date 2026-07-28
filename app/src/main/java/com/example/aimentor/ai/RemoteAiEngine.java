@@ -1,6 +1,7 @@
 package com.example.aimentor.ai;
 
 import com.example.aimentor.network.GroqApiService;
+import com.example.aimentor.network.MistralApiService;
 import com.example.aimentor.network.model.ChatCompletionRequest;
 import com.example.aimentor.network.model.ChatCompletionResponse;
 import com.example.aimentor.network.model.ChatMessage;
@@ -37,10 +38,11 @@ public class RemoteAiEngine implements AiEngine {
 
     static final String FAST_MODEL = "openai/gpt-oss-20b";
     static final String SMART_MODEL = "openai/gpt-oss-120b";
-    static final String VISION_MODEL = "qwen/qwen3.6-27b";
+    static final String MISTRAL_VISION_MODEL = "ministral-14b-latest";
     private static final double TEMPERATURE = 0.5;
+    private static final double MISTRAL_VISION_TEMPERATURE = 0.1;
     private static final int FAST_MAX_TOKENS = 1200;
-    private static final int VISION_MAX_TOKENS = 3000;
+    private static final int MISTRAL_VISION_MAX_TOKENS = 1800;
     private static final int DEEP_MAX_TOKENS = 5000;
     private static final long DEFAULT_CALL_TIMEOUT_MS = 60_000L;
     private static final Gson GSON = new Gson();
@@ -59,21 +61,31 @@ public class RemoteAiEngine implements AiEngine {
 
     private final String apiKey;
     private final GroqApiService service;
+    private final String mistralApiKey;
+    private final MistralApiService mistralService;
     private final long totalDeadlineMs;
     private final LocalAiEngine localQuizEngine = new LocalAiEngine();
 
     public RemoteAiEngine(String baseUrl, String apiKey) {
-        this(baseUrl, apiKey, 15_000L, 60_000L,
+        this(baseUrl, apiKey, "https://api.mistral.ai/", "", 15_000L, 60_000L,
+                DEFAULT_CALL_TIMEOUT_MS, createResilientDns());
+    }
+
+    public RemoteAiEngine(String groqBaseUrl, String groqApiKey,
+                          String mistralBaseUrl, String mistralApiKey) {
+        this(groqBaseUrl, groqApiKey, mistralBaseUrl, mistralApiKey,
+                15_000L, 60_000L,
                 DEFAULT_CALL_TIMEOUT_MS, createResilientDns());
     }
 
     RemoteAiEngine(String baseUrl, String apiKey,
                    long connectTimeoutMs, long readTimeoutMs) {
-        this(baseUrl, apiKey, connectTimeoutMs, readTimeoutMs,
+        this(baseUrl, apiKey, baseUrl, apiKey, connectTimeoutMs, readTimeoutMs,
                 Math.max(1L, readTimeoutMs), Dns.SYSTEM);
     }
 
     RemoteAiEngine(String baseUrl, String apiKey,
+                   String mistralBaseUrl, String mistralApiKey,
                    long connectTimeoutMs, long readTimeoutMs,
                    long callTimeoutMs, Dns dns) {
         if (apiKey == null || apiKey.trim().isEmpty()) {
@@ -84,8 +96,8 @@ public class RemoteAiEngine implements AiEngine {
         }
 
         this.apiKey = apiKey.trim();
+        this.mistralApiKey = mistralApiKey == null ? "" : mistralApiKey.trim();
         this.totalDeadlineMs = Math.max(1L, callTimeoutMs);
-        String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(connectTimeoutMs, TimeUnit.MILLISECONDS)
                 .readTimeout(readTimeoutMs, TimeUnit.MILLISECONDS)
@@ -94,13 +106,23 @@ public class RemoteAiEngine implements AiEngine {
                 .dns(dns)
                 .build();
 
-        Retrofit retrofit = new Retrofit.Builder()
+        this.service = buildRetrofit(baseUrl, client).create(GroqApiService.class);
+        this.mistralService = this.mistralApiKey.isEmpty()
+                ? null
+                : buildRetrofit(mistralBaseUrl, client).create(MistralApiService.class);
+    }
+
+    private static Retrofit buildRetrofit(String baseUrl, OkHttpClient client) {
+        if (baseUrl == null || baseUrl.trim().isEmpty()) {
+            throw AiServiceException.configuration("The AI base URL is missing.");
+        }
+        String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+        return new Retrofit.Builder()
                 .baseUrl(normalizedBaseUrl)
                 .client(client)
                 .addConverterFactory(GsonConverterFactory.create(
                         new GsonBuilder().create()))
                 .build();
-        this.service = retrofit.create(GroqApiService.class);
     }
 
     private static Dns createResilientDns() {
@@ -140,6 +162,9 @@ public class RemoteAiEngine implements AiEngine {
             return answer(question, educationLevel, explanationStyle,
                     subjectHint, subjects);
         }
+        if (mistralService == null || mistralApiKey.isEmpty()) {
+            throw AiServiceException.configuration("The Mistral vision API key is missing.");
+        }
         String systemPrompt = "You are AI Mentor, a friendly academic study assistant. "
                 + (isVietnameseQuestion(question)
                 ? "Answer only in Vietnamese. "
@@ -151,34 +176,33 @@ public class RemoteAiEngine implements AiEngine {
                 + "diagrams and small labels carefully. If any fact needed for the answer "
                 + "is unclear, state exactly what cannot be read. Never invent missing details.";
         List<ChatMessage.ContentPart> userContent = Arrays.asList(
-                ChatMessage.ContentPart.image(image.toDataUrl()),
-                ChatMessage.ContentPart.text(defaultIfBlank(question, "")));
+                ChatMessage.ContentPart.text(defaultIfBlank(question, "")),
+                ChatMessage.ContentPart.image(image.toDataUrl()));
         List<ChatMessage> messages = Arrays.asList(
                 new ChatMessage("system", systemPrompt),
                 new ChatMessage("user", userContent));
         long deadlineNanos = System.nanoTime()
                 + TimeUnit.MILLISECONDS.toNanos(totalDeadlineMs);
 
-        AiAnswer qwenAnswer = null;
-        AiServiceException qwenFailure = null;
+        AiAnswer mistralAnswer = null;
+        AiServiceException mistralFailure = null;
         try {
-            qwenAnswer = requestVisionAnswer(messages, question,
+            mistralAnswer = requestVisionAnswer(messages, question,
                     educationLevel, subjectHint, deadlineNanos);
         } catch (AiServiceException error) {
-            qwenFailure = error;
+            mistralFailure = error;
         }
 
-        if (qwenAnswer != null) return qwenAnswer;
-        throw qwenFailure == null
-                ? AiServiceException.invalidResponse() : qwenFailure;
+        if (mistralAnswer != null) return mistralAnswer;
+        throw mistralFailure == null
+                ? AiServiceException.invalidResponse() : mistralFailure;
     }
 
     private AiAnswer requestVisionAnswer(
             List<ChatMessage> messages, String question,
             String educationLevel, String subjectHint, long deadlineNanos) {
-        ChatCompletionResponse body = executeCompletion(
-                messages, VISION_MODEL, "Detailed",
-                deadlineNanos, true, null);
+        ChatCompletionResponse body = executeMistralVisionCompletion(
+                messages, deadlineNanos);
         ChatCompletionResponse.Choice choice = firstChoice(body);
         if ("length".equalsIgnoreCase(choice.finishReason)) {
             throw AiServiceException.incompleteResponse();
@@ -198,8 +222,32 @@ public class RemoteAiEngine implements AiEngine {
             throw AiServiceException.invalidResponse();
         }
         answer.setSource(AnswerSource.REMOTE);
-        answer.setModelName(defaultIfBlank(body.model, VISION_MODEL));
+        answer.setModelName(defaultIfBlank(body.model, MISTRAL_VISION_MODEL));
         return answer;
+    }
+
+    private ChatCompletionResponse executeMistralVisionCompletion(
+            List<ChatMessage> messages, long deadlineNanos) {
+        long remainingNanos = ensureTimeRemaining(deadlineNanos);
+        ChatCompletionRequest request = new ChatCompletionRequest(
+                MISTRAL_VISION_MODEL, messages, MISTRAL_VISION_TEMPERATURE,
+                MISTRAL_VISION_MAX_TOKENS, false);
+        Call<ChatCompletionResponse> call =
+                mistralService.createCompletion("Bearer " + mistralApiKey, request);
+        call.timeout().timeout(remainingNanos, TimeUnit.NANOSECONDS);
+
+        Response<ChatCompletionResponse> response;
+        try {
+            response = call.execute();
+        } catch (IOException e) {
+            throw AiServiceException.network(e);
+        }
+        if (!response.isSuccessful()) {
+            throw AiServiceException.http(response.code());
+        }
+        ChatCompletionResponse body = response.body();
+        firstChoice(body);
+        return body;
     }
 
     private String stripThinking(String value) {
@@ -687,19 +735,17 @@ public class RemoteAiEngine implements AiEngine {
     }
 
     private String reasoningEffort(String model, String explanationStyle) {
-        if (VISION_MODEL.equals(model)) return null;
         String style = normalizeExplanationStyle(explanationStyle);
         if ("Short".equals(style)) return "low";
         return "Detailed".equals(style) ? "medium" : "high";
     }
 
     private String reasoningFormat(String model) {
-        return VISION_MODEL.equals(model) ? null : "hidden";
+        return "hidden";
     }
 
     private int maxTokensFor(String model) {
         if (FAST_MODEL.equals(model)) return FAST_MAX_TOKENS;
-        if (VISION_MODEL.equals(model)) return VISION_MAX_TOKENS;
         return DEEP_MAX_TOKENS;
     }
 

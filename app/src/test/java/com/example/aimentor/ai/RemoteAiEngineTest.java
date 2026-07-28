@@ -355,7 +355,7 @@ public class RemoteAiEngineTest {
     }
 
     @Test
-    public void answerWithImage_usesQwenOnlyWithoutReasoningFields()
+    public void answerWithImage_usesMistralOnlyWithoutReasoningFields()
             throws Exception {
         server.enqueue(jsonResponse(200,
                 completionBody(structuredContent("Read from the image"))));
@@ -370,16 +370,30 @@ public class RemoteAiEngineTest {
         assertEquals(1, server.getRequestCount());
         RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
         assertTrue(request != null);
+        assertEquals("/v1/chat/completions", request.getPath());
+        assertEquals("Bearer test-key", request.getHeader("Authorization"));
         JsonObject body = JsonParser.parseString(
                 request.getBody().readUtf8()).getAsJsonObject();
-        assertEquals("qwen/qwen3.6-27b",
+        assertEquals("ministral-14b-latest",
                 body.get("model").getAsString());
-        assertEquals(3000, body.get("max_tokens").getAsInt());
+        assertEquals(1800, body.get("max_tokens").getAsInt());
+        assertEquals(0.1, body.get("temperature").getAsDouble(), 0.0001);
         assertTrue(!body.has("response_format"));
         assertTrue(!body.has("reasoning_effort"));
         assertTrue(!body.has("reasoning_format"));
-        assertTrue(body.getAsJsonArray("messages").get(1)
-                .getAsJsonObject().getAsJsonArray("content").size() == 2);
+        assertEquals(2, body.getAsJsonArray("messages").get(1)
+                .getAsJsonObject().getAsJsonArray("content").size());
+        JsonObject textPart = body.getAsJsonArray("messages").get(1)
+                .getAsJsonObject().getAsJsonArray("content")
+                .get(0).getAsJsonObject();
+        JsonObject imagePart = body.getAsJsonArray("messages").get(1)
+                .getAsJsonObject().getAsJsonArray("content")
+                .get(1).getAsJsonObject();
+        assertEquals("text", textPart.get("type").getAsString());
+        assertEquals("image_url", imagePart.get("type").getAsString());
+        assertTrue(imagePart.get("image_url").isJsonPrimitive());
+        assertEquals("data:image/jpeg;base64,AQID",
+                imagePart.get("image_url").getAsString());
     }
 
     @Test
@@ -398,7 +412,7 @@ public class RemoteAiEngineTest {
     }
 
     @Test
-    public void answerWithImage_plainMarkdownIsReturnedFromQwen() {
+    public void answerWithImage_plainMarkdownIsReturnedFromMistral() {
         server.enqueue(jsonResponse(200, completionBody(
                 "<think>private</think>\nThe formula is $x^2 + 1$.")));
         RemoteAiEngine engine = engine(1_000, 1_000);
