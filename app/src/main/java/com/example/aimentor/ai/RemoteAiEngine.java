@@ -384,8 +384,8 @@ public class RemoteAiEngine implements AiEngine {
                 + "requests are OUT_OF_SCOPE. For OUT_OF_SCOPE, set scope to OUT_OF_SCOPE, "
                 + "subject to General, use empty optional fields and reply only with "
                 + (isVietnameseQuestion(question)
-                ? "\"TÃ´i khÃ´ng thá»ƒ giÃºp tráº£ lá»i cÃ¢u há»i ngoÃ i pháº¡m vi há»c thuáº­t.\" "
-                : "\"I canâ€™t help with questions outside the academic scope.\" ")
+                ? "\"Tôi không thể giúp trả lời câu hỏi ngoài phạm vi học thuật.\" "
+                : "\"I can't help with questions outside the academic scope.\" ")
                 + "in directAnswer. Otherwise set scope to ACADEMIC. "
                 + " Student learning profile: education level = " + normalizedLevel
                 + "; preferred explanation style = " + normalizedStyle
@@ -660,8 +660,8 @@ public class RemoteAiEngine implements AiEngine {
     private boolean isVietnameseQuestion(String text) {
         if (text == null || text.trim().isEmpty()) return false;
         String lower = text.toLowerCase(Locale.ROOT);
-        if (lower.matches("(?s).*[ÄƒÃ¢Ä‘ÃªÃ´Æ¡Æ°Ã¡Ã áº£Ã£áº¡áº¥áº§áº©áº«áº­áº¯áº±áº³áºµáº·Ã©Ã¨áº»áº½áº¹áº¿á»á»ƒá»…á»‡"
-                + "Ã­Ã¬á»‰Ä©á»‹Ã³Ã²á»Ãµá»á»‘á»“á»•á»—á»™á»›á»á»Ÿá»¡á»£ÃºÃ¹á»§Å©á»¥á»©á»«á»­á»¯á»±Ã½á»³á»·á»¹á»µ].*")) {
+        if (lower.matches("(?s).*[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệ"
+                + "íìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ].*")) {
             return true;
         }
         String padded = " " + lower.replaceAll("[^a-z]+", " ").trim() + " ";
@@ -680,8 +680,8 @@ public class RemoteAiEngine implements AiEngine {
         String padded = " " + text.toLowerCase(Locale.ROOT)
                 .replaceAll("[^\\p{L}]+", " ").trim() + " ";
         String[] vietnameseMarkers = {
-                " lÃ  ", " cá»§a ", " vÃ  ", " khÃ´ng ", " Ä‘Æ°á»£c ",
-                " trong ", " má»™t ", " nhiá»‡t Ä‘á»™ ", " cÃ¢u tráº£ lá»i "
+                " là ", " của ", " và ", " không ", " được ",
+                " trong ", " một ", " nhiệt độ ", " câu trả lời "
         };
         int matches = 0;
         for (String marker : vietnameseMarkers) {
