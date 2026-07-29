@@ -513,6 +513,7 @@ public class RemoteAiEngine implements AiEngine {
                 + "exactly 2; both use correctIndex and an empty acceptedAnswers list. "
                 + "Short-answer and fill-in-the-blank questions use an empty options list, "
                 + "correctIndex -1, and 1 to 4 concise acceptedAnswers. "
+                + "CRITICAL: For SHORT_ANSWER and FILL_IN_THE_BLANK, answers MUST be plain text (words/numbers). Do NOT use math formulas since users type on mobile keyboards. However, for MULTIPLE_CHOICE and TRUE_FALSE, you MUST use standard math notation (e.g., $$...$$) for any formulas or symbols. "
                 + "Do not use markdown and do not repeat a prompt.";
     }
 
