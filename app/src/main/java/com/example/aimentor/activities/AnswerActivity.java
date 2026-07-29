@@ -1,9 +1,14 @@
 package com.example.aimentor.activities;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.view.ActionMode;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -52,6 +57,7 @@ public class AnswerActivity extends AppCompatActivity {
     private int actionGeneration;
     private long visibleSinceElapsed;
     private Markwon markwon;
+    private String lastFormattedMarkdown = "";
 
     public static Intent savedAnswerIntent(Context context, long questionId) {
         Intent intent = new Intent(context, AnswerActivity.class);
@@ -126,8 +132,10 @@ public class AnswerActivity extends AppCompatActivity {
                 question.subject, question.difficulty));
         tvAnswerSource.setText(buildSourceLabel(question));
         tvQuestion.setText(question.questionText);
-        markwon.setMarkdown(tvAnswer,
-                AnswerMarkdownFormatter.format(question.answerText));
+        lastFormattedMarkdown =
+                AnswerMarkdownFormatter.format(question.answerText);
+        markwon.setMarkdown(tvAnswer, lastFormattedMarkdown);
+        installCopyOverride(tvAnswer);
 
         if (transientAnswer) {
             answerActions.setVisibility(View.GONE);
@@ -136,6 +144,61 @@ public class AnswerActivity extends AppCompatActivity {
             refreshBookmarkButton();
             refreshReviewedButton();
         }
+    }
+
+    /**
+     * Overrides the default text-selection copy so that the clipboard receives
+     * the raw Markdown/LaTeX source instead of garbage replacement characters
+     * produced by JLatexMath image spans.
+     */
+    private void installCopyOverride(TextView tv) {
+        ActionMode.Callback copyCallback = new ActionMode.Callback() {
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                return true; // allow the default action mode to appear
+            }
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                return false;
+            }
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                if (item.getItemId() == android.R.id.copy
+                        || item.getItemId() == android.R.id.cut) {
+                    int start = tv.getSelectionStart();
+                    int end = tv.getSelectionEnd();
+                    // Use the source markdown if the entire text is selected or
+                    // if the selection likely spans a LaTeX region (object
+                    // replacement characters would appear).
+                    CharSequence raw = tv.getText();
+                    String selected = (start >= 0 && end > start)
+                            ? raw.subSequence(start, end).toString() : "";
+                    String toCopy;
+                    if (selected.contains("\uFFFC") || (start == 0
+                            && end == raw.length())) {
+                        // Selection contains image span garbage; use source
+                        toCopy = lastFormattedMarkdown;
+                    } else {
+                        toCopy = selected;
+                    }
+                    ClipboardManager clip = (ClipboardManager)
+                            getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (clip != null) {
+                        clip.setPrimaryClip(
+                                ClipData.newPlainText("answer", toCopy));
+                    }
+                    Toast.makeText(AnswerActivity.this,
+                            R.string.copied_to_clipboard, Toast.LENGTH_SHORT)
+                            .show();
+                    mode.finish();
+                    return true;
+                }
+                return false;
+            }
+            @Override
+            public void onDestroyActionMode(ActionMode mode) { }
+        };
+        tv.setCustomSelectionActionModeCallback(copyCallback);
     }
 
     private void loadSavedQuestion(@Nullable Runnable afterLoad) {

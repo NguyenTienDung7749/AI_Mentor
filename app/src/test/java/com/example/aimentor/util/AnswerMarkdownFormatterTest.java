@@ -18,8 +18,9 @@ public class AnswerMarkdownFormatterTest {
 
         assertFalse(formatted.contains("Subject:"));
         assertTrue(formatted.contains("## Answer"));
+        // Double backslashes should be normalized to single backslashes
         assertTrue(formatted.contains(
-                "$x = \\\\frac{-b \\\\pm \\\\sqrt{b^2-4ac}}{2a}$"));
+                "$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$"));
         assertTrue(formatted.contains("**Discriminant**"));
     }
 
@@ -43,5 +44,29 @@ public class AnswerMarkdownFormatterTest {
         assertFalse(formatted.contains("Ý chính"));
         assertTrue(formatted.contains("$O_2$"));
         assertFalse(formatted.contains("xrightarrow"));
+    }
+
+    @Test
+    public void format_fixesDoubleBackslashSpacing() {
+        // \, (thin space) is common in integrals; should be preserved
+        String stored = "Trả lời ngắn\n"
+                + "$$\\\\int f(x)\\\\,dx = F(x) + C$$";
+
+        String formatted = AnswerMarkdownFormatter.format(stored);
+
+        assertTrue(formatted.contains("\\int f(x)\\,dx = F(x) + C"));
+        assertFalse(formatted.contains("\\\\int"));
+        assertFalse(formatted.contains("\\\\,"));
+    }
+
+    @Test
+    public void format_preservesInlineMathDollars() {
+        String stored = "Trả lời ngắn\n"
+                + "trong đó $F(x)$ là hàm bất kỳ và $C$ là hằng số.";
+
+        String formatted = AnswerMarkdownFormatter.format(stored);
+
+        assertTrue(formatted.contains("$F(x)$"));
+        assertTrue(formatted.contains("$C$"));
     }
 }

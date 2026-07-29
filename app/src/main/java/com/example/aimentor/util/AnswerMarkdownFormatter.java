@@ -8,21 +8,19 @@ import java.util.regex.Pattern;
 /** Converts legacy stored answer sections to Markdown without damaging LaTeX. */
 public final class AnswerMarkdownFormatter {
 
+    // Matches $$...$$ block math (lazy) with optional trailing punctuation.
     private static final Pattern BLOCK_MATH =
             Pattern.compile("\\$\\$\\s*(.+?)\\s*\\$\\$[.,;:]?", Pattern.DOTALL);
+    // Matches $...$ inline math (lazy, no newlines).
+    private static final Pattern INLINE_MATH =
+            Pattern.compile("(?<!\\$)\\$(?!\\$)(.+?)(?<!\\$)\\$(?!\\$)");
     private static final Pattern X_RIGHT_ARROW =
             Pattern.compile("\\\\xrightarrow\\{([^{}]+)\\}");
+    // Matches any double-escaped backslash before a LaTeX command or short
+    // spacing token (\, \; \! \> \  etc.).  Covers every named command
+    // (alphabetic) plus the common punctuation-style commands.
     private static final Pattern DOUBLE_BACKSLASH_CMD =
-            Pattern.compile("\\\\\\\\((?:frac|sqrt|sum|prod|int|lim|infty|"
-                    + "alpha|beta|gamma|delta|theta|lambda|mu|pi|sigma|omega|"
-                    + "cdot|times|div|pm|mp|leq|geq|neq|approx|equiv|"
-                    + "rightarrow|leftarrow|Rightarrow|Leftarrow|"
-                    + "text|mathrm|mathbf|begin|end|left|right|over|under|"
-                    + "hat|bar|vec|dot|ddot|tilde|log|ln|sin|cos|tan|"
-                    + "partial|nabla|forall|exists|cup|cap|subset|supset|"
-                    + "in|notin|to|mapsto|circ|oplus|otimes|binom|"
-                    + "stackrel|overset|underset|quad|qquad|"
-                    + "displaystyle|textstyle|operatorname)\\b)");
+            Pattern.compile("\\\\\\\\((?:[a-zA-Z]+|[,;!> ]))");
     private static final Set<String> PRIMARY_HEADINGS = primaryHeadings();
     private static final Set<String> SECONDARY_HEADINGS = secondaryHeadings();
 
@@ -87,16 +85,91 @@ public final class AnswerMarkdownFormatter {
     }
 
     private static String normalizeMath(String markdown) {
+        // Fix double-escaped backslashes that leak from JSON inside math zones.
+        // Must run first so that \\xrightarrow becomes \xrightarrow before
+        // the arrow replacement runs.
+        String result = fixDoubleBackslashesInMath(markdown);
+
         // Replace unsupported \xrightarrow with compatible stackrel
-        String compatibleLatex = X_RIGHT_ARROW.matcher(markdown)
+        result = X_RIGHT_ARROW.matcher(result)
                 .replaceAll("\\\\stackrel{$1}{\\\\longrightarrow}");
-        // Fix double-escaped backslashes that leak from JSON: \\frac -> \frac
-        compatibleLatex = DOUBLE_BACKSLASH_CMD.matcher(compatibleLatex)
-                .replaceAll("\\\\$1");
-        // Ensure $$ block math sits on its own lines for JLatexMathPlugin
-        String isolatedBlocks = BLOCK_MATH.matcher(compatibleLatex)
+
+        // Ensure $$ block math sits on its own lines for JLatexMathPlugin.
+        result = BLOCK_MATH.matcher(result)
                 .replaceAll("\n\n\\$\\$$1\\$\\$\n\n");
-        return isolatedBlocks.replaceAll("\\n{3,}", "\n\n").trim();
+        return result.replaceAll("\\n{3,}", "\n\n").trim();
+    }
+
+    /**
+     * Walks through the text, identifies math zones ($...$ and $$...$$),
+     * and fixes double-escaped backslashes (\\cmd -> \cmd) only inside those
+     * zones.  Non-math text is left untouched.
+     */
+    private static String fixDoubleBackslashesInMath(String text) {
+        StringBuilder out = new StringBuilder(text.length());
+        int i = 0;
+        int len = text.length();
+        while (i < len) {
+            if (text.charAt(i) == '$') {
+                boolean block = i + 1 < len && text.charAt(i + 1) == '$';
+                String delimiter = block ? "$$" : "$";
+                int start = i;
+                int contentStart = i + delimiter.length();
+                // Find the closing delimiter
+                int closingIdx = findClosingDelimiter(text, contentStart, delimiter);
+                if (closingIdx < 0) {
+                    // No closing delimiter found; output the rest as-is
+                    out.append(text, i, len);
+                    break;
+                }
+                int end = closingIdx + delimiter.length();
+                // Extract the math content and fix double backslashes
+                String mathContent = text.substring(contentStart, closingIdx);
+                String fixedMath = DOUBLE_BACKSLASH_CMD.matcher(mathContent)
+                        .replaceAll("\\\\$1");
+                out.append(delimiter).append(fixedMath).append(delimiter);
+                // Skip optional trailing punctuation after block math
+                if (block && end < len) {
+                    char after = text.charAt(end);
+                    if (after == '.' || after == ',' || after == ';' || after == ':') {
+                        end++;
+                    }
+                }
+                i = end;
+            } else {
+                // Also fix double backslashes in non-math context because some
+                // answers have double-escaped LaTeX commands even outside $ delimiters
+                // (e.g. in plain text that later gets wrapped by $...$).
+                out.append(text.charAt(i));
+                i++;
+            }
+        }
+
+        // Also do a global pass for double backslashes that appear outside
+        // math delimiters (some answers have inconsistent escaping)
+        return DOUBLE_BACKSLASH_CMD.matcher(out.toString()).replaceAll("\\\\$1");
+    }
+
+    /**
+     * Finds the index of the closing math delimiter starting from {@code from}.
+     * Returns -1 if not found.
+     */
+    private static int findClosingDelimiter(String text, int from, String delimiter) {
+        int idx = text.indexOf(delimiter, from);
+        if (delimiter.equals("$")) {
+            // For single $, make sure we don't match $$ (block delimiter)
+            while (idx >= 0 && idx + 1 < text.length() && text.charAt(idx + 1) == '$') {
+                idx = text.indexOf(delimiter, idx + 2);
+            }
+            // Also skip if preceded by another $ (we're inside $$)
+            while (idx > 0 && text.charAt(idx - 1) == '$') {
+                idx = text.indexOf(delimiter, idx + 1);
+                if (idx >= 0 && idx + 1 < text.length() && text.charAt(idx + 1) == '$') {
+                    idx = text.indexOf(delimiter, idx + 2);
+                }
+            }
+        }
+        return idx;
     }
 
     private static boolean isRepeatedMetadata(String line) {

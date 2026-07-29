@@ -365,5 +365,6 @@
     <string name="bookmark_question_description">Bookmark “%1$s”</string>
     <string name="remove_bookmark_description">Remove bookmark from “%1$s”</string>
     <string name="open_saved_answer_description">Open saved answer for “%1$s”</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
 
 </resources>
