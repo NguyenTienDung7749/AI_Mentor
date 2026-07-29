@@ -258,7 +258,7 @@ public class AnswerActivity extends AppCompatActivity {
                         drawable.getIntrinsicWidth(),
                         drawable.getIntrinsicHeight());
                 ImageSpan span = new ImageSpan(drawable,
-                        DynamicDrawableSpan.ALIGN_BOTTOM);
+                        DynamicDrawableSpan.ALIGN_BASELINE);
                 ssb.setSpan(span, start, end,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             } catch (Exception ignored) {

@@ -14,6 +14,16 @@ public final class AnswerMarkdownFormatter {
     // Matches $...$ inline math (lazy, no newlines).
     private static final Pattern INLINE_MATH =
             Pattern.compile("(?<!\\$)\\$(?!\\$)(.+?)(?<!\\$)\\$(?!\\$)");
+    // Matches \[...\] display math (LaTeX standard).
+    private static final Pattern BACKSLASH_BRACKET_MATH =
+            Pattern.compile("\\\\\\[\\s*(.+?)\\s*\\\\]", Pattern.DOTALL);
+    // Matches [ ... ] that contain LaTeX commands (heuristic: content has backslash commands).
+    private static final Pattern BRACKET_BLOCK_MATH =
+            Pattern.compile("^\\[\\s*(.+?)\\s*]\\s*$", Pattern.MULTILINE);
+    // Matches a stray single $ at the start of what looks like a LaTeX expression
+    // (e.g. "$r^2" without a closing $). We'll wrap it as inline math.
+    private static final Pattern STRAY_DOLLAR =
+            Pattern.compile("(?<!\\$)\\$(?!\\$)([A-Za-z0-9_\\\\{^]+(?:\\{[^}]*\\}|[A-Za-z0-9_^])*)(?!\\$)(?=[\\s.,;:!?)]|$)");
     private static final Pattern X_RIGHT_ARROW =
             Pattern.compile("\\\\xrightarrow\\{([^{}]+)\\}");
     // Matches any double-escaped backslash before a LaTeX command or short
@@ -86,18 +96,91 @@ public final class AnswerMarkdownFormatter {
 
     private static String normalizeMath(String markdown) {
         // Fix double-escaped backslashes that leak from JSON inside math zones.
-        // Must run first so that \\xrightarrow becomes \xrightarrow before
-        // the arrow replacement runs.
         String result = fixDoubleBackslashesInMath(markdown);
 
         // Replace unsupported \xrightarrow with compatible stackrel
         result = X_RIGHT_ARROW.matcher(result)
                 .replaceAll("\\\\stackrel{$1}{\\\\longrightarrow}");
 
+        // Convert \[...\] display math to $$...$$
+        result = BACKSLASH_BRACKET_MATH.matcher(result)
+                .replaceAll("\n\n\\$\\$$1\\$\\$\n\n");
+
+        // Convert [ ... ] that contain LaTeX commands to $$...$$
+        // Only matches lines that start with [ and contain backslash commands
+        StringBuffer sb = new StringBuffer();
+        Matcher bm = BRACKET_BLOCK_MATH.matcher(result);
+        while (bm.find()) {
+            String content = bm.group(1);
+            // Only convert if the content looks like LaTeX (has backslash commands)
+            if (content != null && content.contains("\\")) {
+                bm.appendReplacement(sb, "\n\\$\\$" + Matcher.quoteReplacement(content) + "\\$\\$\n");
+            }
+        }
+        bm.appendTail(sb);
+        result = sb.toString();
+
+        // Fix stray single $ followed by LaTeX-like content without a closing $
+        // by wrapping them as inline math $...$
+        result = fixStrayDollars(result);
+
         // Ensure $$ block math sits on its own lines for JLatexMathPlugin.
         result = BLOCK_MATH.matcher(result)
                 .replaceAll("\n\n\\$\\$$1\\$\\$\n\n");
         return result.replaceAll("\\n{3,}", "\n\n").trim();
+    }
+
+    /**
+     * Finds stray single-$ sequences (e.g. "$r^2" without closing $) and wraps
+     * them as proper inline math "$r^2$". Only acts on sequences that are NOT
+     * already properly delimited.
+     */
+    private static String fixStrayDollars(String text) {
+        // First check: if all $ signs are properly paired, do nothing
+        Matcher inlineMatcher = INLINE_MATH.matcher(text);
+        // Build a set of positions covered by valid inline math
+        boolean[] covered = new boolean[text.length()];
+        while (inlineMatcher.find()) {
+            for (int i = inlineMatcher.start(); i < inlineMatcher.end(); i++) {
+                covered[i] = true;
+            }
+        }
+        // Also mark positions covered by block math $$...$$
+        Matcher blockMatcher = BLOCK_MATH.matcher(text);
+        while (blockMatcher.find()) {
+            for (int i = blockMatcher.start(); i < blockMatcher.end(); i++) {
+                covered[i] = true;
+            }
+        }
+        // Find lone $ that are not covered
+        StringBuilder sb2 = new StringBuilder(text);
+        int offset = 0;
+        for (int i = 0; i < text.length(); i++) {
+            if (text.charAt(i) == '$' && !covered[i]) {
+                // Check this isn't part of $$
+                if (i + 1 < text.length() && text.charAt(i + 1) == '$') continue;
+                if (i > 0 && text.charAt(i - 1) == '$') continue;
+                // Find the extent of the LaTeX-like content after this $
+                int j = i + 1;
+                while (j < text.length() && text.charAt(j) != ' '
+                        && text.charAt(j) != '\n' && text.charAt(j) != '$'
+                        && text.charAt(j) != ',' && text.charAt(j) != '.') {
+                    j++;
+                }
+                // Also grab content after space if it looks like it continues
+                // (e.g. "$r^2" -> just grab until non-math)
+                if (j > i + 1) {
+                    String mathContent = text.substring(i + 1, j);
+                    // Only fix if it looks like math (has ^, _, \, digits mixed with letters)
+                    if (mathContent.matches(".*[\\\\^_{}].*") || mathContent.matches("[a-zA-Z][0-9].*")) {
+                        // Insert closing $ after the content
+                        sb2.insert(j + offset, '$');
+                        offset++;
+                    }
+                }
+            }
+        }
+        return sb2.toString();
     }
 
     /**

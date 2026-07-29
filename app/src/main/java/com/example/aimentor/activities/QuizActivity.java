@@ -223,8 +223,9 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void showQuestion() {
+        if (countDownTimer != null) { countDownTimer.cancel(); countDownTimer = null; }
         if (questions.isEmpty() || index < 0 || index >= questions.size()) {
-            finish();
+            finishQuiz();
             return;
         }
         QuizQuestion question = questions.get(index);
@@ -260,13 +261,17 @@ public class QuizActivity extends AppCompatActivity {
             optionCards[i].setScaleY(1f);
             optionCards[i].setEnabled(true);
             
-            GridLayout.LayoutParams params = (GridLayout.LayoutParams) optionCards[i].getLayoutParams();
-            if (isTwoOptions) {
-                params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 2, 1f);
-            } else {
-                params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, 1f);
+            try {
+                GridLayout.LayoutParams params = (GridLayout.LayoutParams) optionCards[i].getLayoutParams();
+                if (isTwoOptions) {
+                    params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 2, 1f);
+                } else {
+                    params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, 1f);
+                }
+                optionCards[i].setLayoutParams(params);
+            } catch (ClassCastException ignored) {
+                // Safety net: if the LayoutParams is not GridLayout.LayoutParams
             }
-            optionCards[i].setLayoutParams(params);
 
             if (i < questionOptions.size()) {
                 optionCards[i].setVisibility(View.VISIBLE);
@@ -381,6 +386,8 @@ public class QuizActivity extends AppCompatActivity {
         lastSelectedIndex = selected;
         lastTextAnswer = textAnswer == null ? "" : textAnswer;
         lastAnswerCorrect = correct;
+        if (countDownTimer != null) { countDownTimer.cancel(); countDownTimer = null; }
+        tvTimer.setVisibility(View.GONE);
         for (FrameLayout card : optionCards) card.setEnabled(false);
         etTextAnswer.setEnabled(false);
 
@@ -565,8 +572,9 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void onTimeUp() {
-        if (answered) return;
-        Toast.makeText(this, "Time\'s up!", Toast.LENGTH_SHORT).show();
+        if (answered || isFinishing() || questions.isEmpty()
+                || index < 0 || index >= questions.size()) return;
+        Toast.makeText(this, "Time's up!", Toast.LENGTH_SHORT).show();
         QuizQuestion question = questions.get(index);
         if (!retryRound && !wrongQuestions.contains(question)) {
             wrongQuestions.add(question);
