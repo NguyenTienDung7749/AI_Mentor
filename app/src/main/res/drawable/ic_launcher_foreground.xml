@@ -4,19 +4,57 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- LEARNIX icon: person + open book, centered in the 66x66 safe zone -->
     <group
-        android:scaleX="3"
-        android:scaleY="3"
-        android:translateX="18"
+        android:translateX="22"
         android:translateY="18">
+        <!-- Head circle -->
         <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M12,2l1.45,4.55L18,8l-4.55,1.45L12,14l-1.45,-4.55L6,8l4.55,-1.45L12,2z" />
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4"
+            android:pathData="M32,16
+                              a9,9 0,1 0,0.01 0z" />
+        <!-- Body / arms going into book -->
         <path
-            android:fillColor="#D9FFFFFF"
-            android:pathData="M19,13l0.9,2.1L22,16l-2.1,0.9L19,19l-0.9,-2.1L16,16l2.1,-0.9L19,13z" />
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4"
+            android:strokeLineCap="round"
+            android:pathData="M32,25
+                              L32,40
+                              M32,32
+                              L18,28
+                              M32,32
+                              L46,28" />
+        <!-- Open book left page -->
         <path
-            android:fillColor="#D9FFFFFF"
-            android:pathData="M6,14l1.1,2.9L10,18l-2.9,1.1L6,22l-1.1,-2.9L2,18l2.9,-1.1L6,14z" />
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="3.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M32,40
+                              C28,38 20,36 8,40
+                              L8,62
+                              C20,58 28,60 32,62" />
+        <!-- Open book right page -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="3.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M32,40
+                              C36,38 44,36 56,40
+                              L56,62
+                              C44,58 36,60 32,62" />
+        <!-- Book spine -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="3.5"
+            android:strokeLineCap="round"
+            android:pathData="M32,40 L32,62" />
     </group>
 </vector>

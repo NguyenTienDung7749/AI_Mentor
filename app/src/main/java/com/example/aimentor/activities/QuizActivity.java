@@ -1,16 +1,21 @@
 package com.example.aimentor.activities;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -22,7 +27,6 @@ import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.color.MaterialColors;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -52,6 +56,14 @@ public class QuizActivity extends AppCompatActivity {
     private static final String STATE_TEXT_ANSWER = "text_answer";
     private static final String STATE_LAST_CORRECT = "last_correct";
 
+    /** Kahoot-style option background drawables (red, blue, yellow, green). */
+    private static final int[] OPTION_BACKGROUNDS = {
+            R.drawable.bg_quiz_option_red,
+            R.drawable.bg_quiz_option_blue,
+            R.drawable.bg_quiz_option_yellow,
+            R.drawable.bg_quiz_option_green
+    };
+
     private QuizViewModel quizViewModel;
     private SessionManager session;
     private ArrayList<QuizQuestion> questions = new ArrayList<>();
@@ -73,9 +85,10 @@ public class QuizActivity extends AppCompatActivity {
     private boolean lastAnswerCorrect;
     private boolean gameInitialized;
 
-    private TextView tvProgress, tvQuestionPrompt, tvFeedback, tvQuizType, tvQuizError;
-    private RadioGroup rgOptions;
-    private RadioButton[] options;
+    private TextView tvProgress, tvQuestionPrompt, tvFeedback, tvQuizType,
+            tvQuizError, tvScore;
+    private FrameLayout[] optionCards;
+    private TextView[] optionTexts;
     private TextInputLayout textAnswerLayout;
     private TextInputEditText etTextAnswer;
     private MaterialButton btnAction, btnRetryQuiz;
@@ -94,8 +107,8 @@ public class QuizActivity extends AppCompatActivity {
                 .get(QuizViewModel.class);
         bindViews();
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        ImageButton btnClose = findViewById(R.id.btnClose);
+        btnClose.setOnClickListener(v -> finish());
         btnAction.setOnClickListener(v -> onAction());
         btnRetryQuiz.setOnClickListener(v -> requestQuiz());
 
@@ -135,16 +148,26 @@ public class QuizActivity extends AppCompatActivity {
         tvFeedback = findViewById(R.id.tvFeedback);
         tvQuizType = findViewById(R.id.tvQuizType);
         tvQuizError = findViewById(R.id.tvQuizError);
+        tvScore = findViewById(R.id.tvScore);
         quizProgressIndicator = findViewById(R.id.quizProgressIndicator);
         quizLoadingState = findViewById(R.id.quizLoadingState);
         quizErrorState = findViewById(R.id.quizErrorState);
         quizContent = findViewById(R.id.quizContent);
-        rgOptions = findViewById(R.id.rgOptions);
         textAnswerLayout = findViewById(R.id.textAnswerLayout);
         etTextAnswer = findViewById(R.id.etTextAnswer);
-        options = new RadioButton[]{
-                findViewById(R.id.rbOpt0), findViewById(R.id.rbOpt1),
-                findViewById(R.id.rbOpt2), findViewById(R.id.rbOpt3)};
+
+        optionCards = new FrameLayout[]{
+                findViewById(R.id.optionA), findViewById(R.id.optionB),
+                findViewById(R.id.optionC), findViewById(R.id.optionD)};
+        optionTexts = new TextView[]{
+                findViewById(R.id.tvOpt0), findViewById(R.id.tvOpt1),
+                findViewById(R.id.tvOpt2), findViewById(R.id.tvOpt3)};
+
+        for (int i = 0; i < optionCards.length; i++) {
+            final int optIndex = i;
+            optionCards[i].setOnClickListener(v -> onOptionSelected(optIndex));
+        }
+
         btnAction = findViewById(R.id.btnAction);
         btnRetryQuiz = findViewById(R.id.btnRetryQuiz);
         tvFeedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -187,6 +210,8 @@ public class QuizActivity extends AppCompatActivity {
         quizErrorState.setVisibility(View.GONE);
         quizContent.setVisibility(View.VISIBLE);
         btnAction.setEnabled(true);
+        tvScore.setVisibility(View.VISIBLE);
+        updateScoreDisplay(false);
         showQuestion();
     }
 
@@ -211,27 +236,48 @@ public class QuizActivity extends AppCompatActivity {
         quizProgressIndicator.setProgressCompat(index + 1, true);
         tvQuizType.setText(labelForType(question.getType()));
         tvQuestionPrompt.setText(question.getPrompt());
-        rgOptions.clearCheck();
+
         boolean textAnswer = question.requiresTextAnswer();
-        rgOptions.setVisibility(textAnswer ? View.GONE : View.VISIBLE);
+        View optionsGrid = findViewById(R.id.optionsGrid);
+        optionsGrid.setVisibility(textAnswer ? View.GONE : View.VISIBLE);
         textAnswerLayout.setVisibility(textAnswer ? View.VISIBLE : View.GONE);
         etTextAnswer.setEnabled(true);
         etTextAnswer.setText("");
 
         List<String> questionOptions = question.getOptions();
-        for (int i = 0; i < options.length; i++) {
-            options[i].setBackgroundResource(R.drawable.bg_quiz_option);
+        for (int i = 0; i < optionCards.length; i++) {
+            optionCards[i].setBackgroundResource(OPTION_BACKGROUNDS[i]);
+            optionCards[i].setAlpha(1f);
+            optionCards[i].setScaleX(1f);
+            optionCards[i].setScaleY(1f);
+            optionCards[i].setEnabled(true);
             if (i < questionOptions.size()) {
-                options[i].setVisibility(View.VISIBLE);
-                options[i].setText(questionOptions.get(i));
-                options[i].setEnabled(true);
+                optionCards[i].setVisibility(View.VISIBLE);
+                optionTexts[i].setText(questionOptions.get(i));
             } else {
-                options[i].setVisibility(View.GONE);
+                optionCards[i].setVisibility(View.GONE);
             }
         }
         tvFeedback.setVisibility(View.GONE);
         tvFeedback.setBackgroundResource(R.drawable.bg_info_panel);
         btnAction.setText(R.string.check_answer);
+
+        // Animate options appearing with stagger effect
+        if (!restoreAnswered) {
+            for (int i = 0; i < optionCards.length; i++) {
+                if (optionCards[i].getVisibility() == View.VISIBLE) {
+                    optionCards[i].setTranslationY(100f);
+                    optionCards[i].setAlpha(0f);
+                    optionCards[i].animate()
+                            .translationY(0f)
+                            .alpha(1f)
+                            .setStartDelay(i * 80L)
+                            .setDuration(300)
+                            .setInterpolator(new OvershootInterpolator(0.8f))
+                            .start();
+                }
+            }
+        }
 
         if (restoreAnswered) {
             if (textAnswer) {
@@ -239,16 +285,31 @@ public class QuizActivity extends AppCompatActivity {
                 renderAnsweredState(question, -1, restoredTextAnswer, restoredCorrect);
             } else if (restoredSelection >= 0
                     && restoredSelection < questionOptions.size()) {
-                options[restoredSelection].setChecked(true);
                 renderAnsweredState(question, restoredSelection, "", restoredCorrect);
             }
         } else if (textAnswer && !restoredTextAnswer.isEmpty()) {
             etTextAnswer.setText(restoredTextAnswer);
             etTextAnswer.setSelection(restoredTextAnswer.length());
-        } else if (restoredSelection >= 0
-                && restoredSelection < questionOptions.size()) {
-            options[restoredSelection].setChecked(true);
         }
+    }
+
+    /** Called when a colored option card is tapped. */
+    private void onOptionSelected(int selectedIndex) {
+        if (answered) return;
+        // Visual selection: scale up the selected card, dim others
+        for (int i = 0; i < optionCards.length; i++) {
+            if (optionCards[i].getVisibility() != View.VISIBLE) continue;
+            if (i == selectedIndex) {
+                optionCards[i].animate().scaleX(1.05f).scaleY(1.05f)
+                        .setDuration(150).start();
+                optionCards[i].setAlpha(1f);
+            } else {
+                optionCards[i].animate().scaleX(1f).scaleY(1f)
+                        .setDuration(150).start();
+                optionCards[i].setAlpha(0.6f);
+            }
+        }
+        lastSelectedIndex = selectedIndex;
     }
 
     private int labelForType(QuizQuestion.Type type) {
@@ -258,19 +319,11 @@ public class QuizActivity extends AppCompatActivity {
         return R.string.quiz_multiple_choice;
     }
 
-    private int selectedIndex() {
-        int checkedId = rgOptions.getCheckedRadioButtonId();
-        for (int i = 0; i < options.length; i++) {
-            if (options[i].getId() == checkedId) return i;
-        }
-        return -1;
-    }
-
     private void onAction() {
         if (questions.isEmpty()) return;
         if (!answered) {
             QuizQuestion question = questions.get(index);
-            int selected = question.requiresTextAnswer() ? -1 : selectedIndex();
+            int selected = question.requiresTextAnswer() ? -1 : lastSelectedIndex;
             String textAnswer = question.requiresTextAnswer() && etTextAnswer.getText() != null
                     ? etTextAnswer.getText().toString().trim() : "";
             if ((!question.requiresTextAnswer() && selected < 0)
@@ -283,6 +336,7 @@ public class QuizActivity extends AppCompatActivity {
                     ? question.isCorrect(textAnswer) : question.isCorrect(selected);
             if (correct) {
                 correctCount++;
+                updateScoreDisplay(true);
             } else if (!retryRound && !wrongQuestions.contains(question)) {
                 wrongQuestions.add(question);
             }
@@ -307,7 +361,7 @@ public class QuizActivity extends AppCompatActivity {
         lastSelectedIndex = selected;
         lastTextAnswer = textAnswer == null ? "" : textAnswer;
         lastAnswerCorrect = correct;
-        for (RadioButton option : options) option.setEnabled(false);
+        for (FrameLayout card : optionCards) card.setEnabled(false);
         etTextAnswer.setEnabled(false);
 
         tvFeedback.setVisibility(View.VISIBLE);
@@ -315,30 +369,71 @@ public class QuizActivity extends AppCompatActivity {
             tvFeedback.setText(getString(
                     R.string.quiz_correct_feedback, question.getExplanation()));
             tvFeedback.setBackgroundResource(R.drawable.bg_quiz_feedback_correct);
+            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.success));
         } else {
             tvFeedback.setText(getString(R.string.quiz_incorrect_feedback_answer,
                     question.getDisplayAnswer(), question.getExplanation()));
             tvFeedback.setBackgroundResource(R.drawable.bg_quiz_feedback_incorrect);
+            tvFeedback.setTextColor(0xFFE21B3C);
         }
+
         if (!question.requiresTextAnswer()) {
-            if (selected >= 0 && selected < options.length) {
-                options[selected].setBackgroundResource(correct
-                        ? R.drawable.bg_quiz_option_correct
-                        : R.drawable.bg_quiz_option_incorrect);
-            }
+            // Animate correct/incorrect options
             int correctIndex = question.getCorrectIndex();
-            if (!correct && correctIndex >= 0 && correctIndex < options.length) {
-                options[correctIndex].setBackgroundResource(
-                        R.drawable.bg_quiz_option_correct);
+            for (int i = 0; i < optionCards.length; i++) {
+                if (optionCards[i].getVisibility() != View.VISIBLE) continue;
+                if (i == correctIndex) {
+                    // Correct answer: pulse glow
+                    animateCorrectOption(optionCards[i]);
+                } else if (i == selected && !correct) {
+                    // Wrong answer selected: shake
+                    animateWrongOption(optionCards[i]);
+                } else {
+                    // Dim unselected wrong options
+                    optionCards[i].animate().alpha(0.3f).setDuration(300).start();
+                }
             }
         }
-        int feedbackColor = correct
-                ? ContextCompat.getColor(this, R.color.success)
-                : MaterialColors.getColor(tvFeedback,
-                        com.google.android.material.R.attr.colorError);
-        tvFeedback.setTextColor(feedbackColor);
+
+        // Fade in feedback
+        tvFeedback.setAlpha(0f);
+        tvFeedback.animate().alpha(1f).setDuration(400).start();
+
         btnAction.setText(index == questions.size() - 1
                 ? R.string.finish_quiz : R.string.next_question);
+    }
+
+    /** Pulse animation for the correct answer option. */
+    private void animateCorrectOption(View view) {
+        view.setAlpha(1f);
+        ObjectAnimator scaleX = ObjectAnimator.ofFloat(view, "scaleX", 1f, 1.08f, 1f);
+        ObjectAnimator scaleY = ObjectAnimator.ofFloat(view, "scaleY", 1f, 1.08f, 1f);
+        scaleX.setDuration(500);
+        scaleY.setDuration(500);
+        scaleX.setInterpolator(new AccelerateDecelerateInterpolator());
+        scaleY.setInterpolator(new AccelerateDecelerateInterpolator());
+        scaleX.start();
+        scaleY.start();
+    }
+
+    /** Shake animation for wrong answer option. */
+    private void animateWrongOption(View view) {
+        view.setAlpha(0.7f);
+        ObjectAnimator shake = ObjectAnimator.ofFloat(view, "translationX",
+                0f, -12f, 12f, -8f, 8f, -4f, 4f, 0f);
+        shake.setDuration(400);
+        shake.start();
+    }
+
+    /** Updates the score badge display. */
+    private void updateScoreDisplay(boolean animate) {
+        tvScore.setText(String.valueOf(correctCount));
+        if (animate) {
+            tvScore.animate().scaleX(1.3f).scaleY(1.3f).setDuration(150)
+                    .withEndAction(() -> tvScore.animate()
+                            .scaleX(1f).scaleY(1f).setDuration(150).start())
+                    .start();
+        }
     }
 
     private void finishQuiz() {
@@ -422,6 +517,7 @@ public class QuizActivity extends AppCompatActivity {
         answered = false;
         lastSelectedIndex = -1;
         lastTextAnswer = "";
+        updateScoreDisplay(false);
         showQuestion();
     }
 
@@ -438,12 +534,11 @@ public class QuizActivity extends AppCompatActivity {
         outState.putBoolean(STATE_RETRY, retryRound);
         outState.putBoolean(STATE_RECORDED, resultRecorded);
         outState.putInt(STATE_AWARDED_XP, awardedXp);
-        int savedSelection = answered ? lastSelectedIndex : selectedIndex();
+        outState.putInt(STATE_SELECTED, lastSelectedIndex);
         String savedText = lastTextAnswer;
         if (!answered && etTextAnswer.getText() != null) {
             savedText = etTextAnswer.getText().toString();
         }
-        outState.putInt(STATE_SELECTED, savedSelection);
         outState.putString(STATE_TEXT_ANSWER, savedText);
         outState.putBoolean(STATE_LAST_CORRECT, lastAnswerCorrect);
     }

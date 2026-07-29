@@ -4,8 +4,13 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.DynamicDrawableSpan;
+import android.text.style.ImageSpan;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -28,9 +33,15 @@ import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import io.noties.markwon.Markwon;
 import io.noties.markwon.ext.latex.JLatexMathPlugin;
 import io.noties.markwon.inlineparser.MarkwonInlineParserPlugin;
+import ru.noties.jlatexmath.JLatexMathDrawable;
 
 /** Displays a single question and its saved AI answer (works offline). */
 public class AnswerActivity extends AppCompatActivity {
@@ -135,6 +146,7 @@ public class AnswerActivity extends AppCompatActivity {
         lastFormattedMarkdown =
                 AnswerMarkdownFormatter.format(question.answerText);
         markwon.setMarkdown(tvAnswer, lastFormattedMarkdown);
+        renderInlineLatex(tvAnswer);
         installCopyOverride(tvAnswer);
 
         if (transientAnswer) {
@@ -199,6 +211,61 @@ public class AnswerActivity extends AppCompatActivity {
             public void onDestroyActionMode(ActionMode mode) { }
         };
         tv.setCustomSelectionActionModeCallback(copyCallback);
+    }
+
+    /**
+     * Post-processes rendered text to replace any remaining {@code $...$}
+     * inline LaTeX that JLatexMathPlugin failed to render.  Creates
+     * JLatexMathDrawable image spans so formulas display as rendered math
+     * instead of raw dollar-sign delimited text.
+     */
+    private void renderInlineLatex(TextView tv) {
+        CharSequence text = tv.getText();
+        if (text == null) return;
+        String str = text.toString();
+
+        // Match $...$ that are NOT part of $$ (block math)
+        Pattern inlinePattern = Pattern.compile(
+                "(?<!\\$)\\$(?!\\$)(.+?)(?<!\\$)\\$(?!\\$)");
+        Matcher matcher = inlinePattern.matcher(str);
+
+        // Collect matches first (we'll process in reverse to keep indices valid)
+        List<int[]> matches = new ArrayList<>();
+        while (matcher.find()) {
+            matches.add(new int[]{matcher.start(), matcher.end()});
+        }
+        if (matches.isEmpty()) return;
+
+        SpannableStringBuilder ssb = text instanceof SpannableStringBuilder
+                ? (SpannableStringBuilder) text
+                : new SpannableStringBuilder(text);
+        float textSize = tv.getTextSize();
+        int textColor = tv.getCurrentTextColor();
+
+        // Process in reverse order so earlier indices remain valid
+        for (int i = matches.size() - 1; i >= 0; i--) {
+            int start = matches.get(i)[0];
+            int end = matches.get(i)[1];
+            // Extract the LaTeX content (without the $ delimiters)
+            String latex = str.substring(start + 1, end - 1).trim();
+            if (latex.isEmpty()) continue;
+            try {
+                JLatexMathDrawable drawable = JLatexMathDrawable.builder(latex)
+                        .textSize(textSize)
+                        .color(textColor)
+                        .build();
+                drawable.setBounds(0, 0,
+                        drawable.getIntrinsicWidth(),
+                        drawable.getIntrinsicHeight());
+                ImageSpan span = new ImageSpan(drawable,
+                        DynamicDrawableSpan.ALIGN_BOTTOM);
+                ssb.setSpan(span, start, end,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            } catch (Exception ignored) {
+                // If rendering fails for this formula, leave it as raw text
+            }
+        }
+        tv.setText(ssb, TextView.BufferType.SPANNABLE);
     }
 
     private void loadSavedQuestion(@Nullable Runnable afterLoad) {
