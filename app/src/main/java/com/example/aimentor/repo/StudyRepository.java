@@ -422,14 +422,15 @@ public class StudyRepository {
         boolean personalized = requestedSubject == null
                 || requestedSubject.toLowerCase(Locale.ROOT).startsWith("personalized");
         String resolvedSubject = personalized
-                ? mostStudiedSubject(history)
+                ? "Mixed Subjects"
                 : SubjectClassifier.normalize(requestedSubject);
         String resolvedDifficulty = resolveQuizDifficulty(
                 userId, requestedDifficulty, userDao.findById(userId));
 
         List<String> topics = new ArrayList<>();
         for (Question question : history) {
-            if (resolvedSubject.equals(question.subject)
+            boolean subjectMatches = personalized || resolvedSubject.equals(question.subject);
+            if (subjectMatches
                     && question.questionText != null
                     && !question.questionText.trim().isEmpty()) {
                 topics.add(question.questionText.trim());
