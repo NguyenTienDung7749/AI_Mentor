@@ -257,6 +257,9 @@ public class QuizActivity extends AppCompatActivity {
         etTextAnswer.setText("");
 
         List<String> questionOptions = question.getOptions();
+        Log.d("QUIZ_DEBUG", "Q" + index + " type=" + question.getType()
+                + " options=" + questionOptions.size()
+                + " opts=" + questionOptions);
 
         for (int i = 0; i < optionCards.length; i++) {
             optionCards[i].setBackgroundResource(OPTION_BACKGROUNDS[i]);
@@ -271,6 +274,10 @@ public class QuizActivity extends AppCompatActivity {
             } else {
                 optionCards[i].setVisibility(View.GONE);
             }
+        }
+        View row2 = findViewById(R.id.optionsRow2);
+        if (row2 != null) {
+            row2.setVisibility(questionOptions.size() > 2 ? View.VISIBLE : View.GONE);
         }
         tvFeedback.setVisibility(View.GONE);
         tvFeedback.setBackgroundResource(R.drawable.bg_info_panel);
