@@ -225,7 +225,7 @@ public class QuizActivity extends AppCompatActivity {
     private void showQuestion() {
         if (countDownTimer != null) { countDownTimer.cancel(); countDownTimer = null; }
         if (questions.isEmpty() || index < 0 || index >= questions.size()) {
-            finishQuiz();
+            finish(); // Safety net — should not happen during normal flow
             return;
         }
         QuizQuestion question = questions.get(index);
@@ -246,7 +246,7 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestionPrompt.setText(question.getPrompt());
 
         boolean textAnswer = question.requiresTextAnswer();
-        View optionsGrid = findViewById(R.id.optionsGrid);
+        GridLayout optionsGrid = findViewById(R.id.optionsGrid);
         optionsGrid.setVisibility(textAnswer ? View.GONE : View.VISIBLE);
         textAnswerLayout.setVisibility(textAnswer ? View.VISIBLE : View.GONE);
         etTextAnswer.setEnabled(true);
@@ -254,24 +254,15 @@ public class QuizActivity extends AppCompatActivity {
 
         List<String> questionOptions = question.getOptions();
         boolean isTwoOptions = questionOptions.size() == 2;
+        // Switch between 1-column (for 2 options) and 2-column (for 4 options)
+        optionsGrid.setColumnCount(isTwoOptions ? 1 : 2);
+
         for (int i = 0; i < optionCards.length; i++) {
             optionCards[i].setBackgroundResource(OPTION_BACKGROUNDS[i]);
             optionCards[i].setAlpha(1f);
             optionCards[i].setScaleX(1f);
             optionCards[i].setScaleY(1f);
             optionCards[i].setEnabled(true);
-            
-            try {
-                GridLayout.LayoutParams params = (GridLayout.LayoutParams) optionCards[i].getLayoutParams();
-                if (isTwoOptions) {
-                    params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 2, 1f);
-                } else {
-                    params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, 1f);
-                }
-                optionCards[i].setLayoutParams(params);
-            } catch (ClassCastException ignored) {
-                // Safety net: if the LayoutParams is not GridLayout.LayoutParams
-            }
 
             if (i < questionOptions.size()) {
                 optionCards[i].setVisibility(View.VISIBLE);
@@ -286,7 +277,7 @@ public class QuizActivity extends AppCompatActivity {
 
         // Animate options appearing with stagger effect
         if (!restoreAnswered) {
-            startTimer(textAnswer);
+            startTimer(question);
             for (int i = 0; i < optionCards.length; i++) {
                 if (optionCards[i].getVisibility() == View.VISIBLE) {
                     optionCards[i].setTranslationY(100f);
@@ -548,23 +539,34 @@ public class QuizActivity extends AppCompatActivity {
         showQuestion();
     }
 
-    private void startTimer(boolean isTextAnswer) {
+    private void startTimer(QuizQuestion question) {
         if (countDownTimer != null) countDownTimer.cancel();
         tvTimer.setVisibility(View.VISIBLE);
-        long durationMs = isTextAnswer ? 50000L : 20000L;
+        long durationMs;
+        if (question.requiresTextAnswer()) {
+            durationMs = 60_000L; // 60s for text input
+        } else if (question.getType() == QuizQuestion.Type.TRUE_FALSE) {
+            durationMs = 20_000L; // 20s for true/false
+        } else {
+            durationMs = 30_000L; // 30s for 4-option multiple choice
+        }
+        tvTimer.setText(String.valueOf(durationMs / 1000));
+        tvTimer.setTextColor(0xFFFFFFFF);
         countDownTimer = new CountDownTimer(durationMs, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
+                if (isFinishing()) { cancel(); return; }
                 tvTimer.setText(String.valueOf(millisUntilFinished / 1000));
                 if (millisUntilFinished < 6000) {
                     tvTimer.setTextColor(0xFFE21B3C); // Red when < 6s
                 } else {
-                    tvTimer.setTextColor(0xFFFFFFFF); // White otherwise
+                    tvTimer.setTextColor(0xFFFFFFFF);
                 }
             }
 
             @Override
             public void onFinish() {
+                if (isFinishing()) return;
                 tvTimer.setText("0");
                 onTimeUp();
             }
@@ -580,6 +582,19 @@ public class QuizActivity extends AppCompatActivity {
             wrongQuestions.add(question);
         }
         renderAnsweredState(question, -1, "", false);
+        // Auto-advance to next question after 2 seconds
+        tvFeedback.postDelayed(() -> {
+            if (isFinishing()) return;
+            if (index < questions.size() - 1) {
+                index++;
+                answered = false;
+                lastSelectedIndex = -1;
+                lastTextAnswer = "";
+                showQuestion();
+            } else {
+                finishQuiz();
+            }
+        }, 2000);
     }
 
     @Override
