@@ -5,10 +5,12 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
+import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -86,7 +88,8 @@ public class QuizActivity extends AppCompatActivity {
     private boolean gameInitialized;
 
     private TextView tvProgress, tvQuestionPrompt, tvFeedback, tvQuizType,
-            tvQuizError, tvScore;
+            tvQuizError, tvScore, tvTimer;
+    private CountDownTimer countDownTimer;
     private FrameLayout[] optionCards;
     private TextView[] optionTexts;
     private TextInputLayout textAnswerLayout;
@@ -138,8 +141,10 @@ public class QuizActivity extends AppCompatActivity {
         quizLoadingState.setVisibility(View.VISIBLE);
         quizErrorState.setVisibility(View.GONE);
         quizContent.setVisibility(View.GONE);
+        btnAction.setVisibility(View.GONE);
         btnAction.setEnabled(false);
         btnRetryQuiz.setEnabled(false);
+        tvProgress.setText("");
     }
 
     private void bindViews() {
@@ -149,6 +154,7 @@ public class QuizActivity extends AppCompatActivity {
         tvQuizType = findViewById(R.id.tvQuizType);
         tvQuizError = findViewById(R.id.tvQuizError);
         tvScore = findViewById(R.id.tvScore);
+        tvTimer = findViewById(R.id.tvTimer);
         quizProgressIndicator = findViewById(R.id.quizProgressIndicator);
         quizLoadingState = findViewById(R.id.quizLoadingState);
         quizErrorState = findViewById(R.id.quizErrorState);
@@ -209,6 +215,7 @@ public class QuizActivity extends AppCompatActivity {
         quizLoadingState.setVisibility(View.GONE);
         quizErrorState.setVisibility(View.GONE);
         quizContent.setVisibility(View.VISIBLE);
+        btnAction.setVisibility(View.VISIBLE);
         btnAction.setEnabled(true);
         tvScore.setVisibility(View.VISIBLE);
         updateScoreDisplay(false);
@@ -245,12 +252,22 @@ public class QuizActivity extends AppCompatActivity {
         etTextAnswer.setText("");
 
         List<String> questionOptions = question.getOptions();
+        boolean isTwoOptions = questionOptions.size() == 2;
         for (int i = 0; i < optionCards.length; i++) {
             optionCards[i].setBackgroundResource(OPTION_BACKGROUNDS[i]);
             optionCards[i].setAlpha(1f);
             optionCards[i].setScaleX(1f);
             optionCards[i].setScaleY(1f);
             optionCards[i].setEnabled(true);
+            
+            GridLayout.LayoutParams params = (GridLayout.LayoutParams) optionCards[i].getLayoutParams();
+            if (isTwoOptions) {
+                params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 2, 1f);
+            } else {
+                params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, 1f);
+            }
+            optionCards[i].setLayoutParams(params);
+
             if (i < questionOptions.size()) {
                 optionCards[i].setVisibility(View.VISIBLE);
                 optionTexts[i].setText(questionOptions.get(i));
@@ -264,6 +281,7 @@ public class QuizActivity extends AppCompatActivity {
 
         // Animate options appearing with stagger effect
         if (!restoreAnswered) {
+            startTimer(textAnswer);
             for (int i = 0; i < optionCards.length; i++) {
                 if (optionCards[i].getVisibility() == View.VISIBLE) {
                     optionCards[i].setTranslationY(100f);
@@ -296,6 +314,7 @@ public class QuizActivity extends AppCompatActivity {
     /** Called when a colored option card is tapped. */
     private void onOptionSelected(int selectedIndex) {
         if (answered) return;
+        if (countDownTimer != null) countDownTimer.cancel();
         // Visual selection: scale up the selected card, dim others
         for (int i = 0; i < optionCards.length; i++) {
             if (optionCards[i].getVisibility() != View.VISIBLE) continue;
@@ -332,6 +351,7 @@ public class QuizActivity extends AppCompatActivity {
                         Toast.LENGTH_SHORT).show();
                 return;
             }
+            if (countDownTimer != null) countDownTimer.cancel();
             boolean correct = question.requiresTextAnswer()
                     ? question.isCorrect(textAnswer) : question.isCorrect(selected);
             if (correct) {
@@ -369,12 +389,12 @@ public class QuizActivity extends AppCompatActivity {
             tvFeedback.setText(getString(
                     R.string.quiz_correct_feedback, question.getExplanation()));
             tvFeedback.setBackgroundResource(R.drawable.bg_quiz_feedback_correct);
-            tvFeedback.setTextColor(ContextCompat.getColor(this, R.color.success));
+            tvFeedback.setTextColor(0xFFFFFFFF);
         } else {
             tvFeedback.setText(getString(R.string.quiz_incorrect_feedback_answer,
                     question.getDisplayAnswer(), question.getExplanation()));
             tvFeedback.setBackgroundResource(R.drawable.bg_quiz_feedback_incorrect);
-            tvFeedback.setTextColor(0xFFE21B3C);
+            tvFeedback.setTextColor(0xFFFFFFFF);
         }
 
         if (!question.requiresTextAnswer()) {
@@ -521,6 +541,39 @@ public class QuizActivity extends AppCompatActivity {
         showQuestion();
     }
 
+    private void startTimer(boolean isTextAnswer) {
+        if (countDownTimer != null) countDownTimer.cancel();
+        tvTimer.setVisibility(View.VISIBLE);
+        long durationMs = isTextAnswer ? 50000L : 20000L;
+        countDownTimer = new CountDownTimer(durationMs, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                tvTimer.setText(String.valueOf(millisUntilFinished / 1000));
+                if (millisUntilFinished < 6000) {
+                    tvTimer.setTextColor(0xFFE21B3C); // Red when < 6s
+                } else {
+                    tvTimer.setTextColor(0xFFFFFFFF); // White otherwise
+                }
+            }
+
+            @Override
+            public void onFinish() {
+                tvTimer.setText("0");
+                onTimeUp();
+            }
+        }.start();
+    }
+
+    private void onTimeUp() {
+        if (answered) return;
+        Toast.makeText(this, "Time\'s up!", Toast.LENGTH_SHORT).show();
+        QuizQuestion question = questions.get(index);
+        if (!retryRound && !wrongQuestions.contains(question)) {
+            wrongQuestions.add(question);
+        }
+        renderAnsweredState(question, -1, "", false);
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -567,5 +620,11 @@ public class QuizActivity extends AppCompatActivity {
         lastTextAnswer = state.getString(STATE_TEXT_ANSWER, "");
         lastAnswerCorrect = state.getBoolean(STATE_LAST_CORRECT, false);
         return true;
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (countDownTimer != null) countDownTimer.cancel();
     }
 }

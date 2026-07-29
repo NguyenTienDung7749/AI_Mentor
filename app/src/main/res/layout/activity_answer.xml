@@ -155,7 +155,7 @@
             android:id="@+id/btnBookmark"
             style="@style/Widget.AIMentor.Button.Outlined"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="@string/bookmark"
             app:icon="@drawable/ic_bookmark_24"
@@ -164,7 +164,7 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnReviewed"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginStart="@dimen/space_md"
             android:layout_weight="1"
             android:text="@string/mark_reviewed"

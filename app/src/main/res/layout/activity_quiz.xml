@@ -35,6 +35,21 @@
             android:textSize="14sp"
             android:textStyle="bold" />
 
+        <!-- Timer badge -->
+        <TextView
+            android:id="@+id/tvTimer"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_info_panel"
+            android:backgroundTint="#66FFFFFF"
+            android:gravity="center"
+            android:text="20"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
         <!-- Score badge -->
         <TextView
             android:id="@+id/tvScore"
@@ -344,14 +359,19 @@
             <!-- Text answer input (for short answer / fill-in-the-blank) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textAnswerLayout"
-                style="@style/Widget.AIMentor.TextInput"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="@string/quiz_type_answer_hint"
                 android:visibility="gone"
-                app:boxStrokeColor="#FFFFFF"
-                app:hintTextColor="#CCFFFFFF">
+                app:boxBackgroundColor="#FFFFFF"
+                app:boxStrokeWidth="0dp"
+                app:boxCornerRadiusTopStart="16dp"
+                app:boxCornerRadiusTopEnd="16dp"
+                app:boxCornerRadiusBottomStart="16dp"
+                app:boxCornerRadiusBottomEnd="16dp"
+                app:hintTextColor="#666666">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etTextAnswer"
@@ -361,7 +381,7 @@
                     android:inputType="textCapSentences"
                     android:maxLength="160"
                     android:maxLines="3"
-                    android:textColor="#FFFFFF" />
+                    android:textColor="#000000" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Feedback panel -->
