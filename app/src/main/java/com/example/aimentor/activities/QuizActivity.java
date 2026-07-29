@@ -6,11 +6,11 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
-import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -224,7 +224,11 @@ public class QuizActivity extends AppCompatActivity {
 
     private void showQuestion() {
         if (countDownTimer != null) { countDownTimer.cancel(); countDownTimer = null; }
+        Log.d("QUIZ_DEBUG", "showQuestion: index=" + index + " questions.size()=" + questions.size()
+                + " answered=" + answered + " gameInit=" + gameInitialized);
         if (questions.isEmpty() || index < 0 || index >= questions.size()) {
+            Log.e("QUIZ_DEBUG", "showQuestion BAIL: empty=" + questions.isEmpty()
+                    + " index=" + index + " size=" + questions.size());
             finish(); // Safety net — should not happen during normal flow
             return;
         }
@@ -246,16 +250,13 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestionPrompt.setText(question.getPrompt());
 
         boolean textAnswer = question.requiresTextAnswer();
-        GridLayout optionsGrid = findViewById(R.id.optionsGrid);
+        View optionsGrid = findViewById(R.id.optionsGrid);
         optionsGrid.setVisibility(textAnswer ? View.GONE : View.VISIBLE);
         textAnswerLayout.setVisibility(textAnswer ? View.VISIBLE : View.GONE);
         etTextAnswer.setEnabled(true);
         etTextAnswer.setText("");
 
         List<String> questionOptions = question.getOptions();
-        boolean isTwoOptions = questionOptions.size() == 2;
-        // Switch between 1-column (for 2 options) and 2-column (for 4 options)
-        optionsGrid.setColumnCount(isTwoOptions ? 1 : 2);
 
         for (int i = 0; i < optionCards.length; i++) {
             optionCards[i].setBackgroundResource(OPTION_BACKGROUNDS[i]);
@@ -335,6 +336,8 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void onAction() {
+        Log.d("QUIZ_DEBUG", "onAction: answered=" + answered + " index=" + index
+                + " questions.size()=" + questions.size());
         if (questions.isEmpty()) return;
         if (!answered) {
             QuizQuestion question = questions.get(index);
