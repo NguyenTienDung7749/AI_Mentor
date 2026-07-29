@@ -6,11 +6,11 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
-import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -224,7 +224,11 @@ public class QuizActivity extends AppCompatActivity {
 
     private void showQuestion() {
         if (countDownTimer != null) { countDownTimer.cancel(); countDownTimer = null; }
+        Log.d("QUIZ_DEBUG", "showQuestion: index=" + index + " questions.size()=" + questions.size()
+                + " answered=" + answered + " gameInit=" + gameInitialized);
         if (questions.isEmpty() || index < 0 || index >= questions.size()) {
+            Log.e("QUIZ_DEBUG", "showQuestion BAIL: empty=" + questions.isEmpty()
+                    + " index=" + index + " size=" + questions.size());
             finish(); // Safety net — should not happen during normal flow
             return;
         }
@@ -246,16 +250,13 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestionPrompt.setText(question.getPrompt());
 
         boolean textAnswer = question.requiresTextAnswer();
-        GridLayout optionsGrid = findViewById(R.id.optionsGrid);
+        View optionsGrid = findViewById(R.id.optionsGrid);
         optionsGrid.setVisibility(textAnswer ? View.GONE : View.VISIBLE);
         textAnswerLayout.setVisibility(textAnswer ? View.VISIBLE : View.GONE);
         etTextAnswer.setEnabled(true);
         etTextAnswer.setText("");
 
         List<String> questionOptions = question.getOptions();
-        boolean isTwoOptions = questionOptions.size() == 2;
-        // Switch between 1-column (for 2 options) and 2-column (for 4 options)
-        optionsGrid.setColumnCount(isTwoOptions ? 1 : 2);
 
         for (int i = 0; i < optionCards.length; i++) {
             optionCards[i].setBackgroundResource(OPTION_BACKGROUNDS[i]);
@@ -335,6 +336,8 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void onAction() {
+        Log.d("QUIZ_DEBUG", "onAction: answered=" + answered + " index=" + index
+                + " questions.size()=" + questions.size());
         if (questions.isEmpty()) return;
         if (!answered) {
             QuizQuestion question = questions.get(index);
@@ -542,6 +545,14 @@ public class QuizActivity extends AppCompatActivity {
     private void startTimer(QuizQuestion question) {
         if (countDownTimer != null) countDownTimer.cancel();
         tvTimer.setVisibility(View.VISIBLE);
+        tvTimer.setBackgroundResource(R.drawable.bg_timer_circle);
+        tvTimer.setTextColor(0xFFFFFFFF);
+        // Entrance animation
+        tvTimer.setScaleX(0f);
+        tvTimer.setScaleY(0f);
+        tvTimer.animate().scaleX(1f).scaleY(1f).setDuration(300)
+                .setInterpolator(new OvershootInterpolator(1.2f)).start();
+
         long durationMs;
         if (question.requiresTextAnswer()) {
             durationMs = 60_000L; // 60s for text input
@@ -551,16 +562,24 @@ public class QuizActivity extends AppCompatActivity {
             durationMs = 30_000L; // 30s for 4-option multiple choice
         }
         tvTimer.setText(String.valueOf(durationMs / 1000));
-        tvTimer.setTextColor(0xFFFFFFFF);
+        final boolean[] urgentMode = {false};
         countDownTimer = new CountDownTimer(durationMs, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
                 if (isFinishing()) { cancel(); return; }
-                tvTimer.setText(String.valueOf(millisUntilFinished / 1000));
-                if (millisUntilFinished < 6000) {
-                    tvTimer.setTextColor(0xFFE21B3C); // Red when < 6s
-                } else {
-                    tvTimer.setTextColor(0xFFFFFFFF);
+                long seconds = millisUntilFinished / 1000;
+                tvTimer.setText(String.valueOf(seconds));
+                if (seconds <= 5 && !urgentMode[0]) {
+                    urgentMode[0] = true;
+                    tvTimer.setBackgroundResource(R.drawable.bg_timer_circle_urgent);
+                    tvTimer.setTextColor(0xFFE21B3C);
+                }
+                if (urgentMode[0]) {
+                    // Pulse animation each second
+                    tvTimer.animate().scaleX(1.2f).scaleY(1.2f).setDuration(150)
+                            .withEndAction(() -> tvTimer.animate()
+                                    .scaleX(1f).scaleY(1f).setDuration(150).start())
+                            .start();
                 }
             }
 

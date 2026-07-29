@@ -35,18 +35,17 @@
             android:textSize="14sp"
             android:textStyle="bold" />
 
-        <!-- Timer badge -->
+        <!-- Timer badge (circular countdown) -->
         <TextView
             android:id="@+id/tvTimer"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginEnd="8dp"
-            android:background="@drawable/bg_info_panel"
-            android:backgroundTint="#66FFFFFF"
+            android:background="@drawable/bg_timer_circle"
             android:gravity="center"
-            android:text="20"
+            android:text="30"
             android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:visibility="gone" />
 
@@ -363,25 +362,29 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:hint="@string/quiz_type_answer_hint"
                 android:visibility="gone"
                 app:boxBackgroundColor="#FFFFFF"
-                app:boxStrokeWidth="0dp"
+                app:boxStrokeColor="#FFFFFF"
+                app:boxStrokeWidth="2dp"
                 app:boxCornerRadiusTopStart="16dp"
                 app:boxCornerRadiusTopEnd="16dp"
                 app:boxCornerRadiusBottomStart="16dp"
                 app:boxCornerRadiusBottomEnd="16dp"
-                app:hintTextColor="#666666">
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etTextAnswer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="@string/quiz_type_answer_hint"
                     android:imeOptions="actionDone"
                     android:inputType="textCapSentences"
                     android:maxLength="160"
                     android:maxLines="3"
-                    android:textColor="#000000" />
+                    android:paddingVertical="16dp"
+                    android:textColor="#1A1A2E"
+                    android:textColorHint="#888888"
+                    android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Feedback panel -->
