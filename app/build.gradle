@@ -5,7 +5,13 @@ plugins {
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
-    localPropertiesFile.withInputStream { localProperties.load(it) }
+    // Read as text and strip UTF-8 BOM if present, then load into Properties.
+    // Some Windows editors silently add a BOM that corrupts the first key.
+    def rawText = localPropertiesFile.getText("UTF-8")
+    if (rawText.startsWith("\uFEFF")) {
+        rawText = rawText.substring(1)
+    }
+    localProperties.load(new StringReader(rawText))
 }
 def groqApiKey = localProperties.getProperty("GROQ_API_KEY", "")
 def mistralApiKey = localProperties.getProperty("MISTRAL_API_KEY", "")
