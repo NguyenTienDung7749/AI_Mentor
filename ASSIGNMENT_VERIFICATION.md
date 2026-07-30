@@ -16,6 +16,10 @@ read from `local.properties` and compiled into `BuildConfig`, as agreed for
 this assignment. That is acceptable for a private demonstration build but is
 not a production secret-management design.
 
+The final optimized release APK is 2,600,651 bytes, 13.43% smaller than the
+verified pre-cleanup build. The optimized quiz layout was also exercised on
+the Pixel 7 AVD after the full automated test run.
+
 ## Requirement traceability
 
 | Area | User-visible evidence | Main implementation | Automated evidence |

@@ -6,11 +6,9 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.util.Log;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -91,8 +89,7 @@ public class QuizActivity extends AppCompatActivity {
     private TextView tvProgress, tvQuestionPrompt, tvFeedback, tvQuizType,
             tvQuizError, tvScore, tvTimer;
     private CountDownTimer countDownTimer;
-    private FrameLayout[] optionCards;
-    private TextView[] optionTexts;
+    private TextView[] optionCards;
     private TextInputLayout textAnswerLayout;
     private TextInputEditText etTextAnswer;
     private MaterialButton btnAction, btnRetryQuiz;
@@ -163,12 +160,9 @@ public class QuizActivity extends AppCompatActivity {
         textAnswerLayout = findViewById(R.id.textAnswerLayout);
         etTextAnswer = findViewById(R.id.etTextAnswer);
 
-        optionCards = new FrameLayout[]{
+        optionCards = new TextView[]{
                 findViewById(R.id.optionA), findViewById(R.id.optionB),
                 findViewById(R.id.optionC), findViewById(R.id.optionD)};
-        optionTexts = new TextView[]{
-                findViewById(R.id.tvOpt0), findViewById(R.id.tvOpt1),
-                findViewById(R.id.tvOpt2), findViewById(R.id.tvOpt3)};
 
         for (int i = 0; i < optionCards.length; i++) {
             final int optIndex = i;
@@ -225,11 +219,7 @@ public class QuizActivity extends AppCompatActivity {
 
     private void showQuestion() {
         if (countDownTimer != null) { countDownTimer.cancel(); countDownTimer = null; }
-        Log.d("QUIZ_DEBUG", "showQuestion: index=" + index + " questions.size()=" + questions.size()
-                + " answered=" + answered + " gameInit=" + gameInitialized);
         if (questions.isEmpty() || index < 0 || index >= questions.size()) {
-            Log.e("QUIZ_DEBUG", "showQuestion BAIL: empty=" + questions.isEmpty()
-                    + " index=" + index + " size=" + questions.size());
             finish(); // Safety net — should not happen during normal flow
             return;
         }
@@ -258,10 +248,6 @@ public class QuizActivity extends AppCompatActivity {
         etTextAnswer.setText("");
 
         List<String> questionOptions = question.getOptions();
-        Log.d("QUIZ_DEBUG", "Q" + index + " type=" + question.getType()
-                + " options=" + questionOptions.size()
-                + " opts=" + questionOptions);
-
         for (int i = 0; i < optionCards.length; i++) {
             optionCards[i].setBackgroundResource(OPTION_BACKGROUNDS[i]);
             optionCards[i].setAlpha(1f);
@@ -271,7 +257,7 @@ public class QuizActivity extends AppCompatActivity {
 
             if (i < questionOptions.size()) {
                 optionCards[i].setVisibility(View.VISIBLE);
-                optionTexts[i].setText(questionOptions.get(i));
+                optionCards[i].setText(questionOptions.get(i));
             } else {
                 optionCards[i].setVisibility(View.GONE);
             }
@@ -344,8 +330,6 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void onAction() {
-        Log.d("QUIZ_DEBUG", "onAction: answered=" + answered + " index=" + index
-                + " questions.size()=" + questions.size());
         if (questions.isEmpty()) return;
         if (!answered) {
             QuizQuestion question = questions.get(index);
@@ -390,7 +374,7 @@ public class QuizActivity extends AppCompatActivity {
         lastAnswerCorrect = correct;
         if (countDownTimer != null) { countDownTimer.cancel(); countDownTimer = null; }
         tvTimer.setVisibility(View.GONE);
-        for (FrameLayout card : optionCards) card.setEnabled(false);
+        for (TextView card : optionCards) card.setEnabled(false);
         etTextAnswer.setEnabled(false);
 
         tvFeedback.setVisibility(View.VISIBLE);

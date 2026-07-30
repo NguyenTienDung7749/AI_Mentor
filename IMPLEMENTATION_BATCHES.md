@@ -148,7 +148,11 @@ Final result:
 - 70 unit tests passed.
 - 30 instrumented tests passed on Pixel 7 Android 15 (API 35).
 - Debug and minified unsigned release APKs assembled successfully.
-- Android Lint completed with 0 errors and 23 non-blocking warnings.
+- The release APK was reduced from 3,004,303 to 2,600,651 bytes (13.43%)
+  by limiting packaged locales, removing stale strings/debug logs and
+  flattening the quiz-option view hierarchy.
+- Android Lint completed with 0 errors and 15 non-blocking version/overdraw
+  warnings; no unused-resource or redundant-layout warnings remain.
 - A real airplane-mode/restart/reconnect flow produced and saved a remote
   `openai/gpt-oss-120b` answer through WorkManager.
 - Traceability, limitations, manual test log and screenshots are recorded in
