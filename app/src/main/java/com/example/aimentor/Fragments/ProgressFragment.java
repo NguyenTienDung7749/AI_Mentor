@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -18,6 +19,7 @@ import androidx.lifecycle.Lifecycle;
 
 import com.example.aimentor.R;
 import com.example.aimentor.ai.SubjectClassifier;
+import com.example.aimentor.data.LocalLeaderboardRow;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.Gamification;
 import com.example.aimentor.util.LearningAnalytics;
@@ -41,8 +43,11 @@ public class ProgressFragment extends Fragment {
     private TextView tvProgressAccuracy, tvProgressCorrect;
     private TextView tvReviewSummary, tvAccuracyTrends, tvRepeatedTopics;
     private TextView tvSubjectBreakdown, tvWeeklySummary, tvWeeklyEmpty;
+    private TextView tvLocalLeaderboard;
     private ProgressBar progressLevel;
     private LinearLayout weeklyActivityContainer;
+    private ScrollView progressScroll;
+    private boolean initialScrollApplied;
     private int refreshGeneration;
 
     public ProgressFragment() { }
@@ -76,8 +81,10 @@ public class ProgressFragment extends Fragment {
         tvSubjectBreakdown = view.findViewById(R.id.tvSubjectBreakdown);
         tvWeeklySummary = view.findViewById(R.id.tvWeeklySummary);
         tvWeeklyEmpty = view.findViewById(R.id.tvWeeklyEmpty);
+        tvLocalLeaderboard = view.findViewById(R.id.tvLocalLeaderboard);
         progressLevel = view.findViewById(R.id.progressLevel);
         weeklyActivityContainer = view.findViewById(R.id.weeklyActivityContainer);
+        progressScroll = view.findViewById(R.id.progressScroll);
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvProgressHeading), true);
     }
@@ -144,13 +151,23 @@ public class ProgressFragment extends Fragment {
                 progress.reviewedAnswers);
         String readingTime = getResources().getQuantityString(
                 R.plurals.minute_count, reviewMinutes, reviewMinutes);
-        tvReviewSummary.setText(getString(R.string.progress_review_detail,
-                bookmarks, reviewed, readingTime));
+        String reviewDetail = getString(R.string.progress_review_detail,
+                bookmarks, reviewed, readingTime);
+        String reviewStates = getString(R.string.progress_review_states,
+                progress.dueReviewCount, progress.learningCount,
+                progress.masteredCount);
+        tvReviewSummary.setText(getString(
+                R.string.two_line_summary, reviewDetail, reviewStates));
 
         tvAccuracyTrends.setText(buildAccuracyTrends(progress));
         bindRepeatedTopics(progress);
         bindSubjectBreakdown(progress);
         bindWeeklyActivity(progress);
+        bindLocalLeaderboard(progress);
+        if (!initialScrollApplied) {
+            initialScrollApplied = true;
+            progressScroll.post(() -> progressScroll.scrollTo(0, 0));
+        }
     }
 
     private String buildAccuracyTrends(StudyRepository.Progress progress) {
@@ -212,7 +229,8 @@ public class ProgressFragment extends Fragment {
             String quizCount = getResources().getQuantityString(
                     R.plurals.quiz_attempt_count, quizzes, quizzes);
             lines.add(getString(R.string.subject_question_quiz_count,
-                    subject, questionCount, quizCount));
+                    subject, questionCount, quizCount)
+                    + "\n" + masteryLine(progress, subject));
         }
         tvSubjectBreakdown.setText(lines.isEmpty()
                 ? getString(R.string.subject_activity_empty)
@@ -227,8 +245,13 @@ public class ProgressFragment extends Fragment {
         String activeDayCount = getResources().getQuantityString(
                 R.plurals.active_day_count, progress.activeDaysLast7Days,
                 progress.activeDaysLast7Days);
+        String weeklyDetail = getString(
+                R.string.weekly_activity_summary, activityCount, activeDayCount);
+        String streak = getResources().getQuantityString(
+                R.plurals.current_streak_days,
+                progress.currentStreakDays, progress.currentStreakDays);
         tvWeeklySummary.setText(getString(
-                R.string.weekly_activity_summary, activityCount, activeDayCount));
+                R.string.two_line_summary, weeklyDetail, streak));
         boolean empty = progress.activityCountLast7Days == 0;
         tvWeeklyEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
         weeklyActivityContainer.setVisibility(empty ? View.GONE : View.VISIBLE);
@@ -243,6 +266,49 @@ public class ProgressFragment extends Fragment {
         for (StudyRepository.DailyActivity day : progress.last7Days) {
             addActivityRow(dateFormat.format(day.dayStart), day.count, max);
         }
+    }
+
+    private String masteryLine(
+            StudyRepository.Progress progress, String subject) {
+        StudyRepository.SubjectMastery mastery =
+                progress.subjectMastery.get(subject);
+        if (mastery == null || mastery.answered == 0) {
+            return getString(R.string.subject_mastery_no_quiz,
+                    mastery == null ? "Exploring" : mastery.label);
+        }
+        String answers = getResources().getQuantityString(
+                R.plurals.quiz_answer_count,
+                mastery.answered, mastery.answered);
+        return getString(R.string.subject_mastery_with_accuracy,
+                mastery.label, mastery.accuracyPercent, answers);
+    }
+
+    private void bindLocalLeaderboard(StudyRepository.Progress progress) {
+        if (!progress.localLeaderboardEnabled) {
+            tvLocalLeaderboard.setText(
+                    R.string.local_leaderboard_opt_in_needed);
+            return;
+        }
+        if (progress.localLeaderboard.isEmpty()) {
+            tvLocalLeaderboard.setText(R.string.local_leaderboard_empty);
+            return;
+        }
+        List<String> rows = new ArrayList<>();
+        long currentUserId = session.getCurrentUserId();
+        for (int index = 0; index < progress.localLeaderboard.size(); index++) {
+            LocalLeaderboardRow entry = progress.localLeaderboard.get(index);
+            String name = entry.name == null || entry.name.trim().isEmpty()
+                    ? getString(R.string.default_student_name)
+                    : entry.name.trim();
+            if (entry.id == currentUserId) {
+                name = getString(
+                        R.string.local_leaderboard_current_name, name);
+            }
+            rows.add(getString(R.string.local_leaderboard_row,
+                    index + 1, name, entry.xp));
+        }
+        tvLocalLeaderboard.setText(
+                android.text.TextUtils.join("\n", rows));
     }
 
     private void addActivityRow(String label, int count, int max) {

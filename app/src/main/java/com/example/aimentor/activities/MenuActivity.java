@@ -74,6 +74,14 @@ public class MenuActivity extends AppCompatActivity {
         return 0;
     }
 
+    /** Lets dashboard actions open an existing top-level destination. */
+    public void selectTab(int position) {
+        if (viewPager == null) return;
+        int safePosition = Math.max(0, Math.min(position, TITLE_RES.length - 1));
+        viewPager.setCurrentItem(
+                safePosition, WindowUiHelper.animationsEnabled(this));
+    }
+
     private void setupViewPager() {
         ViewPagerAdapter adapter = new ViewPagerAdapter(getSupportFragmentManager(), getLifecycle());
         viewPager.setAdapter(adapter);

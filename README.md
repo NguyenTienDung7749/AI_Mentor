@@ -1,6 +1,6 @@
 # AI Study Mentor
 
-AI Study Mentor là một ứng dụng Android bằng Java được tạo ra cho kịch bản học tập BrightPath trong bài tập BTEC Unit 22: Application Development (Phát triển Ứng dụng). Ứng dụng kết hợp trợ lý học tập được hỗ trợ bởi Groq với tính năng OCR trên thiết bị, các bài trắc nghiệm được cá nhân hóa, lịch sử cục bộ, theo dõi tiến độ và nhắc nhở học tập theo lịch trình.
+AI Study Mentor là một ứng dụng Android bằng Java được tạo ra cho kịch bản học tập BrightPath trong bài tập BTEC Unit 22: Application Development (Phát triển Ứng dụng). Ứng dụng kết hợp trợ lý học tập dùng Groq cho câu hỏi văn bản và Mistral Vision cho câu hỏi có ảnh, cùng với các bài trắc nghiệm được cá nhân hóa, lịch sử cục bộ, theo dõi tiến độ và nhắc nhở học tập theo lịch trình.
 
 Kho lưu trữ này chứa mã nguồn ứng dụng. Các phần phân tích bài tập, minh chứng kiểm thử, ảnh chụp màn hình, đánh giá chéo và tự đánh giá thuộc về báo cáo bài tập nộp riêng thay vì nằm trong cây mã nguồn này.
 
@@ -10,26 +10,26 @@ Kho lưu trữ này chứa mã nguồn ứng dụng. Các phần phân tích bà
 |---|---|
 | Tài khoản | Đăng ký, đăng nhập, hướng dẫn người dùng mới (onboarding) và quản lý phiên cục bộ |
 | Câu trả lời từ AI | Câu trả lời có cấu trúc bằng ngôn ngữ của câu hỏi với phân loại môn học và độ khó |
-| Định tuyến mô hình (Model routing) | Lựa chọn cục bộ giữa `llama-3.1-8b-instant` và `llama-3.3-70b-versatile` |
+| Định tuyến mô hình (Model routing) | Chọn giữa `openai/gpt-oss-20b` và `openai/gpt-oss-120b` cho văn bản; dùng `ministral-14b-latest` cho một ảnh đính kèm |
 | Độ tin cậy | Cho phép thử lại mô hình thay thế có giới hạn, thời hạn phản hồi tổng cộng là 60 giây và nội dung dự phòng khi ngoại tuyến dựa trên quy tắc |
-| OCR | Nhập ảnh từ thư viện hoặc camera, sử dụng ML Kit OCR trên thiết bị và có thể chỉnh sửa văn bản được trích xuất |
+| Câu hỏi có ảnh | Nhập một ảnh từ thư viện hoặc camera, chuẩn hóa hướng ảnh, giảm kích thước/nén trên thiết bị rồi gửi ảnh cùng câu hỏi tới Mistral Vision |
 | Lịch sử | Tìm kiếm, bộ lọc môn học, đánh dấu (bookmark) và trạng thái "đã ôn tập" được lưu trữ bằng Room |
 | Trắc nghiệm (Quiz) | Cá nhân hóa theo chủ đề/lịch sử, độ khó thích ứng, trắc nghiệm nhiều lựa chọn, đúng/sai, trả lời ngắn, điền vào chỗ trống, giải thích và thử lại các câu sai |
 | Tiến độ | Thống kê thực tế qua Room, thời gian ôn tập, biểu đồ độ chính xác 7/30 ngày, các chủ đề lặp lại, tổng số theo môn học, XP, cấp độ và huy hiệu |
 | Thông báo | Nhắc nhở hàng ngày bằng WorkManager do người dùng kiểm soát, có thể chọn thời gian và có thông báo chạy thử nghiệm |
 | Giao diện | Material UI, chế độ sáng/tối, mở khóa avatar/chủ đề (theme), các trạng thái đang tải/lỗi/trống và phục hồi trạng thái |
 
-Chỉ những câu trả lời thành công qua mạng (remote) mới được lưu vào Room. Nội dung dự phòng ngoại tuyến là tạm thời và không được tính vào lịch sử, tiến độ hay điểm XP. Mỗi khi gửi một câu hỏi luôn bắt đầu một yêu cầu hoàn toàn mới thay vì sử dụng lại câu trả lời cũ.
+Chỉ những câu trả lời thành công qua mạng (remote) mới được lưu vào Room. Nội dung dự phòng ngoại tuyến là tạm thời và không được tính vào lịch sử, tiến độ hay điểm XP. Phiên bản baseline bắt đầu một request mới cho mỗi câu hỏi; các batch nâng cấp của bài nộp bổ sung cache chính xác và hàng đợi câu hỏi ngoại tuyến mà không tự động dùng lại các câu trả lời chỉ gần giống nhau.
 
 ## Công nghệ
 
 - Tương thích với mã nguồn Java 11
 - Android SDK: tối thiểu (min) 24, compile/target 36
-- Android Gradle Plugin 8.11.2 và Gradle 8.13
+- Android Gradle Plugin 9.3.1 và Gradle 9.5.0
 - AndroidX, Material Components và ViewPager2
 - Room để lưu trữ dữ liệu cục bộ
 - Retrofit, OkHttp và Gson cho API tương thích với OpenAI của Groq
-- ML Kit Text Recognition cho tính năng OCR trên thiết bị
+- Mistral Vision cho câu hỏi có một ảnh đính kèm
 - WorkManager cho các nhắc nhở hàng ngày chạy ngầm
 - JUnit, MockWebServer, AndroidX Test và Espresso
 
@@ -145,7 +145,7 @@ Sử dụng thiết bị hoặc profile kiểm thử chuyên dụng: task test c
 
 - Mật khẩu được lưu dưới dạng băm PBKDF2 có salt cho từng người dùng; các hàm băm cũ (legacy hashes) sẽ được tự động nâng cấp sau khi đăng nhập thành công.
 - Truy cập vào dữ liệu Room trên luồng chính (main-thread) bị vô hiệu hóa. Hoạt động của Repository chạy trên các executor nền (background executors) và trả về kết quả cho luồng chính.
-- Ảnh được xử lý hoàn toàn trên thiết bị. Việc nhận dạng văn bản (OCR) chạy cục bộ và chỉ phần văn bản sau khi đã chỉnh sửa mới được gửi tới nhà cung cấp AI.
+- Ảnh được chuẩn hóa hướng, giảm kích thước và nén JPEG trên thiết bị. Khi người dùng gửi câu hỏi có ảnh, cả ảnh đã nén và nội dung câu hỏi được truyền bằng HTTPS tới Mistral để phân tích. Không có ML Kit OCR trong phiên bản hiện tại.
 - Câu hỏi nhập vào được giới hạn trong 6,000 ký tự.
 - Tính năng sao lưu ứng dụng bị vô hiệu hóa và màn hình Cài đặt (Settings) cung cấp tính năng xóa tài khoản/dữ liệu triệt để.
 - Các nhắc nhở hàng ngày là tùy chọn, sử dụng một job định kỳ duy nhất và sẽ bị hủy bỏ khi đăng xuất bình thường hoặc khi xóa tài khoản.
@@ -154,7 +154,7 @@ Sử dụng thiết bị hoặc profile kiểm thử chuyên dụng: task test c
 ## Những hạn chế đã biết của nguyên mẫu (prototype limitations)
 
 - Quá trình xác thực và mọi dữ liệu người dùng chỉ được lưu trên thiết bị (device-local); không có dịch vụ tài khoản đám mây hay tính năng đồng bộ hóa giữa các thiết bị.
-- Groq key có thể bị trích xuất từ file APK đã build vì không có proxy backend bảo vệ.
+- Groq và Mistral key có thể bị trích xuất từ file APK đã build vì nguyên mẫu lớp học không sử dụng proxy backend. Chỉ dùng key giới hạn quota và dữ liệu giả định; kiến trúc production phải chuyển credential sang backend đáng tin cậy.
 - Các nhắc nhở của WorkManager giúp tiết kiệm pin và có tính bền bỉ nhưng không phải là báo thức chính xác; hệ thống Android có thể gửi chúng muộn hơn so với thời gian đã chọn.
 - Các câu trả lời khi ngoại tuyến mang tính hướng dẫn học tập cố định, không phải là sự thay thế cho các mô hình ngôn ngữ trí tuệ nhân tạo trực tuyến.
 - Quá trình ký phát hành (release signing), giám sát trong môi trường production và triển khai lên store ứng dụng nằm ngoài phạm vi nguyên mẫu của bài tập.

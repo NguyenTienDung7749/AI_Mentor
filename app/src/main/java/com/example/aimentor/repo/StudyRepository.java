@@ -7,6 +7,7 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
+import com.example.aimentor.R;
 import com.example.aimentor.ai.AiAnswer;
 import com.example.aimentor.ai.AiEngine;
 import com.example.aimentor.ai.AiEngineFactory;
@@ -16,15 +17,25 @@ import com.example.aimentor.ai.QuizQuestion;
 import com.example.aimentor.ai.QuizGenerationConfig;
 import com.example.aimentor.ai.SubjectClassifier;
 import com.example.aimentor.data.AppDatabase;
+import com.example.aimentor.data.PendingQuestion;
+import com.example.aimentor.data.PendingQuestionDao;
 import com.example.aimentor.data.Question;
 import com.example.aimentor.data.QuestionDao;
 import com.example.aimentor.data.QuizAttempt;
 import com.example.aimentor.data.QuizAttemptDao;
+import com.example.aimentor.data.LocalLeaderboardRow;
 import com.example.aimentor.data.User;
 import com.example.aimentor.data.UserDao;
 import com.example.aimentor.util.ContentModerator;
+import com.example.aimentor.util.AnswerCacheKey;
 import com.example.aimentor.util.Gamification;
 import com.example.aimentor.util.LearningAnalytics;
+import com.example.aimentor.util.NetworkUtils;
+import com.example.aimentor.util.NotificationHelper;
+import com.example.aimentor.util.PendingQuestionScheduler;
+import com.example.aimentor.util.ProgressMetrics;
+import com.example.aimentor.util.ReviewState;
+import com.example.aimentor.util.SessionManager;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -32,14 +43,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 /**
- * Core study logic: asking fresh online questions, generating practice
- * quizzes, recording results, awarding XP and computing progress statistics.
- * Only successful remote answers are persisted.
+ * Core study logic: asking or queueing questions, reusing exact saved answers,
+ * generating practice quizzes, recording results, awarding XP and computing
+ * progress statistics. Only successful remote answers are saved to history.
  */
 public class StudyRepository {
 
@@ -50,11 +62,14 @@ public class StudyRepository {
     private final UserDao userDao;
     private final QuestionDao questionDao;
     private final QuizAttemptDao quizDao;
+    private final PendingQuestionDao pendingQuestionDao;
     private final AiEngine engine;
     private final Handler mainHandler;
+    private final Context appContext;
 
     public StudyRepository(Context context) {
-        this(AppDatabase.getInstance(context), AiEngineFactory.create(),
+        this(context.getApplicationContext(),
+                AppDatabase.getInstance(context), AiEngineFactory.create(),
                 new Handler(Looper.getMainLooper()));
     }
 
@@ -63,10 +78,18 @@ public class StudyRepository {
      * in-memory Room database. Production callers continue to use Context.
      */
     StudyRepository(AppDatabase db, AiEngine engine, Handler mainHandler) {
+        this(null, db, engine, mainHandler);
+    }
+
+    private StudyRepository(
+            Context appContext, AppDatabase db,
+            AiEngine engine, Handler mainHandler) {
+        this.appContext = appContext;
         this.database = db;
         this.userDao = db.userDao();
         this.questionDao = db.questionDao();
         this.quizDao = db.quizAttemptDao();
+        this.pendingQuestionDao = db.pendingQuestionDao();
         this.engine = engine;
         this.mainHandler = mainHandler;
     }
@@ -104,9 +127,19 @@ public class StudyRepository {
         public final boolean leveledUp;
         public final AnswerSource source;
         public final Question answer;
+        public final boolean queued;
+        public final boolean cached;
+        public final long pendingId;
 
         AskResult(boolean success, String message, long questionId, boolean saved,
                   boolean leveledUp, AnswerSource source, Question answer) {
+            this(success, message, questionId, saved, leveledUp,
+                    source, answer, false, false, -1L);
+        }
+
+        AskResult(boolean success, String message, long questionId, boolean saved,
+                  boolean leveledUp, AnswerSource source, Question answer,
+                  boolean queued, boolean cached, long pendingId) {
             this.success = success;
             this.message = message;
             this.questionId = questionId;
@@ -114,6 +147,9 @@ public class StudyRepository {
             this.leveledUp = leveledUp;
             this.source = source == null ? AnswerSource.LEGACY : source;
             this.answer = answer;
+            this.queued = queued;
+            this.cached = cached;
+            this.pendingId = pendingId;
         }
     }
 
@@ -135,15 +171,25 @@ public class StudyRepository {
     public void askAsync(long userId, String questionText, String subjectHint,
                          String explanationStyle, ImageAttachment image,
                          @NonNull AskCallback callback) {
+        askAsync(userId, questionText, subjectHint,
+                explanationStyle, image, true, callback);
+    }
+
+    public void askAsync(long userId, String questionText, String subjectHint,
+                         String explanationStyle, ImageAttachment image,
+                         boolean allowCache,
+                         @NonNull AskCallback callback) {
         IO_EXECUTOR.execute(() -> {
             AskResult result;
             try {
                 result = ask(userId, questionText, subjectHint,
-                        explanationStyle, image);
+                        explanationStyle, image, allowCache);
             } catch (RuntimeException ignored) {
-                result = new AskResult(false,
-                        "Couldn’t connect to AI Mentor. Check your internet connection and try again.",
-                        -1, false, false, AnswerSource.LEGACY, null);
+                result = appContext == null
+                        ? connectionFailure()
+                        : queueQuestion(
+                                userId, questionText, subjectHint,
+                                explanationStyle, image);
             }
             AskResult deliveredResult = result;
             mainHandler.post(() -> callback.onResult(deliveredResult));
@@ -152,12 +198,20 @@ public class StudyRepository {
 
     @WorkerThread
     public AskResult ask(long userId, String questionText, String subjectHint) {
-        return ask(userId, questionText, subjectHint, "", null);
+        return ask(userId, questionText, subjectHint, "", null, true);
     }
 
     @WorkerThread
     public AskResult ask(long userId, String questionText, String subjectHint,
                          String explanationStyle, ImageAttachment image) {
+        return ask(userId, questionText, subjectHint,
+                explanationStyle, image, true);
+    }
+
+    @WorkerThread
+    public AskResult ask(long userId, String questionText, String subjectHint,
+                         String explanationStyle, ImageAttachment image,
+                         boolean allowCache) {
         ContentModerator.Result mod = ContentModerator.check(questionText);
         if (!mod.allowed) {
             return new AskResult(false, mod.reason, -1, false, false,
@@ -173,11 +227,43 @@ public class StudyRepository {
         String resolvedStyle = explanationStyle == null
                 || explanationStyle.trim().isEmpty()
                 ? user.explanationStyle : explanationStyle.trim();
-        AiAnswer generated = image == null
-                ? engine.answer(questionText, user.educationLevel,
-                resolvedStyle, subjectHint, user.subjects)
-                : engine.answerWithImage(questionText, image,
-                user.educationLevel, resolvedStyle, subjectHint, user.subjects);
+        String cacheKey = image == null
+                ? AnswerCacheKey.create(
+                questionText, subjectHint, resolvedStyle, user.educationLevel)
+                : "";
+        if (allowCache && image == null) {
+            Question cached = questionDao.findReusable(userId, cacheKey);
+            if (cached != null) {
+                questionDao.markReused(userId, cached.id);
+                cached.reused = true;
+                return new AskResult(
+                        true, "Opened an exact saved answer.",
+                        cached.id, true, false,
+                        AnswerSource.fromStorage(cached.answerSource),
+                        cached, false, true, -1L);
+            }
+        }
+        if (appContext != null && !NetworkUtils.isOnline(appContext)) {
+            return queueQuestion(
+                    userId, questionText, subjectHint,
+                    resolvedStyle, image);
+        }
+
+        AiAnswer generated;
+        try {
+            generated = image == null
+                    ? engine.answer(questionText, user.educationLevel,
+                    resolvedStyle, subjectHint, user.subjects)
+                    : engine.answerWithImage(questionText, image,
+                    user.educationLevel, resolvedStyle, subjectHint, user.subjects);
+        } catch (RuntimeException requestFailed) {
+            if (appContext != null) {
+                return queueQuestion(
+                        userId, questionText, subjectHint,
+                        resolvedStyle, image);
+            }
+            throw requestFailed;
+        }
         long elapsedNanos = System.nanoTime() - startedAt;
 
         AnswerSource answerSource = generated.getSource();
@@ -191,6 +277,8 @@ public class StudyRepository {
         q.answerSource = answerSource.name();
         q.modelName = generated.getModelName();
         q.responseTimeMs = Math.max(0L, elapsedNanos / 1_000_000L);
+        q.explanationStyle = resolvedStyle;
+        q.cacheKey = cacheKey;
 
         if (answerSource == AnswerSource.REMOTE && generated.isOutOfScope()) {
             return new AskResult(true, "Academic-scope guidance shown.",
@@ -200,9 +288,17 @@ public class StudyRepository {
             return saveRemoteAnswer(userId, q, answerSource);
         }
 
+        return appContext == null
+                ? connectionFailure()
+                : queueQuestion(
+                userId, questionText, subjectHint,
+                resolvedStyle, image);
+    }
+
+    private AskResult connectionFailure() {
         return new AskResult(false,
                 "Couldn’t connect to AI Mentor. Check your internet connection and try again.",
-                -1L, false, false, answerSource, null);
+                -1L, false, false, AnswerSource.LEGACY, null);
     }
 
     /**
@@ -219,6 +315,18 @@ public class StudyRepository {
                     return new AskResult(false,
                             "Your account is no longer available. Please sign in again.",
                             -1L, false, false, AnswerSource.LEGACY, null);
+                }
+                if (question.requestKey != null
+                        && !question.requestKey.isEmpty()) {
+                    Question existing = questionDao.findByRequestKey(
+                            userId, question.requestKey);
+                    if (existing != null) {
+                        return new AskResult(true,
+                                "Queued answer was already saved.",
+                                existing.id, true, false,
+                                AnswerSource.fromStorage(existing.answerSource),
+                                existing);
+                    }
                 }
                 int beforeLevel = Gamification.levelForXp(currentUser.xp);
                 long questionId = questionDao.insert(question);
@@ -239,6 +347,206 @@ public class StudyRepository {
             return new AskResult(false,
                     "The answer arrived but could not be saved. Please try again.",
                     -1L, false, false, AnswerSource.LEGACY, null);
+        }
+    }
+
+    // ------------------------------------------------------- Offline queue
+
+    public enum PendingSyncResult {
+        COMPLETE,
+        RETRY
+    }
+
+    @WorkerThread
+    AskResult queueQuestion(
+            long userId, String questionText, String subjectHint,
+            String explanationStyle, ImageAttachment image) {
+        PendingQuestion pending = new PendingQuestion();
+        pending.userId = userId;
+        pending.questionText = questionText == null
+                ? "" : questionText.trim();
+        pending.subjectHint = subjectHint == null
+                ? "" : subjectHint.trim();
+        pending.explanationStyle = explanationStyle == null
+                ? "" : explanationStyle.trim();
+        if (image != null) {
+            pending.imageMimeType = image.getMimeType();
+            pending.imageBase64 = image.getBase64Data();
+        }
+        pending.requestKey = UUID.randomUUID().toString();
+        long pendingId = pendingQuestionDao.insert(pending);
+        if (pendingId <= 0) {
+            return connectionFailure();
+        }
+        pending.id = pendingId;
+        if (appContext != null) {
+            PendingQuestionScheduler.enqueue(appContext);
+        }
+        return new AskResult(
+                true,
+                "Question saved. AI Mentor will answer when you’re online.",
+                -1L, false, false, AnswerSource.LEGACY, null,
+                true, false, pendingId);
+    }
+
+    @WorkerThread
+    public List<PendingQuestion> getPendingQuestions(long userId) {
+        return pendingQuestionDao.getActiveForUser(userId);
+    }
+
+    public void getPendingQuestionsAsync(
+            long userId,
+            @NonNull DataCallback<List<PendingQuestion>> callback) {
+        executeAsync(() -> getPendingQuestions(userId),
+                new ArrayList<>(), callback);
+    }
+
+    @WorkerThread
+    public int getPendingCount(long userId) {
+        return pendingQuestionDao.countActiveForUser(userId);
+    }
+
+    public void getPendingCountAsync(
+            long userId, @NonNull DataCallback<Integer> callback) {
+        executeAsync(() -> getPendingCount(userId), 0, callback);
+    }
+
+    @WorkerThread
+    public boolean retryPendingNow(long userId, long pendingId) {
+        boolean updated = pendingQuestionDao.retryNow(
+                userId, pendingId, System.currentTimeMillis()) == 1;
+        if (updated && appContext != null) {
+            PendingQuestionScheduler.enqueue(appContext);
+        }
+        return updated;
+    }
+
+    public void retryPendingNowAsync(
+            long userId, long pendingId,
+            @NonNull DataCallback<Boolean> callback) {
+        executeAsync(
+                () -> retryPendingNow(userId, pendingId), false, callback);
+    }
+
+    /**
+     * Processes a small oldest-first batch. WorkManager owns exponential
+     * backoff, while the Room attempt count prevents an invalid provider
+     * configuration from retrying forever.
+     */
+    @WorkerThread
+    public PendingSyncResult syncPendingQuestions() {
+        if (appContext != null && !NetworkUtils.isOnline(appContext)) {
+            return PendingSyncResult.RETRY;
+        }
+        long now = System.currentTimeMillis();
+        pendingQuestionDao.recoverStaleSending(
+                now - 15L * 60L * 1000L, now);
+        List<PendingQuestion> ready = pendingQuestionDao.getRetryable(
+                PendingQuestion.MAX_AUTOMATIC_ATTEMPTS, 5);
+        for (PendingQuestion pending : ready) {
+            syncPendingQuestion(pending);
+        }
+        return pendingQuestionDao.countRetryable(
+                PendingQuestion.MAX_AUTOMATIC_ATTEMPTS) > 0
+                ? PendingSyncResult.RETRY : PendingSyncResult.COMPLETE;
+    }
+
+    private void syncPendingQuestion(PendingQuestion pending) {
+        long now = System.currentTimeMillis();
+        if (pending == null
+                || pendingQuestionDao.markSending(pending.id, now) != 1) {
+            return;
+        }
+        try {
+            ContentModerator.Result moderation =
+                    ContentModerator.check(pending.questionText);
+            User user = userDao.findById(pending.userId);
+            if (!moderation.allowed || user == null) {
+                pendingQuestionDao.markFailed(
+                        pending.id,
+                        user == null ? "Account is no longer available."
+                                : moderation.reason,
+                        System.currentTimeMillis());
+                return;
+            }
+
+            ImageAttachment image = pending.imageBase64.isEmpty()
+                    ? null : new ImageAttachment(
+                    pending.imageMimeType, pending.imageBase64);
+            String resolvedStyle = pending.explanationStyle.isEmpty()
+                    ? user.explanationStyle : pending.explanationStyle;
+            String cacheKey = image == null
+                    ? AnswerCacheKey.create(
+                    pending.questionText, pending.subjectHint,
+                    resolvedStyle, user.educationLevel)
+                    : "";
+            Question cached = image == null
+                    ? questionDao.findReusable(pending.userId, cacheKey)
+                    : null;
+            if (cached != null) {
+                questionDao.markReused(pending.userId, cached.id);
+                markPendingAnswerReady(pending.id, cached.id);
+                return;
+            }
+
+            long startedAt = System.nanoTime();
+            AiAnswer generated = image == null
+                    ? engine.answer(
+                    pending.questionText, user.educationLevel,
+                    resolvedStyle, pending.subjectHint, user.subjects)
+                    : engine.answerWithImage(
+                    pending.questionText, image, user.educationLevel,
+                    resolvedStyle, pending.subjectHint, user.subjects);
+            long elapsedNanos = System.nanoTime() - startedAt;
+            if (generated.getSource() != AnswerSource.REMOTE) {
+                throw new IllegalStateException(
+                        "The online AI provider is still unavailable.");
+            }
+            if (generated.isOutOfScope()) {
+                pendingQuestionDao.markSent(
+                        pending.id, 0L, System.currentTimeMillis());
+                return;
+            }
+
+            Question question = new Question();
+            question.userId = pending.userId;
+            question.questionText = pending.questionText;
+            question.subject = generated.getSubject();
+            question.difficulty = generated.getDifficulty();
+            question.answerText = generated.toDisplayString(
+                    pending.questionText, resolvedStyle);
+            question.answerSource = generated.getSource().name();
+            question.modelName = generated.getModelName();
+            question.responseTimeMs =
+                    Math.max(0L, elapsedNanos / 1_000_000L);
+            question.explanationStyle = resolvedStyle;
+            question.cacheKey = cacheKey;
+            question.requestKey = pending.requestKey;
+
+            AskResult saved = saveRemoteAnswer(
+                    pending.userId, question, generated.getSource());
+            if (!saved.success || !saved.saved) {
+                throw new IllegalStateException(saved.message);
+            }
+            markPendingAnswerReady(pending.id, saved.questionId);
+        } catch (RuntimeException syncFailed) {
+            String message = syncFailed.getMessage();
+            if (message == null || message.trim().isEmpty()) {
+                message = "AI Mentor could not answer this question yet.";
+            }
+            pendingQuestionDao.markFailed(
+                    pending.id, message, System.currentTimeMillis());
+        }
+    }
+
+    private void markPendingAnswerReady(long pendingId, long questionId) {
+        int markedSent = pendingQuestionDao.markSent(
+                pendingId, questionId, System.currentTimeMillis());
+        if (markedSent == 1 && questionId > 0 && appContext != null) {
+            NotificationHelper.notifyAnswerReady(
+                    appContext, questionId,
+                    appContext.getString(R.string.answer_ready_title),
+                    appContext.getString(R.string.answer_ready_body));
         }
     }
 
@@ -367,6 +675,33 @@ public class StudyRepository {
                 // Reading analytics must never interrupt the answer screen.
             }
         });
+    }
+
+    /**
+     * Removes learning records and resets derived XP while preserving the
+     * account, onboarding profile, theme, and reminder preferences.
+     */
+    @WorkerThread
+    public boolean clearStudyData(long userId) {
+        if (userId <= 0 || userDao.findById(userId) == null) return false;
+        try {
+            database.runInTransaction(() -> {
+                questionDao.deleteForUser(userId);
+                quizDao.deleteForUser(userId);
+                pendingQuestionDao.deleteForUser(userId);
+                if (userDao.resetXp(userId) != 1) {
+                    throw new IllegalStateException("Account disappeared");
+                }
+            });
+            return true;
+        } catch (RuntimeException deletionFailed) {
+            return false;
+        }
+    }
+
+    public void clearStudyDataAsync(
+            long userId, @NonNull DataCallback<Boolean> callback) {
+        executeAsync(() -> clearStudyData(userId), false, callback);
     }
 
     // ------------------------------------------------------------------ Quiz
@@ -569,7 +904,12 @@ public class StudyRepository {
         public int xpToNext;
         public int activityCountLast7Days;
         public int activeDaysLast7Days;
+        public int currentStreakDays;
+        public boolean localLeaderboardEnabled;
         public int reviewedAnswers;
+        public int dueReviewCount;
+        public int learningCount;
+        public int masteredCount;
         public long totalReviewDurationMs;
         public int current7DayAccuracy;
         public int previous7DayAccuracy;
@@ -582,11 +922,30 @@ public class StudyRepository {
         public String topSubject = "-";
         public final Map<String, Integer> subjectCounts = new LinkedHashMap<>();
         public final Map<String, Integer> subjectQuizCounts = new LinkedHashMap<>();
+        public final Map<String, SubjectMastery> subjectMastery =
+                new LinkedHashMap<>();
         public final List<DailyActivity> last7Days = new ArrayList<>();
         public final List<String> badges = new ArrayList<>();
         public final List<String> insights = new ArrayList<>();
         public final List<LearningAnalytics.TopicFrequency> repeatedTopics =
                 new ArrayList<>();
+        public final List<LocalLeaderboardRow> localLeaderboard =
+                new ArrayList<>();
+    }
+
+    public static class SubjectMastery {
+        public final int correct;
+        public final int answered;
+        public final int accuracyPercent;
+        public final String label;
+
+        SubjectMastery(
+                int correct, int answered, int accuracyPercent, String label) {
+            this.correct = correct;
+            this.answered = answered;
+            this.accuracyPercent = accuracyPercent;
+            this.label = label;
+        }
     }
 
     public static class DailyActivity {
@@ -612,9 +971,18 @@ public class StudyRepository {
         List<Question> all = normalizeSubjects(questionDao.getForUser(userId));
         p.totalQuestions = all.size();
         int topCount = 0;
+        long now = System.currentTimeMillis();
         for (Question q : all) {
             if (q.bookmarked) p.bookmarkedCount++;
             if (q.reviewed) p.reviewedAnswers++;
+            int reviewState = ReviewState.classify(q, now);
+            if (reviewState == ReviewState.DUE) {
+                p.dueReviewCount++;
+            } else if (reviewState == ReviewState.MASTERED) {
+                p.masteredCount++;
+            } else {
+                p.learningCount++;
+            }
             p.totalReviewDurationMs += Math.max(0L, q.reviewDurationMs);
             String s = SubjectClassifier.normalize(q.subject);
             int c = (p.subjectCounts.containsKey(s) ? p.subjectCounts.get(s) : 0) + 1;
@@ -626,6 +994,8 @@ public class StudyRepository {
         }
 
         List<QuizAttempt> attempts = quizDao.getForUser(userId);
+        Map<String, Integer> correctBySubject = new LinkedHashMap<>();
+        Map<String, Integer> answeredBySubject = new LinkedHashMap<>();
         p.quizzesCompleted = attempts.size();
         for (QuizAttempt attempt : attempts) {
             p.totalCorrect += Math.max(0, Math.min(attempt.correct, attempt.total));
@@ -634,6 +1004,28 @@ public class StudyRepository {
             int count = (p.subjectQuizCounts.containsKey(subject)
                     ? p.subjectQuizCounts.get(subject) : 0) + 1;
             p.subjectQuizCounts.put(subject, count);
+            int safeTotal = Math.max(0, attempt.total);
+            int safeCorrect = Math.max(
+                    0, Math.min(attempt.correct, safeTotal));
+            answeredBySubject.put(subject,
+                    (answeredBySubject.containsKey(subject)
+                            ? answeredBySubject.get(subject) : 0) + safeTotal);
+            correctBySubject.put(subject,
+                    (correctBySubject.containsKey(subject)
+                            ? correctBySubject.get(subject) : 0) + safeCorrect);
+        }
+        for (String subject : SubjectClassifier.SUBJECTS) {
+            int saved = p.subjectCounts.containsKey(subject)
+                    ? p.subjectCounts.get(subject) : 0;
+            int answered = answeredBySubject.containsKey(subject)
+                    ? answeredBySubject.get(subject) : 0;
+            if (saved == 0 && answered == 0) continue;
+            int correct = correctBySubject.containsKey(subject)
+                    ? correctBySubject.get(subject) : 0;
+            int accuracy = Gamification.accuracyPercent(correct, answered);
+            p.subjectMastery.put(subject, new SubjectMastery(
+                    correct, answered, accuracy,
+                    ProgressMetrics.masteryLabel(correct, answered, saved)));
         }
         p.accuracyPercent =
                 Gamification.accuracyPercent(p.totalCorrect, p.totalAnswered);
@@ -643,6 +1035,30 @@ public class StudyRepository {
         p.repeatedTopics.addAll(
                 LearningAnalytics.repeatedTopics(questionTexts, 3));
         buildWeeklyActivity(p, all, attempts);
+        List<Long> activityTimes = new ArrayList<>();
+        for (Question question : all) activityTimes.add(question.createdAt);
+        for (QuizAttempt attempt : attempts) activityTimes.add(attempt.createdAt);
+        p.currentStreakDays = ProgressMetrics.currentStreakDays(
+                activityTimes, System.currentTimeMillis());
+        List<LocalLeaderboardRow> leaderboard =
+                userDao.getLocalLeaderboard(20);
+        if (appContext == null) {
+            p.localLeaderboardEnabled = true;
+            p.localLeaderboard.addAll(
+                    leaderboard.subList(0, Math.min(5, leaderboard.size())));
+        } else {
+            SessionManager preferences = new SessionManager(appContext);
+            p.localLeaderboardEnabled =
+                    preferences.isLeaderboardOptedIn(userId);
+            if (p.localLeaderboardEnabled) {
+                for (LocalLeaderboardRow row : leaderboard) {
+                    if (preferences.isLeaderboardOptedIn(row.id)) {
+                        p.localLeaderboard.add(row);
+                    }
+                    if (p.localLeaderboard.size() == 5) break;
+                }
+            }
+        }
 
         p.badges.addAll(Gamification.earnedBadges(
                 p.totalQuestions, p.quizzesCompleted, p.totalCorrect, p.level));

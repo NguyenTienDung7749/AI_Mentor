@@ -4,6 +4,8 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
 
+import java.util.List;
+
 @Dao
 public interface UserDao {
 
@@ -18,6 +20,9 @@ public interface UserDao {
     @Query("UPDATE users SET xp = xp + :amount "
             + "WHERE id = :userId AND :amount >= 0")
     int addXp(long userId, int amount);
+
+    @Query("UPDATE users SET xp = 0 WHERE id = :userId")
+    int resetXp(long userId);
 
     @Query("UPDATE users SET salt = :salt, passwordHash = :passwordHash "
             + "WHERE id = :userId")
@@ -39,6 +44,10 @@ public interface UserDao {
 
     @Query("SELECT * FROM users WHERE id = :id LIMIT 1")
     User findById(long id);
+
+    @Query("SELECT id, name, xp FROM users "
+            + "ORDER BY xp DESC, createdAt ASC LIMIT :limit")
+    List<LocalLeaderboardRow> getLocalLeaderboard(int limit);
 
     @Query("SELECT COUNT(*) FROM users WHERE email = :email")
     int countByEmail(String email);

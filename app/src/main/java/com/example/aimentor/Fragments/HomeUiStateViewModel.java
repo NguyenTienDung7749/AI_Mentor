@@ -27,6 +27,7 @@ public class HomeUiStateViewModel extends AndroidViewModel {
     private static final String KEY_DRAFT = "home_draft";
     private static final String KEY_SUBJECT = "home_subject";
     private static final String KEY_STYLE = "home_style";
+    private static final String KEY_ALLOW_CACHE = "home_allow_cache";
     private static final String KEY_CAMERA_URI = "home_camera_uri";
     private static final String KEY_CAMERA_FILE = "home_camera_file";
 
@@ -141,6 +142,18 @@ public class HomeUiStateViewModel extends AndroidViewModel {
         askState.setValue(AskUiState.loading());
         studyRepository.askAsync(userId, question, subjectHint,
                 explanationStyle, image, result -> {
+                    if (!cleared) askState.setValue(AskUiState.result(result));
+                });
+        return true;
+    }
+
+    boolean ask(long userId, String question, String subjectHint,
+                String explanationStyle, ImageAttachment image,
+                boolean allowCache) {
+        if (isAsking() || isPreparingImage() || cleared) return false;
+        askState.setValue(AskUiState.loading());
+        studyRepository.askAsync(userId, question, subjectHint,
+                explanationStyle, image, allowCache, result -> {
                     if (!cleared) askState.setValue(AskUiState.result(result));
                 });
         return true;
@@ -265,6 +278,15 @@ public class HomeUiStateViewModel extends AndroidViewModel {
 
     void setStylePosition(int value) {
         savedState.set(KEY_STYLE, value);
+    }
+
+    boolean isCacheAllowed() {
+        Boolean value = savedState.get(KEY_ALLOW_CACHE);
+        return value == null || value;
+    }
+
+    void setCacheAllowed(boolean allowed) {
+        savedState.set(KEY_ALLOW_CACHE, allowed);
     }
 
     @Override

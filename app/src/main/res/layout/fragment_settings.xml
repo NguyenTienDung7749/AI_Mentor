@@ -261,6 +261,18 @@
             android:layout_marginTop="8dp"
             android:text="@string/daily_study_reminder" />
 
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchReviewReminder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/review_due_reminders" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchWeeklySummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/weekly_progress_summary" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnReminderTime"
             style="@style/Widget.AIMentor.Button.Outlined"
@@ -319,6 +331,29 @@
             android:text="@string/privacy_notice"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="13sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExportSummary"
+            style="@style/Widget.AIMentor.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/export_study_summary" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchLocalLeaderboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/local_leaderboard_opt_in" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClearStudyData"
+            style="@style/Widget.AIMentor.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/clear_study_data" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLogout"

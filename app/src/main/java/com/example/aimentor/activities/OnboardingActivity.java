@@ -98,7 +98,8 @@ public class OnboardingActivity extends AppCompatActivity {
                         return;
                     }
                     Intent intent = new Intent(this, MenuActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                     startActivity(intent);
                     finish();
                 });

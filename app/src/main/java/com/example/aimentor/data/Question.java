@@ -9,7 +9,13 @@ import androidx.room.PrimaryKey;
 import com.example.aimentor.ai.AnswerSource;
 
 /** A question asked by a student together with the AI answer (saved for offline history). */
-@Entity(tableName = "questions", indices = {@Index("userId")})
+@Entity(
+        tableName = "questions",
+        indices = {
+                @Index("userId"),
+                @Index("cacheKey"),
+                @Index("requestKey")
+        })
 public class Question {
 
     @PrimaryKey(autoGenerate = true)
@@ -21,7 +27,7 @@ public class Question {
     public String difficulty = "";
     public String answerText = "";
     public boolean bookmarked = false;
-    // Legacy schema field retained for Room compatibility; new answers are never reused.
+    // True only when a saved answer was explicitly reused by the learner.
     public boolean reused = false;
     public boolean reviewed = false; // student has reviewed this saved answer (awards review XP once)
 
@@ -41,6 +47,18 @@ public class Question {
 
     @ColumnInfo(defaultValue = "0")
     public long responseTimeMs = 0L;
+
+    @NonNull
+    @ColumnInfo(defaultValue = "''")
+    public String explanationStyle = "";
+
+    @NonNull
+    @ColumnInfo(defaultValue = "''")
+    public String cacheKey = "";
+
+    @NonNull
+    @ColumnInfo(defaultValue = "''")
+    public String requestKey = "";
 
     public long createdAt = System.currentTimeMillis();
 }

@@ -40,6 +40,22 @@ public class AiAnswerDisplayTest {
     }
 
     @Test
+    public void stepStyle_doesNotDuplicateProviderNumbering() {
+        AiAnswer answer = sampleAnswer();
+        answer.getSteps().clear();
+        answer.getSteps().add("1. Detect connectivity.");
+        answer.getSteps().add("2) Enqueue durable work.");
+
+        String display = answer.toDisplayString(
+                "Explain an offline queue.", "Step-by-step");
+
+        assertTrue(display.contains("1. Detect connectivity."));
+        assertTrue(display.contains("2. Enqueue durable work."));
+        assertFalse(display.contains("1. 1."));
+        assertFalse(display.contains("2. 2)"));
+    }
+
+    @Test
     public void vietnameseQuestion_usesVietnameseHeadingsForEveryStyle() {
         AiAnswer answer = sampleAnswer();
 

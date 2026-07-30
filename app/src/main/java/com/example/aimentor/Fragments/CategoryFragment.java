@@ -22,10 +22,13 @@ import com.example.aimentor.R;
 import com.example.aimentor.activities.AnswerActivity;
 import com.example.aimentor.adapters.QuestionAdapter;
 import com.example.aimentor.data.Question;
+import com.example.aimentor.data.PendingQuestion;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.DropdownAdapters;
+import com.example.aimentor.util.ReviewState;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
@@ -39,6 +42,7 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
     private static final String STATE_SEARCH = "library_search";
     private static final String STATE_SUBJECT_POSITION = "library_subject_position";
     private static final String STATE_BOOKMARKED = "library_bookmarked";
+    private static final String STATE_REVIEW_FILTER = "library_review_filter";
     private static final String[] FILTER_SUBJECT_VALUES = {
             "", "Mathematics", "Science", "Programming",
             "History", "Languages", "General"
@@ -51,10 +55,13 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
     private TextInputEditText etSearch;
     private AutoCompleteTextView actSubjectFilter;
     private Chip chipBookmarked;
+    private ChipGroup reviewStateGroup;
     private RecyclerView rvHistory;
-    private TextView tvEmpty, tvSuggest;
+    private TextView tvEmpty, tvSuggest, tvPendingStatus;
     private View cardLibraryEmpty;
     private int selectedSubjectPosition;
+    @ReviewState.Value
+    private int selectedReviewFilter = ReviewState.ALL;
     private int refreshGeneration;
     private int suggestionGeneration;
     private final Set<Long> pendingBookmarkIds = new HashSet<>();
@@ -77,10 +84,12 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         etSearch = view.findViewById(R.id.etSearch);
         actSubjectFilter = view.findViewById(R.id.actSubjectFilter);
         chipBookmarked = view.findViewById(R.id.chipBookmarked);
+        reviewStateGroup = view.findViewById(R.id.reviewStateGroup);
         rvHistory = view.findViewById(R.id.rvHistory);
         tvEmpty = view.findViewById(R.id.tvEmpty);
         cardLibraryEmpty = view.findViewById(R.id.cardLibraryEmpty);
         tvSuggest = view.findViewById(R.id.tvSuggest);
+        tvPendingStatus = view.findViewById(R.id.tvPendingStatus);
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvLibraryHeading), true);
 
@@ -107,6 +116,9 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
             actSubjectFilter.setText(filterLabels[selectedSubjectPosition], false);
             chipBookmarked.setChecked(
                     savedInstanceState.getBoolean(STATE_BOOKMARKED, false));
+            selectedReviewFilter = savedInstanceState.getInt(
+                    STATE_REVIEW_FILTER, ReviewState.ALL);
+            reviewStateGroup.check(chipIdForReviewFilter(selectedReviewFilter));
         }
 
         etSearch.addTextChangedListener(new TextWatcher() {
@@ -115,6 +127,11 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
             public void afterTextChanged(Editable s) { }
         });
         chipBookmarked.setOnCheckedChangeListener((b, checked) -> refresh());
+        reviewStateGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.isEmpty()) return;
+            selectedReviewFilter = reviewFilterForChip(checkedIds.get(0));
+            refresh();
+        });
     }
 
     @Override
@@ -143,6 +160,54 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
         } else {
             studyRepository.getHistoryAsync(userId, callback);
         }
+        studyRepository.getPendingQuestionsAsync(userId, pending -> {
+            if (!canRenderRefresh(generation)) return;
+            bindPendingStatus(userId, pending);
+        });
+    }
+
+    private void bindPendingStatus(
+            long userId, List<PendingQuestion> pendingQuestions) {
+        int count = pendingQuestions == null ? 0 : pendingQuestions.size();
+        tvPendingStatus.setVisibility(count > 0 ? View.VISIBLE : View.GONE);
+        tvPendingStatus.setOnClickListener(null);
+        if (count == 0) return;
+
+        PendingQuestion failed = null;
+        boolean sending = false;
+        for (PendingQuestion pending : pendingQuestions) {
+            if (PendingQuestion.STATUS_FAILED.equals(pending.status)
+                    && failed == null) {
+                failed = pending;
+            }
+            if (PendingQuestion.STATUS_SENDING.equals(pending.status)) {
+                sending = true;
+            }
+        }
+        if (failed != null) {
+            PendingQuestion retryTarget = failed;
+            tvPendingStatus.setText(getString(
+                    R.string.library_pending_failed,
+                    compactQuestion(failed.questionText)));
+            tvPendingStatus.setOnClickListener(v ->
+                    studyRepository.retryPendingNowAsync(
+                            userId, retryTarget.id, retried -> {
+                                if (isViewStarted()) refresh();
+                            }));
+        } else if (sending) {
+            tvPendingStatus.setText(
+                    R.string.library_pending_sending);
+        } else {
+            tvPendingStatus.setText(getResources().getQuantityString(
+                    R.plurals.library_pending_question_count,
+                    count, count));
+        }
+    }
+
+    private String compactQuestion(String question) {
+        String clean = question == null ? "" : question.trim();
+        return clean.length() <= 60
+                ? clean : clean.substring(0, 57) + "...";
     }
 
     private void refreshSuggestion() {
@@ -165,13 +230,18 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
             if (!subjectFilter.isEmpty() && !subjectFilter.equals(q.subject)) {
                 continue;
             }
+            if (!ReviewState.matches(
+                    q, selectedReviewFilter, System.currentTimeMillis())) {
+                continue;
+            }
             filtered.add(q);
         }
 
         adapter.setItems(filtered);
         boolean empty = filtered.isEmpty();
         boolean filtering = bookmarkedOnly || !query.isEmpty()
-                || !subjectFilter.isEmpty();
+                || !subjectFilter.isEmpty()
+                || selectedReviewFilter != ReviewState.ALL;
         tvEmpty.setText(filtering
                 ? R.string.empty_filtered_history : R.string.empty_history);
         cardLibraryEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
@@ -217,6 +287,22 @@ public class CategoryFragment extends Fragment implements QuestionAdapter.Listen
                 ? "" : etSearch.getText().toString());
         outState.putInt(STATE_SUBJECT_POSITION, selectedSubjectPosition);
         outState.putBoolean(STATE_BOOKMARKED, chipBookmarked.isChecked());
+        outState.putInt(STATE_REVIEW_FILTER, selectedReviewFilter);
+    }
+
+    @ReviewState.Value
+    private int reviewFilterForChip(int chipId) {
+        if (chipId == R.id.chipReviewDue) return ReviewState.DUE;
+        if (chipId == R.id.chipReviewLearning) return ReviewState.LEARNING;
+        if (chipId == R.id.chipReviewMastered) return ReviewState.MASTERED;
+        return ReviewState.ALL;
+    }
+
+    private int chipIdForReviewFilter(@ReviewState.Value int filter) {
+        if (filter == ReviewState.DUE) return R.id.chipReviewDue;
+        if (filter == ReviewState.LEARNING) return R.id.chipReviewLearning;
+        if (filter == ReviewState.MASTERED) return R.id.chipReviewMastered;
+        return R.id.chipReviewAll;
     }
 
     private boolean matchesQuery(Question question, String query) {

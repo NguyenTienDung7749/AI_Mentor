@@ -225,6 +225,7 @@ public class UserRepository {
             database.runInTransaction(() -> {
                 database.questionDao().deleteForUser(userId);
                 database.quizAttemptDao().deleteForUser(userId);
+                database.pendingQuestionDao().deleteForUser(userId);
                 userDao.deleteById(userId);
             });
         } catch (RuntimeException deletionFailed) {

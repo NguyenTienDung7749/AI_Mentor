@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import com.example.aimentor.R;
+import com.example.aimentor.activities.AnswerActivity;
 import com.example.aimentor.activities.MenuActivity;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,6 +25,7 @@ public final class NotificationHelper {
 
     public static final String CHANNEL_ID = "study_reminders";
     public static final int DAILY_REMINDER_NOTIFICATION_ID = 1001;
+    public static final int ANSWER_READY_NOTIFICATION_ID = 1002;
     private static final AtomicInteger ID_COUNTER = new AtomicInteger(2000);
 
     private NotificationHelper() { }
@@ -82,6 +84,21 @@ public final class NotificationHelper {
         return notify(context, DAILY_REMINDER_NOTIFICATION_ID, title, message);
     }
 
+    /** Replaces the prior queue alert and opens the newly saved answer. */
+    public static boolean notifyAnswerReady(
+            Context context, long questionId, String title, String message) {
+        Intent openAnswer =
+                AnswerActivity.savedAnswerIntent(context, questionId)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent contentIntent = PendingIntent.getActivity(
+                context, ANSWER_READY_NOTIFICATION_ID, openAnswer,
+                PendingIntent.FLAG_UPDATE_CURRENT
+                        | PendingIntent.FLAG_IMMUTABLE);
+        return notify(context, ANSWER_READY_NOTIFICATION_ID,
+                title, message, contentIntent);
+    }
+
     private static boolean notify(
             Context context, int notificationId, String title, String message) {
         ensureChannel(context);
@@ -93,7 +110,14 @@ public final class NotificationHelper {
         PendingIntent contentIntent = PendingIntent.getActivity(
                 context, 0, openApp,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return notify(context, notificationId, title, message, contentIntent);
+    }
 
+    private static boolean notify(
+            Context context, int notificationId, String title, String message,
+            PendingIntent contentIntent) {
+        ensureChannel(context);
+        if (!canPostNotifications(context)) return false;
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)

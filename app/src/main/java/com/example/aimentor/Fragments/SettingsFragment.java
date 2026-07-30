@@ -71,10 +71,12 @@ public class SettingsFragment extends Fragment {
     private Spinner spLevel, spStyle;
     private LinearLayout avatarRewardGallery, themeRewardGallery;
     private CheckBox cbMath, cbScience, cbProgramming, cbHistory, cbLanguages;
-    private SwitchMaterial switchReminder;
+    private SwitchMaterial switchReminder, switchReviewReminder, switchWeeklySummary;
+    private SwitchMaterial switchLocalLeaderboard;
     private MaterialButtonToggleGroup themeModeGroup;
     private MaterialButton btnSavePrefs, btnDeleteAccount, btnReminderTime;
     private MaterialButton btnSaveAppearance;
+    private MaterialButton btnExportSummary, btnClearStudyData;
     private TextView tvReminderStatus, tvUnlockStatus;
     private int currentLevel = 1;
     private int loadGeneration;
@@ -134,6 +136,9 @@ public class SettingsFragment extends Fragment {
         cbLanguages = view.findViewById(R.id.cbLanguages);
         themeModeGroup = view.findViewById(R.id.themeModeGroup);
         switchReminder = view.findViewById(R.id.switchReminder);
+        switchReviewReminder = view.findViewById(R.id.switchReviewReminder);
+        switchWeeklySummary = view.findViewById(R.id.switchWeeklySummary);
+        switchLocalLeaderboard = view.findViewById(R.id.switchLocalLeaderboard);
         btnReminderTime = view.findViewById(R.id.btnReminderTime);
         tvReminderStatus = view.findViewById(R.id.tvReminderStatus);
         ViewCompat.setAccessibilityHeading(
@@ -142,6 +147,8 @@ public class SettingsFragment extends Fragment {
         MaterialButton btnRemind = view.findViewById(R.id.btnRemind);
         MaterialButton btnLogout = view.findViewById(R.id.btnLogout);
         btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
+        btnExportSummary = view.findViewById(R.id.btnExportSummary);
+        btnClearStudyData = view.findViewById(R.id.btnClearStudyData);
         selectedAvatar = savedInstanceState == null
                 ? session.getSelectedAvatar()
                 : savedInstanceState.getString(
@@ -172,9 +179,20 @@ public class SettingsFragment extends Fragment {
                         R.string.reminder_disabled, Toast.LENGTH_SHORT).show();
             }
         });
+        switchReviewReminder.setChecked(session.isReviewReminderEnabled());
+        switchReviewReminder.setOnCheckedChangeListener((button, checked) ->
+                session.setReviewReminderEnabled(checked));
+        switchWeeklySummary.setChecked(session.isWeeklySummaryEnabled());
+        switchWeeklySummary.setOnCheckedChangeListener((button, checked) ->
+                session.setWeeklySummaryEnabled(checked));
+        switchLocalLeaderboard.setChecked(session.isLeaderboardOptedIn());
+        switchLocalLeaderboard.setOnCheckedChangeListener((button, checked) ->
+                session.setLeaderboardOptedIn(checked));
         btnReminderTime.setOnClickListener(v -> chooseReminderTime());
         btnLogout.setOnClickListener(v -> logout());
         btnDeleteAccount.setOnClickListener(v -> showDeleteAccountDialog());
+        btnExportSummary.setOnClickListener(v -> exportStudySummary());
+        btnClearStudyData.setOnClickListener(v -> showClearStudyDataDialog());
         bindReminderState();
     }
 
@@ -503,6 +521,8 @@ public class SettingsFragment extends Fragment {
     private void setMutationActionsEnabled(boolean enabled) {
         btnSavePrefs.setEnabled(enabled);
         btnDeleteAccount.setEnabled(enabled);
+        btnExportSummary.setEnabled(enabled);
+        btnClearStudyData.setEnabled(enabled);
     }
 
     private void sendReminder() {
@@ -584,6 +604,8 @@ public class SettingsFragment extends Fragment {
         }
         boolean enabled = session.isReminderEnabled();
         setReminderSwitchChecked(enabled);
+        switchReviewReminder.setEnabled(enabled);
+        switchWeeklySummary.setEnabled(enabled);
         String displayTime = formattedReminderTime();
         btnReminderTime.setText(
                 getString(R.string.reminder_time_button, displayTime));
@@ -658,6 +680,7 @@ public class SettingsFragment extends Fragment {
                             session.getCurrentUserId(), password, result -> {
                                 if (result.success) {
                                     ReminderScheduler.disable(requireContext());
+                                    session.clearCurrentUserPreferences();
                                     session.logout();
                                 }
                                 if (!canRenderMutation(generation)) return;
@@ -679,6 +702,90 @@ public class SettingsFragment extends Fragment {
                             });
                 }));
         dialog.show();
+    }
+
+    private void exportStudySummary() {
+        int generation = ++mutationGeneration;
+        setMutationActionsEnabled(false);
+        studyRepository.getProgressAsync(
+                session.getCurrentUserId(), progress -> {
+                    if (!canRenderMutation(generation)) return;
+                    setMutationActionsEnabled(true);
+                    StringBuilder summary = new StringBuilder();
+                    summary.append(getString(R.string.export_summary_heading))
+                            .append("\n")
+                            .append(java.text.DateFormat.getDateTimeInstance()
+                                    .format(new java.util.Date()))
+                            .append("\n\n")
+                            .append(getString(R.string.export_summary_level,
+                                    progress.level, progress.levelTitle,
+                                    progress.xp))
+                            .append("\n")
+                            .append(getString(R.string.export_summary_activity,
+                                    progress.totalQuestions,
+                                    progress.quizzesCompleted,
+                                    progress.accuracyPercent))
+                            .append("\n")
+                            .append(getString(R.string.export_summary_review,
+                                    progress.dueReviewCount,
+                                    progress.learningCount,
+                                    progress.masteredCount))
+                            .append("\n")
+                            .append(getResources().getQuantityString(
+                                    R.plurals.current_streak_days,
+                                    progress.currentStreakDays,
+                                    progress.currentStreakDays));
+                    if (!progress.subjectMastery.isEmpty()) {
+                        summary.append("\n\n")
+                                .append(getString(
+                                        R.string.export_summary_subjects));
+                        for (java.util.Map.Entry<String,
+                                StudyRepository.SubjectMastery> entry
+                                : progress.subjectMastery.entrySet()) {
+                            summary.append("\n- ")
+                                    .append(entry.getKey())
+                                    .append(": ")
+                                    .append(entry.getValue().label)
+                                    .append(" (")
+                                    .append(entry.getValue().accuracyPercent)
+                                    .append("%)");
+                        }
+                    }
+                    Intent share = new Intent(Intent.ACTION_SEND)
+                            .setType("text/plain")
+                            .putExtra(Intent.EXTRA_SUBJECT,
+                                    getString(R.string.export_summary_heading))
+                            .putExtra(Intent.EXTRA_TEXT, summary.toString());
+                    startActivity(Intent.createChooser(
+                            share, getString(R.string.export_study_summary)));
+                });
+    }
+
+    private void showClearStudyDataDialog() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.clear_study_data_title)
+                .setMessage(R.string.clear_study_data_message)
+                .setNegativeButton(R.string.delete_account_cancel, null)
+                .setPositiveButton(R.string.clear_study_data_confirm,
+                        (dialog, which) -> clearStudyData())
+                .show();
+    }
+
+    private void clearStudyData() {
+        int generation = ++mutationGeneration;
+        setMutationActionsEnabled(false);
+        studyRepository.clearStudyDataAsync(
+                session.getCurrentUserId(), cleared -> {
+                    if (!canRenderMutation(generation)) return;
+                    setMutationActionsEnabled(true);
+                    Toast.makeText(requireContext(),
+                            cleared
+                                    ? R.string.clear_study_data_success
+                                    : R.string.clear_study_data_failed,
+                            cleared ? Toast.LENGTH_SHORT : Toast.LENGTH_LONG)
+                            .show();
+                    if (cleared) loadUser();
+                });
     }
 
     private void navigateToLogin() {

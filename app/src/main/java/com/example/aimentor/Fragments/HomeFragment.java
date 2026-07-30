@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.aimentor.R;
 import com.example.aimentor.activities.AnswerActivity;
+import com.example.aimentor.activities.MenuActivity;
 import com.example.aimentor.ai.ImageAttachment;
 import com.example.aimentor.ai.SubjectClassifier;
 import com.example.aimentor.data.User;
@@ -39,7 +40,9 @@ import com.example.aimentor.util.DropdownAdapters;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.IOException;
@@ -62,17 +65,21 @@ public class HomeFragment extends Fragment {
 
     private TextView tvGreeting, tvLevelTitle, tvXp, tvInsights, tvHomeAvatar;
     private TextView tvQuestionsStat, tvAccuracyStat, tvQuizStat;
+    private TextView tvStudyPlanBody;
     private ProgressBar progressXp;
     private ProgressBar progressAsk;
     private AutoCompleteTextView spSubject;
     private TextInputEditText etQuestion;
     private MaterialButton btnAsk, btnChooseImage, btnTakePhoto;
+    private MaterialButton btnStartStudyPlan;
     private MaterialButtonToggleGroup responseStyleGroup;
     private MaterialCardView cardImageAttachment;
     private ImageView ivImageAttachment;
     private ImageButton btnRemoveImage;
     private ProgressBar progressImage;
     private TextView tvAskStatus, tvImageStatus;
+    private TextView tvQueueStatus;
+    private MaterialCheckBox checkReuseAnswer;
     private int refreshGeneration;
 
     private final ActivityResultLauncher<PickVisualMediaRequest> imagePicker =
@@ -118,6 +125,7 @@ public class HomeFragment extends Fragment {
         tvQuestionsStat = view.findViewById(R.id.tvQuestionsStat);
         tvAccuracyStat = view.findViewById(R.id.tvAccuracyStat);
         tvQuizStat = view.findViewById(R.id.tvQuizStat);
+        tvStudyPlanBody = view.findViewById(R.id.tvStudyPlanBody);
         tvInsights = view.findViewById(R.id.tvInsights);
         progressXp = view.findViewById(R.id.progressXp);
         spSubject = view.findViewById(R.id.spSubject);
@@ -125,6 +133,7 @@ public class HomeFragment extends Fragment {
         btnAsk = view.findViewById(R.id.btnAsk);
         btnChooseImage = view.findViewById(R.id.btnChooseImage);
         btnTakePhoto = view.findViewById(R.id.btnTakePhoto);
+        btnStartStudyPlan = view.findViewById(R.id.btnStartStudyPlan);
         responseStyleGroup = view.findViewById(R.id.responseStyleGroup);
         cardImageAttachment = view.findViewById(R.id.cardImageAttachment);
         ivImageAttachment = view.findViewById(R.id.ivImageAttachment);
@@ -133,6 +142,8 @@ public class HomeFragment extends Fragment {
         progressImage = view.findViewById(R.id.progressImage);
         tvAskStatus = view.findViewById(R.id.tvAskStatus);
         tvImageStatus = view.findViewById(R.id.tvImageStatus);
+        tvQueueStatus = view.findViewById(R.id.tvQueueStatus);
+        checkReuseAnswer = view.findViewById(R.id.checkReuseAnswer);
         ViewCompat.setAccessibilityHeading(
                 view.findViewById(R.id.tvAskHeading), true);
 
@@ -167,11 +178,19 @@ public class HomeFragment extends Fragment {
                     if (isChecked) uiState.setStylePosition(
                             stylePositionForButton(checkedId));
                 });
+        checkReuseAnswer.setChecked(uiState.isCacheAllowed());
+        checkReuseAnswer.setOnCheckedChangeListener(
+                (button, checked) -> uiState.setCacheAllowed(checked));
 
         btnAsk.setOnClickListener(v -> ask());
         btnChooseImage.setOnClickListener(v -> chooseImage());
         btnTakePhoto.setOnClickListener(v -> takePhoto());
         btnRemoveImage.setOnClickListener(v -> uiState.clearImage());
+        btnStartStudyPlan.setOnClickListener(v -> {
+            if (getActivity() instanceof MenuActivity) {
+                ((MenuActivity) getActivity()).selectTab(1);
+            }
+        });
         uiState.getAskState().observe(
                 getViewLifecycleOwner(), this::renderAskState);
         uiState.getImageState().observe(
@@ -180,13 +199,20 @@ public class HomeFragment extends Fragment {
 
     private void chooseImage() {
         if (uiState.isAsking() || uiState.isPreparingImage()) return;
-        imagePicker.launch(new PickVisualMediaRequest.Builder()
-                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
-                .build());
+        withImageSharingConsent(() ->
+                imagePicker.launch(new PickVisualMediaRequest.Builder()
+                        .setMediaType(
+                                ActivityResultContracts.PickVisualMedia
+                                        .ImageOnly.INSTANCE)
+                        .build()));
     }
 
     private void takePhoto() {
         if (uiState.isAsking() || uiState.isPreparingImage()) return;
+        withImageSharingConsent(this::launchCamera);
+    }
+
+    private void launchCamera() {
         try {
             cameraLauncher.launch(uiState.prepareCameraCapture());
         } catch (RuntimeException | IOException error) {
@@ -194,6 +220,23 @@ public class HomeFragment extends Fragment {
             Toast.makeText(requireContext(), R.string.camera_failed,
                     Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void withImageSharingConsent(@NonNull Runnable acceptedAction) {
+        if (session.hasImageSharingConsent()) {
+            acceptedAction.run();
+            return;
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.image_consent_title)
+                .setMessage(R.string.image_consent_message)
+                .setNegativeButton(R.string.image_consent_cancel, null)
+                .setPositiveButton(R.string.image_consent_continue,
+                        (dialog, which) -> {
+                            session.setImageSharingConsent(true);
+                            acceptedAction.run();
+                        })
+                .show();
     }
 
     private void updateInputActions() {
@@ -205,6 +248,7 @@ public class HomeFragment extends Fragment {
         for (int i = 0; i < responseStyleGroup.getChildCount(); i++) {
             responseStyleGroup.getChildAt(i).setEnabled(enabled);
         }
+        checkReuseAnswer.setEnabled(enabled);
     }
 
     private void ask() {
@@ -219,7 +263,8 @@ public class HomeFragment extends Fragment {
                 Math.min(uiState.getStylePosition(), STYLE_VALUES.length - 1));
         ImageAttachment image = uiState.getImageAttachment();
         uiState.ask(session.getCurrentUserId(), question, subjectHint,
-                STYLE_VALUES[stylePosition], image);
+                STYLE_VALUES[stylePosition], image,
+                checkReuseAnswer.isChecked());
     }
 
     private void renderAskState(HomeUiStateViewModel.AskUiState state) {
@@ -252,6 +297,24 @@ public class HomeFragment extends Fragment {
         etQuestion.setText("");
         uiState.setQuestionDraft("");
         uiState.clearImage();
+        if (result.queued) {
+            String message = result.message == null
+                    ? getString(R.string.question_queued) : result.message;
+            tvAskStatus.setText(message);
+            tvAskStatus.setTextColor(MaterialColors.getColor(
+                    tvAskStatus,
+                    com.google.android.material.R.attr.colorPrimary));
+            tvAskStatus.setVisibility(View.VISIBLE);
+            tvAskStatus.announceForAccessibility(message);
+            Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show();
+            refresh();
+            return;
+        }
+        if (result.cached) {
+            Toast.makeText(requireContext(),
+                    R.string.exact_saved_answer_opened,
+                    Toast.LENGTH_SHORT).show();
+        }
         if (result.leveledUp) {
             Toast.makeText(requireContext(), R.string.level_up_toast,
                     Toast.LENGTH_SHORT).show();
@@ -350,6 +413,13 @@ public class HomeFragment extends Fragment {
             if (!canRenderRefresh(generation)) return;
             renderProgress(progress);
         });
+        studyRepository.getPendingCountAsync(userId, count -> {
+            if (!canRenderRefresh(generation)) return;
+            tvQueueStatus.setVisibility(
+                    count > 0 ? View.VISIBLE : View.GONE);
+            tvQueueStatus.setText(getResources().getQuantityString(
+                    R.plurals.pending_question_count, count, count));
+        });
     }
 
     private boolean canRenderRefresh(int generation) {
@@ -408,6 +478,22 @@ public class HomeFragment extends Fragment {
                 R.string.stat_percent, p.accuracyPercent));
         tvQuizStat.setText(getString(
                 R.string.stat_number, p.quizzesCompleted));
+
+        if (p.dueReviewCount > 0) {
+            String due = getResources().getQuantityString(
+                    R.plurals.study_plan_due_answers,
+                    p.dueReviewCount, p.dueReviewCount);
+            tvStudyPlanBody.setText(getString(
+                    R.string.study_plan_due_body, due));
+        } else if (p.learningCount > 0) {
+            String learning = getResources().getQuantityString(
+                    R.plurals.study_plan_learning_answers,
+                    p.learningCount, p.learningCount);
+            tvStudyPlanBody.setText(getString(
+                    R.string.study_plan_learning_body, learning));
+        } else {
+            tvStudyPlanBody.setText(R.string.study_plan_empty);
+        }
 
         StringBuilder insights = new StringBuilder();
         for (String s : p.insights) insights.append("\u2022 ").append(s).append("\n");

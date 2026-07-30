@@ -416,6 +416,9 @@ public class AnswerActivity extends AppCompatActivity {
             label += getString(R.string.answer_response_time_suffix,
                     savedQuestion.responseTimeMs / 1000.0);
         }
+        if (savedQuestion.reused) {
+            label = getString(R.string.answer_source_exact_saved, label);
+        }
         return label;
     }
 }

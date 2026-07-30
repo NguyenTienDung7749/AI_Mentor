@@ -31,6 +31,19 @@ public interface QuestionDao {
     @Query("SELECT * FROM questions WHERE id = :questionId AND userId = :userId LIMIT 1")
     Question findByIdForUser(long userId, long questionId);
 
+    @Query("SELECT * FROM questions WHERE userId = :userId "
+            + "AND cacheKey = :cacheKey AND cacheKey != '' "
+            + "ORDER BY createdAt DESC LIMIT 1")
+    Question findReusable(long userId, String cacheKey);
+
+    @Query("SELECT * FROM questions WHERE userId = :userId "
+            + "AND requestKey = :requestKey AND requestKey != '' LIMIT 1")
+    Question findByRequestKey(long userId, String requestKey);
+
+    @Query("UPDATE questions SET reused = 1 "
+            + "WHERE id = :questionId AND userId = :userId")
+    int markReused(long userId, long questionId);
+
     @Query("UPDATE questions SET bookmarked = CASE WHEN bookmarked = 1 THEN 0 ELSE 1 END "
             + "WHERE id = :questionId AND userId = :userId")
     int toggleBookmark(long userId, long questionId);

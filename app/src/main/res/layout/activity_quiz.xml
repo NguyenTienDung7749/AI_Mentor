@@ -43,7 +43,7 @@
             android:layout_marginEnd="8dp"
             android:background="@drawable/bg_timer_circle"
             android:gravity="center"
-            android:text="30"
+            android:text="@string/quiz_timer_initial"
             android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -57,7 +57,7 @@
             android:background="@drawable/bg_info_panel"
             android:paddingHorizontal="14dp"
             android:paddingVertical="6dp"
-            android:text="0"
+            android:text="@string/quiz_score_initial"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -228,7 +228,7 @@
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:src="@drawable/ic_shape_triangle"
-                                android:contentDescription="A" />
+                                android:contentDescription="@string/quiz_option_a" />
 
                             <TextView
                                 android:id="@+id/tvOpt0"
@@ -266,7 +266,7 @@
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:src="@drawable/ic_shape_diamond"
-                                android:contentDescription="B" />
+                                android:contentDescription="@string/quiz_option_b" />
 
                             <TextView
                                 android:id="@+id/tvOpt1"
@@ -313,7 +313,7 @@
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:src="@drawable/ic_shape_circle"
-                                android:contentDescription="C" />
+                                android:contentDescription="@string/quiz_option_c" />
 
                             <TextView
                                 android:id="@+id/tvOpt2"
@@ -351,7 +351,7 @@
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:src="@drawable/ic_shape_square"
-                                android:contentDescription="D" />
+                                android:contentDescription="@string/quiz_option_d" />
 
                             <TextView
                                 android:id="@+id/tvOpt3"

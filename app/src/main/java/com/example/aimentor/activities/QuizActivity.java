@@ -26,6 +26,7 @@ import com.example.aimentor.ai.QuizQuestion;
 import com.example.aimentor.repo.StudyRepository;
 import com.example.aimentor.util.AppearanceManager;
 import com.example.aimentor.util.NotificationHelper;
+import com.example.aimentor.util.ProgressMetrics;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.WindowUiHelper;
 import com.google.android.material.button.MaterialButton;
@@ -517,7 +518,10 @@ public class QuizActivity extends AppCompatActivity {
     private void showCompletionDialog() {
         String message = getString(R.string.quiz_score,
                 correctCount, questions.size())
-                + "\n" + getString(R.string.quiz_xp_earned, awardedXp);
+                + "\n" + getString(R.string.quiz_xp_earned, awardedXp)
+                + "\n" + getString(R.string.quiz_mastery_signal,
+                ProgressMetrics.masteryLabel(
+                        correctCount, questions.size(), 0));
         if (!wrongQuestions.isEmpty()) {
             message += "\n" + getResources().getQuantityString(
                     R.plurals.quiz_questions_to_retry,

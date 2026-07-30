@@ -5,6 +5,7 @@ import android.app.Application;
 import androidx.appcompat.app.AppCompatDelegate;
 
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.PendingQuestionScheduler;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.DynamicColorsOptions;
 
@@ -21,6 +22,7 @@ public class AiMentorApp extends Application {
                                 new SessionManager(activity).getSelectedAccentTheme()))
                 .build();
         DynamicColors.applyToActivitiesIfAvailable(this, options);
+        PendingQuestionScheduler.enqueue(this);
     }
 
     private int toNightMode(int mode) {

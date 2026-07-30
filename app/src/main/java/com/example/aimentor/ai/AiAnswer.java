@@ -119,7 +119,7 @@ public class AiAnswer {
             sb.append(vietnamese ? "\nGiải thích từng bước\n" : "\nStep-by-step\n");
             for (int i = 0; i < steps.size(); i++) {
                 sb.append(i + 1).append(". ")
-                        .append(preserveFormatting(steps.get(i))).append("\n");
+                        .append(stripListPrefix(steps.get(i))).append("\n");
             }
         }
         if (simplified != null && !simplified.isEmpty()) {
@@ -129,7 +129,7 @@ public class AiAnswer {
         if (!keyConcepts.isEmpty()) {
             sb.append(vietnamese ? "\nKhái niệm chính\n" : "\nKey concepts\n");
             for (String c : keyConcepts) {
-                sb.append("- ").append(preserveFormatting(c)).append("\n");
+                sb.append("- ").append(stripListPrefix(c)).append("\n");
             }
         }
         if (!commonMistakes.isEmpty()) {
@@ -137,7 +137,7 @@ public class AiAnswer {
                     ? "\nNhững lỗi thường gặp cần tránh\n"
                     : "\nCommon mistakes to avoid\n");
             for (String c : commonMistakes) {
-                sb.append("- ").append(preserveFormatting(c)).append("\n");
+                sb.append("- ").append(stripListPrefix(c)).append("\n");
             }
         }
         if (!followUps.isEmpty()) {
@@ -145,7 +145,7 @@ public class AiAnswer {
                     ? "\nCâu hỏi luyện tập thêm\n"
                     : "\nFollow-up questions to practise\n");
             for (String c : followUps) {
-                sb.append("- ").append(preserveFormatting(c)).append("\n");
+                sb.append("- ").append(stripListPrefix(c)).append("\n");
             }
         }
         return sb.toString().trim();
@@ -156,8 +156,13 @@ public class AiAnswer {
         if (values.isEmpty()) return;
         output.append("\n").append(heading).append("\n");
         for (String value : values) {
-            output.append("- ").append(preserveFormatting(value)).append("\n");
+            output.append("- ").append(stripListPrefix(value)).append("\n");
         }
+    }
+
+    private String stripListPrefix(String value) {
+        return preserveFormatting(value).replaceFirst(
+                "^(?:\\d+[.)]|[-*])\\s+", "");
     }
 
     private String preserveFormatting(String value) {

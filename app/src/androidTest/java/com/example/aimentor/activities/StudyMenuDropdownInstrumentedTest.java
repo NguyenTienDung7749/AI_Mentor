@@ -4,6 +4,7 @@ import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.Espresso.pressBack;
 import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.RootMatchers.isPlatformPopup;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
@@ -42,7 +43,7 @@ public class StudyMenuDropdownInstrumentedTest {
             activity = InstrumentationRegistry.getInstrumentation()
                     .startActivitySync(intent);
 
-            onView(withId(R.id.spSubject)).perform(click());
+            onView(withId(R.id.spSubject)).perform(scrollTo(), click());
             assertPopupContains("Mathematics");
             pressBack();
 

@@ -2,6 +2,7 @@ package com.example.aimentor.repo;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -20,6 +21,7 @@ import com.example.aimentor.ai.QuizQuestion;
 import com.example.aimentor.ai.SubjectClassifier;
 import com.example.aimentor.data.AppDatabase;
 import com.example.aimentor.data.Question;
+import com.example.aimentor.data.PendingQuestion;
 import com.example.aimentor.data.QuizAttempt;
 import com.example.aimentor.data.User;
 import com.example.aimentor.util.Gamification;
@@ -95,6 +97,50 @@ public class RepositoryInstrumentedTest {
         assertEquals(-1L, offline.questionId);
         assertEquals(1, database.questionDao().countForUser(userId));
         assertEquals(Gamification.XP_ASK, database.userDao().findById(userId).xp);
+    }
+
+    @Test
+    public void ask_reusesOnlyExactEligibleAnswer_withoutDuplicateXp() {
+        long userId = insertUser("cache@example.com", 0);
+
+        StudyRepository.AskResult first = studyRepository.ask(
+                userId, "Explain gravity", "Science",
+                "Detailed", null, true);
+        StudyRepository.AskResult cached = studyRepository.ask(
+                userId, "  EXPLAIN   gravity ", "science",
+                "detailed", null, true);
+        StudyRepository.AskResult fresh = studyRepository.ask(
+                userId, "Explain gravity", "Science",
+                "Detailed", null, false);
+
+        assertTrue(first.saved);
+        assertTrue(cached.cached);
+        assertEquals(first.questionId, cached.questionId);
+        assertFalse(fresh.cached);
+        assertEquals(2, database.questionDao().countForUser(userId));
+        assertEquals(2 * Gamification.XP_ASK,
+                database.userDao().findById(userId).xp);
+        assertEquals(2, engine.answerCalls);
+    }
+
+    @Test
+    public void queuedQuestion_isDurableAndScopedToItsUser() {
+        long userId = insertUser("queue@example.com", 0);
+        long otherUser = insertUser("other-queue@example.com", 0);
+
+        StudyRepository.AskResult queued = studyRepository.queueQuestion(
+                userId, "Explain offline queues", "Programming",
+                "Detailed", null);
+
+        assertTrue(queued.success);
+        assertTrue(queued.queued);
+        assertEquals(1, studyRepository.getPendingCount(userId));
+        assertEquals(0, studyRepository.getPendingCount(otherUser));
+        PendingQuestion stored =
+                database.pendingQuestionDao().findById(queued.pendingId);
+        assertEquals(userId, stored.userId);
+        assertEquals("Explain offline queues", stored.questionText);
+        assertEquals(PendingQuestion.STATUS_PENDING, stored.status);
     }
 
     @Test
@@ -533,6 +579,27 @@ public class RepositoryInstrumentedTest {
         assertTrue(database.userDao().findById(secondUser) != null);
         assertEquals(1, database.questionDao().countForUser(secondUser));
         assertEquals(1, database.quizAttemptDao().countForUser(secondUser));
+    }
+
+    @Test
+    public void clearStudyData_preservesAccountAndOtherUsers() {
+        long clearedUser = insertUser("clear-history@example.com", 120);
+        long retainedUser = insertUser("retain-history@example.com", 80);
+        insertQuestion(clearedUser, "Clear this answer", "Science", true);
+        insertQuestion(retainedUser, "Retain this answer", "History", false);
+        insertQuiz(clearedUser);
+        insertQuiz(retainedUser);
+
+        assertTrue(studyRepository.clearStudyData(clearedUser));
+
+        User cleared = database.userDao().findById(clearedUser);
+        assertNotNull(cleared);
+        assertEquals(0, cleared.xp);
+        assertEquals("University", cleared.educationLevel);
+        assertEquals(0, database.questionDao().countForUser(clearedUser));
+        assertEquals(0, database.quizAttemptDao().countForUser(clearedUser));
+        assertEquals(1, database.questionDao().countForUser(retainedUser));
+        assertEquals(1, database.quizAttemptDao().countForUser(retainedUser));
     }
 
     @Test

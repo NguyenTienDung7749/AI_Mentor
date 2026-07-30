@@ -161,6 +161,7 @@
     <string name="answer_source_offline">Offline guidance • Local Study Mentor • not saved</string>
     <string name="answer_source_offline_fallback">Offline fallback • online AI unavailable • not saved</string>
     <string name="answer_source_saved">Saved answer</string>
+    <string name="answer_source_exact_saved">Exact saved answer • %1$s</string>
     <string name="answer_response_time_suffix">&#160;•&#160;%1$.1f s</string>
     <string name="source_short_online">online AI</string>
     <string name="source_short_offline">offline</string>
@@ -233,6 +234,17 @@
     <string name="add_visual_context">Visual context (optional, one image)</string>
     <string name="attach_image">Add image</string>
     <string name="response_style">Response style</string>
+    <string name="reuse_exact_answer">Open an exact saved answer when available</string>
+    <string name="question_queued">Question saved. AI Mentor will answer when you’re online.</string>
+    <string name="exact_saved_answer_opened">Opened your exact saved answer.</string>
+    <plurals name="pending_question_count">
+        <item quantity="one">%d question is waiting for a connection</item>
+        <item quantity="other">%d questions are waiting for a connection</item>
+    </plurals>
+    <plurals name="library_pending_question_count">
+        <item quantity="one">%d queued question will appear here after AI Mentor answers it.</item>
+        <item quantity="other">%d queued questions will appear here after AI Mentor answers them.</item>
+    </plurals>
     <string name="style_step_compact">Step-by-step</string>
     <string name="home_dashboard_eyebrow">Your study space</string>
     <string name="home_snapshot_title">Learning snapshot</string>
@@ -283,7 +295,12 @@
     <string name="quiz_stat_correct">Correct</string>
     <string name="quiz_correct_ratio">%1$d/%2$d</string>
     <string name="quiz_correct_ratio_initial">0/0</string>
-    <string name="practice_quiz_title">Practice quiz</string>
+    <string name="quiz_timer_initial">30</string>
+    <string name="quiz_score_initial">0</string>
+    <string name="quiz_option_a">A</string>
+    <string name="quiz_option_b">B</string>
+    <string name="quiz_option_c">C</string>
+    <string name="quiz_option_d">D</string>
     <string name="quiz_personalized">Personalized (from history)</string>
     <string name="quiz_adaptive">Adaptive</string>
     <string name="quiz_beginner">Beginner</string>
@@ -355,6 +372,71 @@
     <string name="reminder_body">Revisit your bookmarked answers and try a quick practice quiz today.</string>
     <string name="notification_channel_name">Study reminders</string>
     <string name="notification_channel_description">Study reminders and progress alerts from AI Study Mentor</string>
+
+    <string name="review_filter_all">All</string>
+    <string name="review_filter_due">Due</string>
+    <string name="review_filter_learning">Learning</string>
+    <string name="review_filter_mastered">Mastered</string>
+    <string name="study_plan_title">Today\'s study plan</string>
+    <string name="study_plan_empty">Ask a question or complete a quiz to start a personalized plan.</string>
+    <string name="study_plan_due_body">%1$s are due. Open Library and use the Due filter for a focused review.</string>
+    <string name="study_plan_learning_body">Continue with %1$s, then try a short quiz on your most active subject.</string>
+    <string name="open_study_library">Open study library</string>
+    <plurals name="study_plan_due_answers">
+        <item quantity="one">%d saved answer</item>
+        <item quantity="other">%d saved answers</item>
+    </plurals>
+    <plurals name="study_plan_learning_answers">
+        <item quantity="one">%d learning answer</item>
+        <item quantity="other">%d learning answers</item>
+    </plurals>
+    <string name="progress_review_states">Due %1$d  |  Learning %2$d  |  Mastered %3$d</string>
+    <string name="review_reminder_title">Saved answers are ready</string>
+    <plurals name="review_reminder_body">
+        <item quantity="one">%d saved answer is due for review. A short recap will keep it fresh.</item>
+        <item quantity="other">%d saved answers are due for review. Start with one short recap.</item>
+    </plurals>
+    <string name="recurring_topic_reminder_title">Strengthen a recurring topic</string>
+    <string name="recurring_topic_reminder_body">You have asked about %1$s several times. Try a focused quiz to check your understanding.</string>
+    <string name="weekly_summary_reminder_title">Your weekly study summary</string>
+    <string name="weekly_summary_reminder_body">%1$s across %2$s. Open Progress for the full breakdown.</string>
+    <string name="review_due_reminders">Review-due and recurring-topic reminders</string>
+    <string name="weekly_progress_summary">Weekly progress summary</string>
+    <plurals name="current_streak_days">
+        <item quantity="one">Current streak: %d day</item>
+        <item quantity="other">Current streak: %d days</item>
+    </plurals>
+    <string name="subject_mastery_no_quiz">Mastery: %1$s - complete a quiz to measure accuracy</string>
+    <string name="subject_mastery_with_accuracy">Mastery: %1$s - %2$d%% across %3$s</string>
+    <string name="two_line_summary">%1$s\n%2$s</string>
+    <string name="local_leaderboard">On-device leaderboard</string>
+    <string name="local_leaderboard_note">Ranks only accounts created on this device. This is not an online leaderboard.</string>
+    <string name="local_leaderboard_empty">No local learners yet.</string>
+    <string name="local_leaderboard_current_name">%1$s (you)</string>
+    <string name="local_leaderboard_row">%1$d. %2$s - %3$d XP</string>
+    <string name="quiz_mastery_signal">Current mastery signal: %1$s</string>
+    <string name="image_consent_title">Share this image with the AI provider?</string>
+    <string name="image_consent_message">The selected image will be sent to the configured AI provider to answer your question. It is not kept with successful answers. If you ask while offline, it remains in the on-device pending queue until the answer is synchronized or you clear study data.</string>
+    <string name="image_consent_cancel">Not now</string>
+    <string name="image_consent_continue">Continue</string>
+    <string name="export_study_summary">Export study summary</string>
+    <string name="export_summary_heading">AI Study Mentor - learning summary</string>
+    <string name="export_summary_level">Level %1$d - %2$s, %3$d XP</string>
+    <string name="export_summary_activity">Saved answers: %1$d | Quizzes: %2$d | Accuracy: %3$d%%</string>
+    <string name="export_summary_review">Due: %1$d | Learning: %2$d | Mastered: %3$d</string>
+    <string name="export_summary_subjects">Subject mastery</string>
+    <string name="clear_study_data">Clear study history and XP</string>
+    <string name="clear_study_data_title">Clear learning data?</string>
+    <string name="clear_study_data_message">This permanently removes saved answers, quiz attempts, pending questions and XP for this account. Your account, profile and preferences remain.</string>
+    <string name="clear_study_data_confirm">Clear learning data</string>
+    <string name="clear_study_data_success">Study history and XP cleared. Your account was kept.</string>
+    <string name="clear_study_data_failed">Could not clear study data. Please try again.</string>
+    <string name="answer_ready_title">Your queued answer is ready</string>
+    <string name="answer_ready_body">The AI response was saved to your Library. Tap to review it now.</string>
+    <string name="local_leaderboard_opt_in">Join the on-device leaderboard</string>
+    <string name="local_leaderboard_opt_in_needed">Participation is off. Enable it in Settings to appear here and compare opted-in local accounts.</string>
+    <string name="library_pending_sending">AI Mentor is answering a queued question now.</string>
+    <string name="library_pending_failed">Could not answer “%1$s”. Tap to retry when connected.</string>
 
     <string name="answer_not_found">Answer not found.</string>
     <string name="answer_subject_difficulty">%1$s  |  %2$s</string>

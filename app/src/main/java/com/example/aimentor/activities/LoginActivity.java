@@ -105,6 +105,10 @@ public class LoginActivity extends AppCompatActivity {
         Intent intent = (user != null && user.onboardingCompleted)
                 ? new Intent(this, MenuActivity.class)
                 : new Intent(this, OnboardingActivity.class);
+        if (user != null && user.onboardingCompleted) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        }
         startActivity(intent);
         finish();
     }

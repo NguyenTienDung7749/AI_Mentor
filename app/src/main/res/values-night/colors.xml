@@ -72,7 +72,6 @@
     <color name="sunset_on_surface_variant">#D8C2BA</color>
 
     <color name="success">#99D5A3</color>
-    <color name="success_container">#1F5130</color>
     <color name="error">#FFB4AB</color>
     <color name="error_container">#93000A</color>
 </resources>

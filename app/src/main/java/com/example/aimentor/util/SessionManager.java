@@ -17,8 +17,13 @@ public class SessionManager {
     private static final String KEY_REMINDER_ENABLED = "reminder_enabled";
     private static final String KEY_REMINDER_HOUR = "reminder_hour";
     private static final String KEY_REMINDER_MINUTE = "reminder_minute";
+    private static final String KEY_REVIEW_REMINDERS = "review_reminders";
+    private static final String KEY_WEEKLY_SUMMARY = "weekly_summary";
     private static final String KEY_AVATAR_PREFIX = "avatar_";
     private static final String KEY_ACCENT_PREFIX = "accent_";
+    private static final String KEY_IMAGE_CONSENT_PREFIX = "image_consent_";
+    private static final String KEY_LEADERBOARD_OPT_IN_PREFIX =
+            "leaderboard_opt_in_";
 
     public static final int DEFAULT_REMINDER_HOUR = 19;
     public static final int DEFAULT_REMINDER_MINUTE = 0;
@@ -49,6 +54,16 @@ public class SessionManager {
         prefs.edit()
                 .remove(KEY_USER_ID)
                 .putBoolean(KEY_REMINDER_ENABLED, false)
+                .apply();
+    }
+
+    public void clearCurrentUserPreferences() {
+        long userId = Math.max(0L, getCurrentUserId());
+        prefs.edit()
+                .remove(KEY_AVATAR_PREFIX + userId)
+                .remove(KEY_ACCENT_PREFIX + userId)
+                .remove(KEY_IMAGE_CONSENT_PREFIX + userId)
+                .remove(KEY_LEADERBOARD_OPT_IN_PREFIX + userId)
                 .apply();
     }
 
@@ -105,6 +120,22 @@ public class SessionManager {
                 .apply();
     }
 
+    public boolean isReviewReminderEnabled() {
+        return prefs.getBoolean(KEY_REVIEW_REMINDERS, true);
+    }
+
+    public void setReviewReminderEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_REVIEW_REMINDERS, enabled).apply();
+    }
+
+    public boolean isWeeklySummaryEnabled() {
+        return prefs.getBoolean(KEY_WEEKLY_SUMMARY, true);
+    }
+
+    public void setWeeklySummaryEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_WEEKLY_SUMMARY, enabled).apply();
+    }
+
     public String getSelectedAvatar() {
         return prefs.getString(userKey(KEY_AVATAR_PREFIX), "Learner");
     }
@@ -121,6 +152,30 @@ public class SessionManager {
     public void setSelectedAccentTheme(String accent) {
         prefs.edit().putString(userKey(KEY_ACCENT_PREFIX),
                 accent == null ? "Indigo" : accent).apply();
+    }
+
+    public boolean hasImageSharingConsent() {
+        return prefs.getBoolean(
+                userKey(KEY_IMAGE_CONSENT_PREFIX), false);
+    }
+
+    public void setImageSharingConsent(boolean accepted) {
+        prefs.edit().putBoolean(
+                userKey(KEY_IMAGE_CONSENT_PREFIX), accepted).apply();
+    }
+
+    public boolean isLeaderboardOptedIn() {
+        return isLeaderboardOptedIn(getCurrentUserId());
+    }
+
+    public boolean isLeaderboardOptedIn(long userId) {
+        return prefs.getBoolean(
+                KEY_LEADERBOARD_OPT_IN_PREFIX + Math.max(0L, userId), false);
+    }
+
+    public void setLeaderboardOptedIn(boolean optedIn) {
+        prefs.edit().putBoolean(
+                userKey(KEY_LEADERBOARD_OPT_IN_PREFIX), optedIn).apply();
     }
 
     private String userKey(String prefix) {
