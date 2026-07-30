@@ -287,8 +287,50 @@ public class LocalAiEngine implements AiEngine {
 
     @Override
     public List<QuizQuestion> generateQuiz(QuizGenerationConfig config) {
-        List<QuizQuestion> generated =
-                generateQuiz(config.getSubject(), config.getCount());
+        List<QuizQuestion> generated;
+        if (!config.getStudyTopics().isEmpty()
+                && SubjectClassifier.GENERAL.equals(config.getSubject())) {
+            // Personalized mode: classify each study topic and pull questions
+            // from every subject the user has actually been studying.
+            java.util.Set<String> relevantSubjects = new java.util.LinkedHashSet<>();
+            for (String topic : config.getStudyTopics()) {
+                relevantSubjects.add(SubjectClassifier.classify(topic));
+            }
+            // Always keep General as a fallback, but add it last.
+            relevantSubjects.remove(SubjectClassifier.GENERAL);
+
+            List<QuizQuestion> pool = new ArrayList<>();
+            for (String subj : relevantSubjects) {
+                pool.addAll(bankFor(subj));
+                if (subj.equals(SubjectClassifier.MATH)) {
+                    Random rnd = new Random();
+                    for (int i = 0; i < 3; i++) pool.add(generateArithmetic(rnd));
+                }
+            }
+            // If not enough questions from detected subjects, pad with General.
+            if (pool.size() < config.getCount()) {
+                pool.addAll(bankFor(SubjectClassifier.GENERAL));
+            }
+            Collections.shuffle(pool);
+            generated = new ArrayList<>();
+            // Ensure type variety when count is large enough.
+            if (config.getCount() >= QuizQuestion.Type.values().length) {
+                for (QuizQuestion.Type type : QuizQuestion.Type.values()) {
+                    for (QuizQuestion question : pool) {
+                        if (question.getType() == type) {
+                            generated.add(question);
+                            break;
+                        }
+                    }
+                }
+            }
+            for (QuizQuestion question : pool) {
+                if (generated.size() >= config.getCount()) break;
+                if (!generated.contains(question)) generated.add(question);
+            }
+        } else {
+            generated = generateQuiz(config.getSubject(), config.getCount());
+        }
         List<QuizQuestion> adapted = new ArrayList<>();
         for (QuizQuestion question : generated) {
             adapted.add(new QuizQuestion(
