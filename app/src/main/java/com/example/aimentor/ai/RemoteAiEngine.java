@@ -513,7 +513,13 @@ public class RemoteAiEngine implements AiEngine {
                 + "exactly 2; both use correctIndex and an empty acceptedAnswers list. "
                 + "Short-answer and fill-in-the-blank questions use an empty options list, "
                 + "correctIndex -1, and 1 to 4 concise acceptedAnswers. "
-                + "CRITICAL: For SHORT_ANSWER and FILL_IN_THE_BLANK, answers MUST be plain text (words/numbers). Do NOT use math formulas since users type on mobile keyboards. However, for MULTIPLE_CHOICE and TRUE_FALSE, you MUST use standard math notation (e.g., $$...$$) for any formulas or symbols. "
+                + "Every explanation must explicitly include the exact correct option, or "
+                + "at least one exact accepted answer for a typed question. It must explain "
+                + "only its own prompt; never reuse an explanation from another question. "
+                + "CRITICAL: Use mobile-readable plain math such as '2x + 5 = 17', "
+                + "'a/b' and 'sqrt(x)'. Never emit Markdown/LaTeX dollar delimiters or "
+                + "commands. Typed answers must be plain words or numbers that students can "
+                + "enter on a mobile keyboard. "
                 + "Do not use markdown and do not repeat a prompt.";
     }
 
@@ -619,6 +625,10 @@ public class RemoteAiEngine implements AiEngine {
                     acceptedAnswers.add(clean);
                 }
             }
+            if (!explanationSupportsAnswer(type, options, item.correctIndex,
+                    acceptedAnswers, explanation)) {
+                throw AiServiceException.invalidResponse();
+            }
             hasMultipleChoice |= type == QuizQuestion.Type.MULTIPLE_CHOICE;
             hasTrueFalse |= type == QuizQuestion.Type.TRUE_FALSE;
             hasShortAnswer |= type == QuizQuestion.Type.SHORT_ANSWER;
@@ -635,6 +645,51 @@ public class RemoteAiEngine implements AiEngine {
             throw AiServiceException.invalidResponse();
         }
         return result;
+    }
+
+    /**
+     * Rejects a common model failure where a valid-looking quiz item carries
+     * the explanation from a different question. True/false explanations are
+     * exempt because a useful rationale often does not repeat the word itself.
+     */
+    private boolean explanationSupportsAnswer(
+            QuizQuestion.Type type, List<String> options, int correctIndex,
+            List<String> acceptedAnswers, String explanation) {
+        if (type == QuizQuestion.Type.TRUE_FALSE) return true;
+        if (type == QuizQuestion.Type.MULTIPLE_CHOICE) {
+            if (correctIndex < 0 || correctIndex >= options.size()) return false;
+            return answerAppearsInExplanation(options.get(correctIndex), explanation);
+        }
+        for (String answer : acceptedAnswers) {
+            if (answerAppearsInExplanation(answer, explanation)) return true;
+        }
+        return false;
+    }
+
+    private boolean answerAppearsInExplanation(String answer, String explanation) {
+        String normalizedAnswer = normalizeQuizEvidence(answer);
+        String normalizedExplanation = normalizeQuizEvidence(explanation);
+        if (normalizedAnswer.isEmpty() || normalizedExplanation.isEmpty()) return false;
+        if (normalizedExplanation.contains(normalizedAnswer)) return true;
+
+        String[] tokens = answer.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}]+");
+        int meaningful = 0;
+        int matched = 0;
+        for (String token : tokens) {
+            if (token.length() < 3 && !token.matches("\\d+")) continue;
+            meaningful++;
+            String normalizedToken = normalizeQuizEvidence(token);
+            if (!normalizedToken.isEmpty()
+                    && normalizedExplanation.contains(normalizedToken)) {
+                matched++;
+            }
+        }
+        return meaningful > 0 && matched * 5 >= meaningful * 3;
+    }
+
+    private String normalizeQuizEvidence(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]", "");
     }
 
     private QuizQuestion.Type parseQuizType(String value) {
@@ -654,6 +709,19 @@ public class RemoteAiEngine implements AiEngine {
         return value.replace("**", "")
                 .replace("__", "")
                 .replace("`", "")
+                .replace("$$", "")
+                .replace("$", "")
+                .replace("\\times", "×")
+                .replace("\\div", "÷")
+                .replace("\\cdot", "·")
+                .replace("\\pm", "±")
+                .replace("\\leq", "≤")
+                .replace("\\geq", "≥")
+                .replace("\\neq", "≠")
+                .replace("\\left", "")
+                .replace("\\right", "")
+                .replaceAll("\\\\frac\\s*\\{([^{}]+)\\}\\s*\\{([^{}]+)\\}", "$1/$2")
+                .replaceAll("\\\\sqrt\\s*\\{([^{}]+)\\}", "sqrt($1)")
                 .replaceAll("(?m)^\\s{0,3}#{1,6}\\s*", "")
                 .trim();
     }

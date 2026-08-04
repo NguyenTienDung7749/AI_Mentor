@@ -429,9 +429,9 @@ public class RemoteAiEngineTest {
     @Test
     public void generateQuiz_parsesAllFourTypesAndSnakeCaseOpenAnswers() {
         String content = "{\"questions\":["
-                + "{\"type\":\"MULTIPLE_CHOICE\",\"prompt\":\"MCQ?\","
-                + "\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,"
-                + "\"explanation\":\"A is correct.\"},"
+                + "{\"type\":\"MULTIPLE_CHOICE\",\"prompt\":\"Solve $$2x + 5 = 17$$.\","
+                + "\"options\":[\"x = 6\",\"x = 7\",\"x = 8\",\"x = 9\"],\"correctIndex\":0,"
+                + "\"explanation\":\"$$x = 6$$ is correct.\"},"
                 + "{\"type\":\"TRUE_FALSE\",\"prompt\":\"True or false?\","
                 + "\"options\":[\"True\",\"False\"],\"correctIndex\":1,"
                 + "\"explanation\":\"False is correct.\"},"
@@ -452,11 +452,42 @@ public class RemoteAiEngineTest {
         List<QuizQuestion> questions = engine.generateQuiz(config);
 
         assertEquals(4, questions.size());
+        assertEquals("Solve 2x + 5 = 17.", questions.get(0).getPrompt());
+        assertEquals("x = 6 is correct.", questions.get(0).getExplanation());
         assertEquals(QuizQuestion.Type.SHORT_ANSWER, questions.get(2).getType());
         assertTrue(questions.get(2).isCorrect("NEW"));
         assertEquals(QuizQuestion.Type.FILL_IN_THE_BLANK,
                 questions.get(3).getType());
         assertTrue(questions.get(3).isCorrect("four"));
+    }
+
+    @Test
+    public void generateQuiz_rejectsExplanationFromAnotherQuestion() {
+        String content = "{\"questions\":["
+                + "{\"type\":\"MULTIPLE_CHOICE\","
+                + "\"prompt\":\"Solve 2x + 5 = 17.\","
+                + "\"options\":[\"x = 6\",\"x = 7\",\"x = 8\",\"x = 9\"],"
+                + "\"correctIndex\":0,"
+                + "\"explanation\":\"Add 4 to both sides, then 3y = 15 gives y = 5.\"},"
+                + "{\"type\":\"TRUE_FALSE\","
+                + "\"prompt\":\"Sound travels through a vacuum.\","
+                + "\"options\":[\"True\",\"False\"],"
+                + "\"correctIndex\":1,"
+                + "\"explanation\":\"Sound needs a material medium.\"}]}";
+        server.enqueue(jsonResponse(200, completionBody(content)));
+        server.enqueue(jsonResponse(200, completionBody(content)));
+        RemoteAiEngine engine = engine(1_000, 1_000);
+        QuizGenerationConfig config = new QuizGenerationConfig(
+                SubjectClassifier.MATH, "Intermediate", 2,
+                Arrays.asList("Solve linear equations"));
+
+        try {
+            engine.generateQuiz(config);
+            fail("Expected mismatched explanation to be rejected");
+        } catch (AiServiceException error) {
+            assertEquals(AiServiceException.Kind.INVALID_RESPONSE, error.getKind());
+            assertEquals(2, server.getRequestCount());
+        }
     }
 
     private RemoteAiEngine engine(long connectTimeoutMs, long readTimeoutMs) {

@@ -87,7 +87,7 @@
     <string name="send_test_reminder">Send test reminder now</string>
     <string name="logout">Log out</string>
     <string name="privacy_and_data">Privacy and data</string>
-    <string name="privacy_notice">Questions, selected images and learning preferences may be sent securely to configured AI providers to prepare personalized answers. Successful answers and study progress are stored on this device; your email and password are never sent to an AI provider. App data is excluded from Android backup.</string>
+    <string name="privacy_notice">Questions, selected images and learning preferences may be sent securely to configured AI providers to prepare personalized answers. Study records stay in Android’s private credential-encrypted app storage; passwords are salted and hashed, and authenticator secrets receive extra Android Keystore encryption. Your email and password are never sent to an AI provider. App data is excluded from Android backup.</string>
     <string name="delete_account">Delete account and local data</string>
     <string name="delete_account_title">Permanently delete this account?</string>
     <string name="delete_account_message">Enter your password to delete this local account, its saved answers, quiz results, progress, XP and badges. This cannot be undone.</string>
@@ -317,7 +317,7 @@
         <item>@string/quiz_intermediate</item>
         <item>@string/quiz_advanced</item>
     </string-array>
-    <string name="quiz_help">Choose Personalized to practise recent topics. Quizzes mix multiple-choice and true/false questions with explanations.</string>
+    <string name="quiz_help">Choose Personalized to practise recent topics. Quizzes mix multiple-choice, true/false, short-answer and fill-in-the-blank questions with instant explanations.</string>
     <string name="quiz_question_progress">Question %1$d of %2$d  •  %3$s  •  %4$s</string>
     <string name="quiz_retry_progress">Retry %1$d of %2$d  •  %3$s  •  %4$s</string>
     <string name="quiz_choose_answer">Please choose an answer.</string>
@@ -431,6 +431,26 @@
     <string name="answer_ready_body">The AI response was saved to your Library. Tap to review it now.</string>
     <string name="local_leaderboard_opt_in">Join the on-device leaderboard</string>
     <string name="local_leaderboard_opt_in_needed">Participation is off. Enable it in Settings to appear here and compare opted-in local accounts.</string>
+    <string name="account_security">Account security</string>
+    <string name="two_factor_support">Protect new sign-ins with a 6-digit code from any TOTP authenticator app. This is optional and can be turned off with a current code.</string>
+    <string name="two_factor_status_on">Authenticator verification is on</string>
+    <string name="two_factor_status_off">Authenticator verification is off</string>
+    <string name="two_factor_enable">Set up authenticator verification</string>
+    <string name="two_factor_disable">Turn off authenticator verification</string>
+    <string name="two_factor_setup_title">Set up authenticator verification</string>
+    <string name="two_factor_setup_help">In your authenticator app, add an account manually and enter this setup key. Then type the current 6-digit code below to confirm.</string>
+    <string name="copy_setup_key">Copy setup key</string>
+    <string name="setup_key_copied">Setup key copied. Keep it private.</string>
+    <string name="authenticator_code">6-digit authenticator code</string>
+    <string name="authenticator_code_invalid">That code is invalid or expired. Check the device time and try again.</string>
+    <string name="verify_and_enable">Verify and enable</string>
+    <string name="verify">Verify</string>
+    <string name="two_factor_login_title">Authenticator verification</string>
+    <string name="two_factor_login_help">Open the authenticator app used for this account and enter its current 6-digit code.</string>
+    <string name="two_factor_verified">Identity verified. Welcome back!</string>
+    <string name="two_factor_disable_title">Turn off authenticator verification?</string>
+    <string name="two_factor_disable_help">Enter the current 6-digit code. Future sign-ins will then require only the account password.</string>
+    <string name="secure_storage_note">All local records use Android’s credential-encrypted private storage. The authenticator setup key has an additional AES-GCM layer backed by Android Keystore.</string>
     <string name="library_pending_sending">AI Mentor is answering a queued question now.</string>
     <string name="library_pending_failed">Could not answer “%1$s”. Tap to retry when connected.</string>
 

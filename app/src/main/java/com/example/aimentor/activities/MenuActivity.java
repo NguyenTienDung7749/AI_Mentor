@@ -2,10 +2,10 @@ package com.example.aimentor.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.aimentor.R;
@@ -26,6 +26,7 @@ public class MenuActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNavigationView;
     private ViewPager2 viewPager;
+    private TextView toolbarDestination;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -41,15 +42,9 @@ public class MenuActivity extends AppCompatActivity {
             return;
         }
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        toolbarDestination = findViewById(R.id.tvToolbarDestination);
         viewPager = findViewById(R.id.viewPager);
         bottomNavigationView = findViewById(R.id.bottomNavigation);
-
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayShowTitleEnabled(true);
-            getSupportActionBar().setTitle(TITLE_RES[0]);
-        }
 
         setupViewPager();
         clickTabNavigation();
@@ -97,9 +92,9 @@ public class MenuActivity extends AppCompatActivity {
                 else if (position == 4) menuId = R.id.Settings_menu;
                 else menuId = R.id.home_menu;
                 bottomNavigationView.getMenu().findItem(menuId).setChecked(true);
-                if (getSupportActionBar() != null
+                if (toolbarDestination != null
                         && position >= 0 && position < TITLE_RES.length) {
-                    getSupportActionBar().setTitle(TITLE_RES[position]);
+                    toolbarDestination.setText(TITLE_RES[position]);
                 }
             }
         });

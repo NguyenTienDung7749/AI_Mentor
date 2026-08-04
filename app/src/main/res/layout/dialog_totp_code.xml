@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="@dimen/space_sm">
+
+    <TextView
+        android:id="@+id/tvTwoFactorDialogHelp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/two_factor_login_help"
+        android:textAppearance="@style/TextAppearance.AIMentor.Supporting" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilTwoFactorCode"
+        style="@style/Widget.AIMentor.TextInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_lg"
+        android:hint="@string/authenticator_code"
+        app:counterEnabled="true"
+        app:counterMaxLength="6">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etTwoFactorCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autofillHints="smsOTPCode"
+            android:digits="0123456789"
+            android:imeOptions="actionDone"
+            android:inputType="number"
+            android:maxLength="6" />
+    </com.google.android.material.textfield.TextInputLayout>
+</LinearLayout>

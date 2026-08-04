@@ -2,9 +2,11 @@ package com.example.aimentor.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ViewCompat;
 
@@ -12,10 +14,13 @@ import com.example.aimentor.R;
 import com.example.aimentor.data.User;
 import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.AppearanceManager;
+import com.example.aimentor.util.SecondFactorManager;
 import com.example.aimentor.util.SessionManager;
 import com.example.aimentor.util.WindowUiHelper;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -23,6 +28,7 @@ public class LoginActivity extends AppCompatActivity {
     private MaterialButton btnLogin;
     private UserRepository userRepository;
     private SessionManager session;
+    private SecondFactorManager secondFactorManager;
     private int operationGeneration;
 
     @Override
@@ -36,6 +42,7 @@ public class LoginActivity extends AppCompatActivity {
 
         userRepository = new UserRepository(this);
         session = new SessionManager(this);
+        secondFactorManager = new SecondFactorManager(this);
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         btnLogin = findViewById(R.id.btnLogin);
@@ -73,9 +80,54 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
                 return;
             }
-            session.setCurrentUserId(result.userId);
-            Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show();
-            userRepository.getUserAsync(result.userId, user -> {
+            if (secondFactorManager.isEnabled(result.userId)) {
+                showTwoFactorDialog(result.userId, generation);
+            } else {
+                completeLogin(result.userId, generation, result.message);
+            }
+        });
+    }
+
+    private void showTwoFactorDialog(long userId, int generation) {
+        View dialogView = getLayoutInflater().inflate(
+                R.layout.dialog_totp_code, null, false);
+        TextInputLayout codeLayout = dialogView.findViewById(
+                R.id.tilTwoFactorCode);
+        TextInputEditText codeInput = dialogView.findViewById(
+                R.id.etTwoFactorCode);
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.two_factor_login_title)
+                .setView(dialogView)
+                .setNegativeButton(android.R.string.cancel, (ignored, which) -> {
+                    if (canHandle(generation)) btnLogin.setEnabled(true);
+                })
+                .setPositiveButton(R.string.verify, null)
+                .create();
+        dialog.setOnCancelListener(ignored -> {
+            if (canHandle(generation)) btnLogin.setEnabled(true);
+        });
+        dialog.setOnShowListener(ignored -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String code = valueOf(codeInput);
+                if (!secondFactorManager.verify(userId, code)) {
+                    codeLayout.setError(getString(R.string.authenticator_code_invalid));
+                    codeInput.requestFocus();
+                    return;
+                }
+                codeLayout.setError(null);
+                dialog.dismiss();
+                completeLogin(userId, generation,
+                        getString(R.string.two_factor_verified));
+            });
+        });
+        dialog.show();
+    }
+
+    private void completeLogin(long userId, int generation, String message) {
+        if (!canHandle(generation)) return;
+        session.setCurrentUserId(userId);
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        userRepository.getUserAsync(userId, user -> {
                 if (!canHandle(generation)) return;
                 if (user == null) {
                     session.logout();
@@ -87,7 +139,6 @@ public class LoginActivity extends AppCompatActivity {
                 }
                 goToNextScreen(user);
             });
-        });
     }
 
     private boolean canHandle(int generation) {

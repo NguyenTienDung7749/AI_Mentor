@@ -143,7 +143,7 @@ Exit criteria:
 - No lint errors remain.
 - Every requirement is linked to a screen, implementation, test and evidence.
 
-Final result:
+Batch 6 checkpoint result (superseded by the Batch 7 totals below):
 
 - 70 unit tests passed.
 - 30 instrumented tests passed on Pixel 7 Android 15 (API 35).
@@ -157,3 +157,34 @@ Final result:
   `openai/gpt-oss-120b` answer through WorkManager.
 - Traceability, limitations, manual test log and screenshots are recorded in
   `ASSIGNMENT_VERIFICATION.md` and `docs/evidence/`.
+
+## Batch 7 — Final production-readiness audit
+
+Status: complete
+
+- Re-read and visually inspected all 20 pages of both assignment documents.
+- Rechecked the complete requirement matrix rather than only the previous
+  remediation list.
+- Compared the UI patterns used by Quizlet, Photomath, Khan Academy,
+  Duolingo, NotebookLM, Knowt, Vaia and Brainly while retaining the app's
+  working visual identity.
+- Replaced duplicated destination headings with a compact branded app bar and
+  fixed outlined dropdown rendering without changing the five-tab model.
+- Added optional RFC 6238 authenticator verification with Android-Keystore
+  AES-GCM protection and password-plus-code login gating.
+- Found a live AI quiz whose explanation belonged to another equation; added
+  prompt constraints, response validation and a regression test so malformed
+  remote quizzes retry or safely fall back.
+- Repeated fresh registration/onboarding, real online answer, bookmark/review,
+  live mixed-format quiz, 2FA login, dark theme and 130% text-size tests.
+
+Exit criteria achieved:
+
+- 75 unit tests and 31 instrumented tests pass with no failures or skips.
+- Android Lint reports 0 errors and 15 non-blocking dependency/version/known
+  quiz-background overdraw warnings.
+- Debug and minified release builds succeed; the unsigned release APK is
+  2,609,384 bytes and remains 13.15% below the pre-cleanup baseline.
+- Final emulator state is restored to light mode and 100% font scale.
+- Updated evidence and this verification record are ready to cite in the
+  assignment report.

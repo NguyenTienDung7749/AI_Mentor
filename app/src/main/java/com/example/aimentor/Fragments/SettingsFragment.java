@@ -2,6 +2,9 @@ package com.example.aimentor.Fragments;
 
 import android.Manifest;
 import android.app.TimePickerDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Build;
@@ -38,6 +41,7 @@ import com.example.aimentor.repo.UserRepository;
 import com.example.aimentor.util.NotificationHelper;
 import com.example.aimentor.util.ReminderScheduler;
 import com.example.aimentor.util.SessionManager;
+import com.example.aimentor.util.SecondFactorManager;
 import com.example.aimentor.util.Gamification;
 import com.example.aimentor.util.DropdownAdapters;
 import com.google.android.material.button.MaterialButton;
@@ -46,6 +50,8 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,6 +71,7 @@ public class SettingsFragment extends Fragment {
     private UserRepository userRepository;
     private StudyRepository studyRepository;
     private SessionManager session;
+    private SecondFactorManager secondFactorManager;
 
     private TextView tvName, tvEmail, tvLevelInfo, tvBadges, tvXpProgress;
     private ProgressBar progressLevel;
@@ -77,7 +84,8 @@ public class SettingsFragment extends Fragment {
     private MaterialButton btnSavePrefs, btnDeleteAccount, btnReminderTime;
     private MaterialButton btnSaveAppearance;
     private MaterialButton btnExportSummary, btnClearStudyData;
-    private TextView tvReminderStatus, tvUnlockStatus;
+    private MaterialButton btnTwoFactor;
+    private TextView tvReminderStatus, tvUnlockStatus, tvTwoFactorStatus;
     private int currentLevel = 1;
     private int loadGeneration;
     private int mutationGeneration;
@@ -116,6 +124,7 @@ public class SettingsFragment extends Fragment {
         userRepository = new UserRepository(requireContext());
         studyRepository = new StudyRepository(requireContext());
         session = new SessionManager(requireContext());
+        secondFactorManager = new SecondFactorManager(requireContext());
 
         tvName = view.findViewById(R.id.tvName);
         tvEmail = view.findViewById(R.id.tvEmail);
@@ -149,6 +158,8 @@ public class SettingsFragment extends Fragment {
         btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
         btnExportSummary = view.findViewById(R.id.btnExportSummary);
         btnClearStudyData = view.findViewById(R.id.btnClearStudyData);
+        btnTwoFactor = view.findViewById(R.id.btnTwoFactor);
+        tvTwoFactorStatus = view.findViewById(R.id.tvTwoFactorStatus);
         selectedAvatar = savedInstanceState == null
                 ? session.getSelectedAvatar()
                 : savedInstanceState.getString(
@@ -193,13 +204,22 @@ public class SettingsFragment extends Fragment {
         btnDeleteAccount.setOnClickListener(v -> showDeleteAccountDialog());
         btnExportSummary.setOnClickListener(v -> exportStudySummary());
         btnClearStudyData.setOnClickListener(v -> showClearStudyDataDialog());
+        btnTwoFactor.setOnClickListener(v -> {
+            if (secondFactorManager.isEnabled(session.getCurrentUserId())) {
+                showDisableTwoFactorDialog();
+            } else {
+                showEnableTwoFactorDialog();
+            }
+        });
         bindReminderState();
+        refreshTwoFactorState();
     }
 
     @Override
     public void onResume() {
         super.onResume();
         bindReminderState();
+        refreshTwoFactorState();
         loadUser();
     }
 
@@ -523,6 +543,107 @@ public class SettingsFragment extends Fragment {
         btnDeleteAccount.setEnabled(enabled);
         btnExportSummary.setEnabled(enabled);
         btnClearStudyData.setEnabled(enabled);
+        btnTwoFactor.setEnabled(enabled);
+    }
+
+    private void refreshTwoFactorState() {
+        if (tvTwoFactorStatus == null || btnTwoFactor == null) return;
+        boolean enabled = secondFactorManager != null
+                && secondFactorManager.isEnabled(session.getCurrentUserId());
+        tvTwoFactorStatus.setText(enabled
+                ? R.string.two_factor_status_on : R.string.two_factor_status_off);
+        btnTwoFactor.setText(enabled
+                ? R.string.two_factor_disable : R.string.two_factor_enable);
+    }
+
+    private void showEnableTwoFactorDialog() {
+        long userId = session.getCurrentUserId();
+        if (userId <= 0L) return;
+        SecondFactorManager.Setup setup = secondFactorManager.createSetup();
+        View dialogView = getLayoutInflater().inflate(
+                R.layout.dialog_totp_setup, null, false);
+        TextView setupKey = dialogView.findViewById(R.id.tvTwoFactorSetupKey);
+        TextInputLayout codeLayout = dialogView.findViewById(
+                R.id.tilTwoFactorCode);
+        TextInputEditText codeInput = dialogView.findViewById(
+                R.id.etTwoFactorCode);
+        MaterialButton copySetupKey = dialogView.findViewById(
+                R.id.btnCopyTwoFactorSetupKey);
+        setupKey.setText(setup.displaySecret);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.two_factor_setup_title)
+                .setView(dialogView)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.verify_and_enable, null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            copySetupKey.setOnClickListener(v -> {
+                ClipboardManager clipboard = (ClipboardManager) requireContext()
+                        .getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText(
+                            getString(R.string.two_factor_setup_title), setup.secret));
+                    Toast.makeText(requireContext(), R.string.setup_key_copied,
+                            Toast.LENGTH_SHORT).show();
+                }
+            });
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                SecondFactorManager.Result result = secondFactorManager.enable(
+                        userId, setup, valueOf(codeInput));
+                if (!result.success) {
+                    codeLayout.setError(result.message);
+                    codeInput.requestFocus();
+                    return;
+                }
+                codeLayout.setError(null);
+                dialog.dismiss();
+                refreshTwoFactorState();
+                Toast.makeText(requireContext(), result.message,
+                        Toast.LENGTH_LONG).show();
+            });
+        });
+        dialog.show();
+    }
+
+    private void showDisableTwoFactorDialog() {
+        long userId = session.getCurrentUserId();
+        if (userId <= 0L) return;
+        View dialogView = getLayoutInflater().inflate(
+                R.layout.dialog_totp_code, null, false);
+        TextView help = dialogView.findViewById(R.id.tvTwoFactorDialogHelp);
+        help.setText(R.string.two_factor_disable_help);
+        TextInputLayout codeLayout = dialogView.findViewById(
+                R.id.tilTwoFactorCode);
+        TextInputEditText codeInput = dialogView.findViewById(
+                R.id.etTwoFactorCode);
+        // The dialog layout already contains sign-in guidance; the title makes
+        // the destructive direction explicit without adding another layout.
+        AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.two_factor_disable_title)
+                .setView(dialogView)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.two_factor_disable, null)
+                .create();
+        dialog.setOnShowListener(ignored ->
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                    SecondFactorManager.Result result = secondFactorManager.disable(
+                            userId, valueOf(codeInput));
+                    if (!result.success) {
+                        codeLayout.setError(result.message);
+                        codeInput.requestFocus();
+                        return;
+                    }
+                    dialog.dismiss();
+                    refreshTwoFactorState();
+                    Toast.makeText(requireContext(), result.message,
+                            Toast.LENGTH_LONG).show();
+                }));
+        dialog.show();
+    }
+
+    private String valueOf(TextInputEditText field) {
+        return field.getText() == null ? "" : field.getText().toString().trim();
     }
 
     private void sendReminder() {
@@ -676,10 +797,12 @@ public class SettingsFragment extends Fragment {
                     dialog.setCancelable(false);
                     dialog.setCanceledOnTouchOutside(false);
                     setMutationActionsEnabled(false);
+                    long deletingUserId = session.getCurrentUserId();
                     userRepository.deleteAccountAsync(
-                            session.getCurrentUserId(), password, result -> {
+                            deletingUserId, password, result -> {
                                 if (result.success) {
                                     ReminderScheduler.disable(requireContext());
+                                    secondFactorManager.clear(deletingUserId);
                                     session.clearCurrentUserPreferences();
                                     session.logout();
                                 }
