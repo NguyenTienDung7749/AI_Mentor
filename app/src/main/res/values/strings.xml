@@ -14,6 +14,9 @@
     <string name="login_welcome_title">Welcome back</string>
     <string name="login_welcome_subtitle">Continue your questions, quizzes and learning streak.</string>
     <string name="auth_privacy_note">Your study history is stored privately on this device.</string>
+    <string name="auth_product_label">BTEC application development</string>
+    <string name="auth_new_here">New to AI Study Mentor?</string>
+    <string name="toolbar_supporting_text">Your focused learning space</string>
     <string name="btec_logo_description">BTEC, in alliance with FPT Education</string>
 
     <!-- Onboarding -->
@@ -172,7 +175,6 @@
     <string name="mark_reviewed">Mark as reviewed</string>
     <string name="reviewed">Reviewed</string>
     <!-- Batch 8: localized UI labels and accessibility text -->
-    <string name="app_tagline">Ask. Learn. Level up.</string>
     <string name="close_screen">Close screen</string>
     <string name="done">Done</string>
 

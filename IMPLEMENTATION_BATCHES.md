@@ -168,8 +168,9 @@ Status: complete
 - Compared the UI patterns used by Quizlet, Photomath, Khan Academy,
   Duolingo, NotebookLM, Knowt, Vaia and Brainly while retaining the app's
   working visual identity.
-- Replaced duplicated destination headings with a compact branded app bar and
-  fixed outlined dropdown rendering without changing the five-tab model.
+- Replaced duplicated destination headings with an elevated branded destination
+  card, refreshed the full-page BTEC authentication presentation and fixed
+  outlined dropdown rendering without changing the five-tab model.
 - Added optional RFC 6238 authenticator verification with Android-Keystore
   AES-GCM protection and password-plus-code login gating.
 - Found a live AI quiz whose explanation belonged to another equation; added
@@ -184,7 +185,7 @@ Exit criteria achieved:
 - Android Lint reports 0 errors and 15 non-blocking dependency/version/known
   quiz-background overdraw warnings.
 - Debug and minified release builds succeed; the unsigned release APK is
-  2,609,384 bytes and remains 13.15% below the pre-cleanup baseline.
+  2,612,862 bytes and remains 13.03% below the pre-cleanup baseline.
 - Final emulator state is restored to light mode and 100% font scale.
 - Updated evidence and this verification record are ready to cite in the
   assignment report.

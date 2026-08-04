@@ -1,160 +1,164 @@
 # AI Study Mentor
 
-AI Study Mentor là một ứng dụng Android bằng Java được tạo ra cho kịch bản học tập BrightPath trong bài tập BTEC Unit 22: Application Development (Phát triển Ứng dụng). Ứng dụng kết hợp trợ lý học tập dùng Groq cho câu hỏi văn bản và Mistral Vision cho câu hỏi có ảnh, cùng với các bài trắc nghiệm được cá nhân hóa, lịch sử cục bộ, theo dõi tiến độ và nhắc nhở học tập theo lịch trình.
+AI Study Mentor là ứng dụng Android hỗ trợ học tập cá nhân hóa, được xây dựng cho bài Assignment BTEC Unit 22 – Application Development. Ứng dụng kết hợp trợ lý AI, câu hỏi có ảnh, bài quiz nhiều định dạng, thư viện ôn tập, theo dõi tiến độ và nhắc lịch học trong một trải nghiệm Material 3 trẻ trung nhưng chuyên nghiệp.
 
-Kho lưu trữ này chứa mã nguồn ứng dụng. Các phần phân tích bài tập, minh chứng kiểm thử, ảnh chụp màn hình, đánh giá chéo và tự đánh giá thuộc về báo cáo bài tập nộp riêng thay vì nằm trong cây mã nguồn này.
+## Trạng thái dự án
 
-## Tính năng
+- Phiên bản: `1.0`
+- Application ID: `com.example.aimentor`
+- Nền tảng: Android 7.0 trở lên (`minSdk 24`, `targetSdk 36`)
+- Ngôn ngữ giao diện: tiếng Anh
+- Kiến trúc dữ liệu: local-first với Room; tài khoản và dữ liệu học tập nằm riêng theo từng người dùng
+- Trạng thái nộp bài: sẵn sàng trình diễn và đưa vào báo cáo Assignment
 
-| Khu vực | Triển khai hiện tại |
+Lần kiểm tra đầy đủ gần nhất đạt 75 unit test, 31 instrumented test, Android Lint không có lỗi và build release thu gọn thành công. Chi tiết đối chiếu yêu cầu nằm trong [ASSIGNMENT_VERIFICATION.md](ASSIGNMENT_VERIFICATION.md).
+
+## Chức năng chính
+
+### Tài khoản và cá nhân hóa
+
+- Đăng ký, đăng nhập và duy trì phiên đăng nhập.
+- Kiểm tra độ mạnh mật khẩu và xác nhận mật khẩu.
+- Onboarding chọn trình độ học vấn, môn học quan tâm và phong cách giải thích.
+- Xác thực hai bước TOTP tùy chọn; khóa thiết lập được mã hóa bằng Android Keystore.
+- Đăng xuất, xóa tài khoản bằng xác nhận mật khẩu và cô lập dữ liệu giữa các tài khoản.
+
+### Trợ lý học tập AI
+
+- Gửi câu hỏi văn bản theo môn học và phong cách giải thích.
+- Chọn ảnh từ thư viện hoặc chụp bằng camera để hỏi bài; hiển thị thông báo đồng ý trước khi chuyển ảnh cho nhà cung cấp AI.
+- Trả lời có cấu trúc gồm đáp án trực tiếp, các bước giải, giải thích đơn giản, khái niệm chính, lỗi thường gặp và câu hỏi tiếp nối.
+- Hiển thị Markdown và công thức toán học.
+- Dùng Groq cho câu hỏi văn bản và Mistral Vision cho câu hỏi có ảnh.
+- Có phương án trả lời cục bộ/fallback khi phản hồi từ xa không khả dụng hoặc không hợp lệ.
+
+### Offline, lưu trữ và ôn tập
+
+- Xếp hàng câu hỏi văn bản khi mất mạng; WorkManager tự gửi lại khi có kết nối.
+- Chống tạo đáp án hoặc XP trùng lặp khi một yêu cầu được thử lại.
+- Tùy chọn dùng lại đáp án đã lưu chỉ khi câu hỏi và hồ sơ học tập khớp chính xác.
+- Thư viện hỗ trợ tìm kiếm, lọc môn học, bookmark và mở lại đáp án.
+- Phân loại nội dung theo `All`, `Due`, `Learning`, `Mastered` và tạo kế hoạch học trong ngày.
+
+### Quiz và tiến độ
+
+- Quiz cá nhân hóa gồm bốn dạng: trắc nghiệm, đúng/sai, trả lời ngắn và điền vào chỗ trống.
+- Phản hồi đáp án ngay lập tức, giải thích, tính điểm, XP và làm lại câu sai.
+- Kiểm tra tính nhất quán giữa đáp án và lời giải từ AI; phản hồi lỗi sẽ được thử lại hoặc thay bằng quiz an toàn cục bộ.
+- Theo dõi XP, cấp độ, huy hiệu, streak, hoạt động theo tuần, mastery theo môn và lịch sử quiz.
+- Bảng xếp hạng cục bộ chỉ dành cho tài khoản đã chủ động tham gia và không hiển thị email.
+
+### Cài đặt và quyền riêng tư
+
+- Chế độ sáng/tối/theo hệ thống và bốn bảng màu: Scholar, Ocean, Forest, Sunset.
+- Ảnh đại diện, nhắc lịch học, thông báo đến hạn ôn tập, chủ đề lặp lại, tổng kết tuần và đáp án sẵn sàng.
+- Xuất bản tóm tắt dữ liệu học tập, xóa lịch sử nhưng giữ tài khoản, hoặc xóa toàn bộ tài khoản.
+- Tắt Android backup; dữ liệu Room nằm trong vùng lưu trữ riêng của ứng dụng.
+
+## Công nghệ sử dụng
+
+| Thành phần | Công nghệ |
 |---|---|
-| Tài khoản | Đăng ký, đăng nhập, hướng dẫn người dùng mới (onboarding) và quản lý phiên cục bộ |
-| Câu trả lời từ AI | Câu trả lời có cấu trúc bằng ngôn ngữ của câu hỏi với phân loại môn học và độ khó |
-| Định tuyến mô hình (Model routing) | Chọn giữa `openai/gpt-oss-20b` và `openai/gpt-oss-120b` cho văn bản; dùng `ministral-14b-latest` cho một ảnh đính kèm |
-| Độ tin cậy | Cho phép thử lại mô hình thay thế có giới hạn, thời hạn phản hồi tổng cộng là 60 giây và nội dung dự phòng khi ngoại tuyến dựa trên quy tắc |
-| Câu hỏi có ảnh | Nhập một ảnh từ thư viện hoặc camera, chuẩn hóa hướng ảnh, giảm kích thước/nén trên thiết bị rồi gửi ảnh cùng câu hỏi tới Mistral Vision |
-| Lịch sử | Tìm kiếm, bộ lọc môn học, đánh dấu (bookmark) và trạng thái "đã ôn tập" được lưu trữ bằng Room |
-| Trắc nghiệm (Quiz) | Cá nhân hóa theo chủ đề/lịch sử, độ khó thích ứng, trắc nghiệm nhiều lựa chọn, đúng/sai, trả lời ngắn, điền vào chỗ trống, giải thích và thử lại các câu sai |
-| Tiến độ | Thống kê thực tế qua Room, thời gian ôn tập, biểu đồ độ chính xác 7/30 ngày, các chủ đề lặp lại, tổng số theo môn học, XP, cấp độ và huy hiệu |
-| Thông báo | Nhắc nhở hàng ngày bằng WorkManager do người dùng kiểm soát, có thể chọn thời gian và có thông báo chạy thử nghiệm |
-| Giao diện | Material UI, chế độ sáng/tối, mở khóa avatar/chủ đề (theme), các trạng thái đang tải/lỗi/trống và phục hồi trạng thái |
-
-Chỉ những câu trả lời thành công qua mạng (remote) mới được lưu vào Room. Nội dung dự phòng ngoại tuyến là tạm thời và không được tính vào lịch sử, tiến độ hay điểm XP. Phiên bản baseline bắt đầu một request mới cho mỗi câu hỏi; các batch nâng cấp của bài nộp bổ sung cache chính xác và hàng đợi câu hỏi ngoại tuyến mà không tự động dùng lại các câu trả lời chỉ gần giống nhau.
-
-## Công nghệ
-
-- Tương thích với mã nguồn Java 11
-- Android SDK: tối thiểu (min) 24, compile/target 36
-- Android Gradle Plugin 9.3.1 và Gradle 9.5.0
-- AndroidX, Material Components và ViewPager2
-- Room để lưu trữ dữ liệu cục bộ
-- Retrofit, OkHttp và Gson cho API tương thích với OpenAI của Groq
-- Mistral Vision cho câu hỏi có một ảnh đính kèm
-- WorkManager cho các nhắc nhở hàng ngày chạy ngầm
-- JUnit, MockWebServer, AndroidX Test và Espresso
+| Ngôn ngữ | Java 11 |
+| Giao diện | Material 3, ConstraintLayout, RecyclerView, ViewPager2 |
+| Dữ liệu | Room 2.6.1 |
+| Tác vụ nền | WorkManager 2.11.2 |
+| Mạng | Retrofit 3, OkHttp 4, Gson |
+| Nội dung | Markwon và LaTeX extension |
+| Kiểm thử | JUnit 4, MockWebServer, AndroidX Test, Espresso |
+| Build | Gradle 9.5, Android Gradle Plugin 9.3.1 |
 
 ## Cấu trúc dự án
 
 ```text
 app/src/main/java/com/example/aimentor/
-|-- activities/    Màn hình đăng nhập, đăng ký, hướng dẫn, trả lời và trắc nghiệm
-|-- Fragments/     Trang chủ, lịch sử, thiết lập trắc nghiệm và cài đặt
-|-- adapters/      Adapter cho ViewPager và danh sách câu hỏi
-|-- ai/            Các engine kết nối mạng/cục bộ, phân tích cú pháp, phân loại và mô hình trắc nghiệm
-|-- data/          Room entity, DAO, cơ sở dữ liệu và migration
-|-- network/       Service Retrofit cho Groq và các mô hình request/response
-|-- repo/          Repository bất đồng bộ cho người dùng và tiến độ học
-|-- util/          Các hàm tiện ích cho bảo mật, xác thực, game hóa và nhắc nhở
-`-- worker/        Worker chạy lịch nhắc nhở học tập
+├── activities/   Màn hình đăng nhập, onboarding, menu, đáp án và quiz
+├── Fragments/    Home, Library, Quiz, Progress và Settings
+├── ai/           Mô hình dữ liệu, parser và AI engine từ xa/cục bộ
+├── data/         Room database, entity và DAO
+├── network/      Retrofit service cho Groq và Mistral
+├── repo/         Nghiệp vụ tài khoản và học tập
+├── util/         Bảo mật, giao diện, thông báo và tính toán tiến độ
+└── worker/       Đồng bộ câu hỏi offline và nhắc học
 ```
 
-## Cấu hình cục bộ
+Các tài liệu quan trọng:
 
-Ứng dụng không yêu cầu sinh viên cung cấp API key. Nhà phát triển tự cung cấp key trên máy cục bộ khi build.
+- [ASSIGNMENT_VERIFICATION.md](ASSIGNMENT_VERIFICATION.md): đối chiếu yêu cầu, bằng chứng và giới hạn của sản phẩm.
+- [IMPLEMENTATION_BATCHES.md](IMPLEMENTATION_BATCHES.md): lịch sử các batch nâng cấp.
+- [TESTING_GUIDE.md](TESTING_GUIDE.md): quy trình kiểm thử tự động và thủ công toàn bộ ứng dụng.
+- [`docs/evidence`](docs/evidence): ảnh bằng chứng dùng cho báo cáo.
 
-Tạo hoặc cập nhật file `local.properties` ở thư mục gốc:
+## Chuẩn bị môi trường
+
+Yêu cầu:
+
+- Android Studio có Android SDK 36.
+- JDK đi kèm Android Studio hoặc JDK tương thích với Gradle 9.5.
+- Thiết bị thật hoặc máy ảo Android 7.0 trở lên; cấu hình kiểm tra chính là Pixel 7, Android 15 (API 35).
+- Kết nối Internet để gọi AI.
+
+Tạo hoặc cập nhật `local.properties` ở thư mục gốc:
 
 ```properties
-sdk.dir=/absolute/path/to/Android/Sdk
-GROQ_API_KEY=thay-bang-groq-key-cua-ban
-MISTRAL_API_KEY=thay-bang-mistral-key-cua-ban
+sdk.dir=C\:\\Users\\<ten-nguoi-dung>\\AppData\\Local\\Android\\Sdk
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxx
+MISTRAL_API_KEY=xxxxxxxxxxxxxxxxxxxx
 ```
 
-File `local.properties` được Git bỏ qua (ignore). Tuyệt đối không đặt key thật trong code Java, XML, ảnh chụp màn hình, issue, báo cáo hay các commit.
-
-Bản mẫu (prototype) debug đọc các key này vào `BuildConfig`. Các câu hỏi chỉ có văn bản sẽ sử dụng:
-
-```text
-https://api.groq.com/openai/v1/chat/completions
-```
-
-Các câu hỏi có đính kèm 1 hình ảnh sử dụng:
-
-```text
-https://api.mistral.ai/v1/chat/completions
-```
-
-Điều này chỉ được chấp nhận đối với một nguyên mẫu được kiểm soát trong môi trường lớp học bằng cách sử dụng dữ liệu giả. Bất kỳ giá trị nào biên dịch vào APK đều có thể bị trích xuất. Phiên bản production bắt buộc phải giữ credential của nhà cung cấp trên một backend/proxy đáng tin cậy và xác thực người dùng ứng dụng trước khi chuyển tiếp yêu cầu.
-
-Nếu `GROQ_API_KEY` trống, ứng dụng sẽ sử dụng `LocalAiEngine`. Khi một request từ xa được cấu hình bị thất bại do lỗi tạm thời (transient error) đủ điều kiện, ứng dụng có thể thử lại bằng mô hình Groq thay thế một lần trong cùng thời hạn 60 giây, và sau đó hiển thị dự phòng ngoại tuyến mà không bị crash.
+`GROQ_API_KEY` là bắt buộc cho build release và luồng AI văn bản. `MISTRAL_API_KEY` cần cho câu hỏi có ảnh. Với phạm vi bài Assignment, khóa được đưa vào `BuildConfig` để dễ chạy demo. Không dùng cách này cho sản phẩm phát hành công khai; bản production thực tế cần backend proxy, giới hạn quota và cơ chế xoay khóa.
 
 ## Build và chạy
 
-Yêu cầu (Prerequisites):
+Mở thư mục dự án bằng Android Studio, chờ Gradle Sync hoàn tất, chọn thiết bị rồi chạy cấu hình `app`.
 
-- Android Studio với Android SDK/platform 36
-- JDK 17 hoặc JBR đi kèm với Android Studio
-- Thiết bị thật hoặc máy ảo Android chạy API 24 trở lên
-
-Trên Windows PowerShell:
+Có thể build bằng PowerShell tại thư mục gốc:
 
 ```powershell
-.\gradlew.bat testDebugUnitTest assembleDebug lintDebug
-.\gradlew.bat verifyReleaseConfiguration assembleRelease
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+.\gradlew.bat assembleDebug
 ```
 
-Trên macOS/Linux:
-
-```bash
-./gradlew testDebugUnitTest assembleDebug lintDebug
-```
-
-Tệp APK debug sẽ được tạo tại:
+APK debug nằm tại:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Các bản build Release yêu cầu phải có một `GROQ_API_KEY` hợp lệ cục bộ, kích hoạt tối ưu hóa/làm rối mã code bằng R8 và loại bỏ các resource không sử dụng. APK release được tạo ra chưa được ký (unsigned) trừ khi nhà phát triển cung cấp cấu hình ký riêng tư bên ngoài repository.
-
-Mở dự án trong Android Studio, chọn thiết bị và chạy cấu hình `app`. Luồng sử dụng lần đầu thông thường là:
-
-```text
-Đăng ký -> Hướng dẫn (Onboarding) -> Trang chủ
-```
-
-## Kiểm thử (Testing)
-
-Các bài test JVM bao phủ:
-
-- Phân tích cú pháp phản hồi (response parsing) và kết quả có cấu trúc song ngữ
-- Lựa chọn mô hình cục bộ và ánh xạ các lần thử lại/lỗi
-- Thời hạn dự phòng chung 60 giây
-- Xác thực, mã hóa và kiểm tra mật khẩu
-- Phân loại môn học, chấm điểm trắc nghiệm, XP, cấp độ và huy hiệu
-- Giới hạn nhập liệu/OCR và tính toán thời gian nhắc nhở
-
-Các instrumented test bao phủ:
-
-- Các thao tác với Room repository và cách ly người dùng
-- Lưu trữ câu trả lời qua mạng và không lưu trữ khi ngoại tuyến
-- Cập nhật (mutations) bất đồng bộ và nguyên tử đối với điểm XP/ôn tập/trắc nghiệm
-- Các callback bất đồng bộ của repository
-- Phục hồi trạng thái ViewModel và ngăn chặn gửi trùng lặp yêu cầu
-- Lập lịch, hủy và thiết lập kênh thông báo bằng WorkManager độc nhất
-
-Chạy instrumented tests với thiết bị đã kết nối:
+Build release thu gọn:
 
 ```powershell
-.\gradlew.bat connectedDebugAndroidTest
+.\gradlew.bat assembleRelease
 ```
 
-Sử dụng thiết bị hoặc profile kiểm thử chuyên dụng: task test của Android Gradle có thể cài đặt hoặc gỡ cài đặt ứng dụng debug và do đó sẽ xóa các tài khoản cục bộ cũng như lịch sử Room.
+APK release mặc định chưa được ký để phát hành. Hãy cấu hình keystore riêng nếu cần cài bản release hoặc đưa lên cửa hàng.
 
-## Ghi chú về dữ liệu và bảo mật
+## Kiểm thử nhanh
 
-- Mật khẩu được lưu dưới dạng băm PBKDF2 có salt cho từng người dùng; các hàm băm cũ (legacy hashes) sẽ được tự động nâng cấp sau khi đăng nhập thành công.
-- Truy cập vào dữ liệu Room trên luồng chính (main-thread) bị vô hiệu hóa. Hoạt động của Repository chạy trên các executor nền (background executors) và trả về kết quả cho luồng chính.
-- Ảnh được chuẩn hóa hướng, giảm kích thước và nén JPEG trên thiết bị. Khi người dùng gửi câu hỏi có ảnh, cả ảnh đã nén và nội dung câu hỏi được truyền bằng HTTPS tới Mistral để phân tích. Không có ML Kit OCR trong phiên bản hiện tại.
-- Câu hỏi nhập vào được giới hạn trong 6,000 ký tự.
-- Tính năng sao lưu ứng dụng bị vô hiệu hóa và màn hình Cài đặt (Settings) cung cấp tính năng xóa tài khoản/dữ liệu triệt để.
-- Các nhắc nhở hàng ngày là tùy chọn, sử dụng một job định kỳ duy nhất và sẽ bị hủy bỏ khi đăng xuất bình thường hoặc khi xóa tài khoản.
-- Ứng dụng này là một bản nguyên mẫu (prototype) giáo dục và nên được sử dụng với dữ liệu giả định.
+```powershell
+# Unit test
+.\gradlew.bat testDebugUnitTest
 
-## Những hạn chế đã biết của nguyên mẫu (prototype limitations)
+# Kiểm thử trên máy ảo/thiết bị đang kết nối
+.\gradlew.bat connectedDebugAndroidTest
 
-- Quá trình xác thực và mọi dữ liệu người dùng chỉ được lưu trên thiết bị (device-local); không có dịch vụ tài khoản đám mây hay tính năng đồng bộ hóa giữa các thiết bị.
-- Groq và Mistral key có thể bị trích xuất từ file APK đã build vì nguyên mẫu lớp học không sử dụng proxy backend. Chỉ dùng key giới hạn quota và dữ liệu giả định; kiến trúc production phải chuyển credential sang backend đáng tin cậy.
-- Các nhắc nhở của WorkManager giúp tiết kiệm pin và có tính bền bỉ nhưng không phải là báo thức chính xác; hệ thống Android có thể gửi chúng muộn hơn so với thời gian đã chọn.
-- Các câu trả lời khi ngoại tuyến mang tính hướng dẫn học tập cố định, không phải là sự thay thế cho các mô hình ngôn ngữ trí tuệ nhân tạo trực tuyến.
-- Quá trình ký phát hành (release signing), giám sát trong môi trường production và triển khai lên store ứng dụng nằm ngoài phạm vi nguyên mẫu của bài tập.
+# Android Lint
+.\gradlew.bat lintDebug
+
+# Kiểm tra toàn bộ và build APK
+.\gradlew.bat testDebugUnitTest connectedDebugAndroidTest lintDebug assembleDebug assembleRelease
+```
+
+Lưu ý: `connectedDebugAndroidTest` có thể cài lại hoặc xóa dữ liệu ứng dụng trên thiết bị kiểm thử. Không chạy lệnh này trên thiết bị đang chứa dữ liệu cần giữ. Quy trình chi tiết và kết quả mong đợi có trong [TESTING_GUIDE.md](TESTING_GUIDE.md).
+
+## Giới hạn đã biết
+
+- API key trong APK có thể bị trích xuất; thiết kế hiện tại chỉ phù hợp cho bài tập và demo riêng tư.
+- Bảng xếp hạng là cục bộ trên một thiết bị, không phải dịch vụ nhiều người dùng trực tuyến.
+- Chất lượng và thời gian trả lời phụ thuộc nhà cung cấp AI và kết nối mạng.
+- Bản release tạo từ dự án chưa có chữ ký của chủ sở hữu.
+- Ứng dụng chưa có đồng bộ tài khoản/dữ liệu giữa nhiều thiết bị.
+
+## Phạm vi sử dụng
+
+Dự án phục vụ học tập và đánh giá Assignment BTEC. Không nhập dữ liệu cá nhân nhạy cảm hoặc dùng khóa API production có quota lớn trong bản demo.

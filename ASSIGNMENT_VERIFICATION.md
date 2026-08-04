@@ -11,17 +11,19 @@ five-tab navigation, AI answer, Library, quiz, progress, rewards, appearance
 and reminder flows. The final audit adds real optional TOTP two-factor sign-in,
 Android-Keystore protection for its setup key, a clearer branded app bar,
 cleaner quiz dropdowns and response validation that rejects an AI quiz when an
-explanation does not support its own answer.
+explanation does not support its own answer. The final visual pass also refreshes
+the full-page sign-in/sign-up presentation with a BTEC identity plate, semantic
+field icons and an elevated destination card without changing any user flow.
 
 The app remains intentionally scoped as a classroom prototype. API keys are
 read from `local.properties` and compiled into `BuildConfig`, as agreed for
 this assignment. That is acceptable for a private demonstration build but is
 not a production secret-management design.
 
-The final minified release APK is 2,609,384 bytes (2.49 MiB), 13.15% smaller
+The final minified release APK is 2,612,862 bytes (2.49 MiB), 13.03% smaller
 than the verified 3,004,303-byte pre-cleanup build. Adding genuine 2FA,
 Keystore encryption, quiz validation and the final UI resources increased the
-previous optimized APK by only 8,733 bytes (0.34%).
+previous optimized APK by only 12,211 bytes (0.47%).
 
 Assessment verdict: ready for the Android assignment demonstration and report.
 The required MVP (AI question/answer, history and basic progress) is complete,
@@ -55,7 +57,7 @@ boundaries rather than being presented as an online production service.
 | Local data protection | App records use Android app-private credential-encrypted storage; the TOTP seed adds AES-256-GCM with a non-exportable Keystore key; backup is disabled | manifest, Room, `SecondFactorManager` | Android Keystore instrumented test and device encryption check |
 | Data controls | Settings can export a text summary, clear study history/XP while keeping the account, or delete all account data with password confirmation | `SettingsFragment`, repository transaction | Instrumented clear/delete isolation tests |
 | Upgrade safety | Room v4-to-v5 migration adds cache/queue fields and tables without destructive migration | `AppDatabase.MIGRATION_4_5` | 31 connected tests on a real Android Room runtime |
-| Youthful professional UI | Existing gradient/cards/navigation remain; compact brand bar, consistent outlined dropdowns and a polished security card remove duplicated/rough states | Material layouts/styles | Emulator review at 1080 x 2400, light/dark and 100%/130% font scale |
+| Youthful professional UI | Existing gradient/cards/navigation remain; BTEC-branded full-page authentication, elevated destination card, consistent outlined dropdowns and a polished security card remove duplicated/rough states | Material layouts/styles | Emulator review at 1080 x 2400, light/dark and 100%/130% font scale |
 
 ## Real-device workflow log
 
