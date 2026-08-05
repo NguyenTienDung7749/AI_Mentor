@@ -2,7 +2,6 @@ package com.example.aimentor.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,7 +25,6 @@ public class MenuActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNavigationView;
     private ViewPager2 viewPager;
-    private TextView toolbarDestination;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -42,7 +40,6 @@ public class MenuActivity extends AppCompatActivity {
             return;
         }
 
-        toolbarDestination = findViewById(R.id.tvToolbarDestination);
         viewPager = findViewById(R.id.viewPager);
         bottomNavigationView = findViewById(R.id.bottomNavigation);
 
@@ -92,10 +89,6 @@ public class MenuActivity extends AppCompatActivity {
                 else if (position == 4) menuId = R.id.Settings_menu;
                 else menuId = R.id.home_menu;
                 bottomNavigationView.getMenu().findItem(menuId).setChecked(true);
-                if (toolbarDestination != null
-                        && position >= 0 && position < TITLE_RES.length) {
-                    toolbarDestination.setText(TITLE_RES[position]);
-                }
             }
         });
     }
