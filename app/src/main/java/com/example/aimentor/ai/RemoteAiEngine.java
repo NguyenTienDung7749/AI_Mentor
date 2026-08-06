@@ -806,7 +806,7 @@ public class RemoteAiEngine implements AiEngine {
     private String reasoningEffort(String model, String explanationStyle) {
         String style = normalizeExplanationStyle(explanationStyle);
         if ("Short".equals(style)) return "low";
-        return "Detailed".equals(style) ? "medium" : "high";
+        return "Detailed".equals(style) || "Step-by-step".equals(style) ? "medium" : "high";
     }
 
     private String reasoningFormat(String model) {
