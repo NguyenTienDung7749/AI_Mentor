@@ -240,4 +240,56 @@ public class UserRepository {
         runAsync(() -> deleteAccount(userId, password),
                 "Could not delete local data. Please try again.", callback);
     }
+
+    /**
+     * Updates the name, email and optionally the password for an existing
+     * account. The caller must provide the current password for verification.
+     */
+    @WorkerThread
+    public Result updateProfile(long userId, String currentPassword,
+                                String name, String email,
+                                String newPassword) {
+        User user = userDao.findById(userId);
+        if (user == null) {
+            return new Result(false, "Account not found.", -1);
+        }
+        String safeCurrent = currentPassword == null ? "" : currentPassword;
+        if (!SecurityUtils.verify(safeCurrent, user.salt, user.passwordHash)) {
+            return new Result(false, "Incorrect current password.", -1);
+        }
+        String cleanName = (name == null || name.trim().isEmpty())
+                ? user.name : name.trim();
+        String cleanEmail = email == null
+                ? user.email : email.trim().toLowerCase(Locale.ROOT);
+        if (!Validators.isValidEmail(cleanEmail)) {
+            return new Result(false, "Please enter a valid email address.", -1);
+        }
+        if (!cleanEmail.equals(user.email)
+                && userDao.countByEmail(cleanEmail) > 0) {
+            return new Result(false,
+                    "An account with this email already exists.", -1);
+        }
+        boolean changePassword = newPassword != null
+                && !newPassword.isEmpty();
+        if (changePassword && !PasswordValidator.isAcceptable(newPassword)) {
+            return new Result(false, PasswordValidator.requirementMessage(), -1);
+        }
+        userDao.updateProfile(userId, cleanName, cleanEmail);
+        if (changePassword) {
+            String salt = SecurityUtils.generateSalt();
+            String hash = SecurityUtils.hashPassword(newPassword, salt);
+            userDao.updateCredentials(userId, salt, hash);
+        }
+        return new Result(true, "Profile updated.", userId);
+    }
+
+    public void updateProfileAsync(
+            long userId, String currentPassword,
+            String name, String email, String newPassword,
+            @NonNull ResultCallback callback) {
+        runAsync(() -> updateProfile(userId, currentPassword,
+                        name, email, newPassword),
+                "Could not update the profile. Please try again.", callback);
+    }
 }
+

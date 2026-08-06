@@ -84,6 +84,7 @@ public class SettingsFragment extends Fragment {
     private MaterialButton btnSavePrefs, btnDeleteAccount, btnReminderTime;
     private MaterialButton btnSaveAppearance;
     private MaterialButton btnExportSummary, btnClearStudyData;
+    private MaterialButton btnEditProfile;
     private MaterialButton btnTwoFactor;
     private TextView tvReminderStatus, tvUnlockStatus, tvTwoFactorStatus;
     private int currentLevel = 1;
@@ -204,6 +205,8 @@ public class SettingsFragment extends Fragment {
         btnDeleteAccount.setOnClickListener(v -> showDeleteAccountDialog());
         btnExportSummary.setOnClickListener(v -> exportStudySummary());
         btnClearStudyData.setOnClickListener(v -> showClearStudyDataDialog());
+        btnEditProfile = view.findViewById(R.id.btnEditProfile);
+        btnEditProfile.setOnClickListener(v -> showEditProfileDialog());
         btnTwoFactor.setOnClickListener(v -> {
             if (secondFactorManager.isEnabled(session.getCurrentUserId())) {
                 showDisableTwoFactorDialog();
@@ -544,6 +547,7 @@ public class SettingsFragment extends Fragment {
         btnExportSummary.setEnabled(enabled);
         btnClearStudyData.setEnabled(enabled);
         btnTwoFactor.setEnabled(enabled);
+        btnEditProfile.setEnabled(enabled);
     }
 
     private void refreshTwoFactorState() {
@@ -640,6 +644,103 @@ public class SettingsFragment extends Fragment {
                             Toast.LENGTH_LONG).show();
                 }));
         dialog.show();
+    }
+
+    private void showEditProfileDialog() {
+        long userId = session.getCurrentUserId();
+        if (userId <= 0L) return;
+        int generation = ++loadGeneration;
+        userRepository.getUserAsync(userId, user -> {
+            if (!canRenderLoad(generation) || user == null) return;
+            LinearLayout form = new LinearLayout(requireContext());
+            form.setOrientation(LinearLayout.VERTICAL);
+            int pad = dp(24);
+            form.setPadding(pad, dp(8), pad, 0);
+
+            TextInputLayout tilName = new TextInputLayout(requireContext());
+            TextInputEditText etName = new TextInputEditText(tilName.getContext());
+            etName.setHint(R.string.full_name);
+            etName.setText(user.name);
+            etName.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
+            tilName.addView(etName);
+            form.addView(tilName);
+
+            TextInputLayout tilEmail = new TextInputLayout(requireContext());
+            TextInputEditText etEmail = new TextInputEditText(tilEmail.getContext());
+            etEmail.setHint(R.string.email);
+            etEmail.setText(user.email);
+            etEmail.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+            tilEmail.addView(etEmail);
+            form.addView(tilEmail);
+
+            TextInputLayout tilCurrent = new TextInputLayout(requireContext());
+            TextInputEditText etCurrent = new TextInputEditText(tilCurrent.getContext());
+            etCurrent.setHint(R.string.current_password);
+            etCurrent.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            tilCurrent.addView(etCurrent);
+            form.addView(tilCurrent);
+
+            TextInputLayout tilNew = new TextInputLayout(requireContext());
+            TextInputEditText etNew = new TextInputEditText(tilNew.getContext());
+            etNew.setHint(R.string.new_password_optional);
+            etNew.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            tilNew.addView(etNew);
+            form.addView(tilNew);
+
+            TextInputLayout tilConfirm = new TextInputLayout(requireContext());
+            TextInputEditText etConfirm = new TextInputEditText(tilConfirm.getContext());
+            etConfirm.setHint(R.string.confirm_new_password);
+            etConfirm.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            tilConfirm.addView(etConfirm);
+            form.addView(tilConfirm);
+
+            AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.edit_profile_title)
+                    .setView(form)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.save_preferences, null)
+                    .create();
+            dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        String name2 = valueOf(etName);
+                        String email2 = valueOf(etEmail);
+                        String currentPwd = valueOf(etCurrent);
+                        String newPwd = valueOf(etNew);
+                        String confirmPwd = valueOf(etConfirm);
+
+                        if (!newPwd.isEmpty() && !newPwd.equals(confirmPwd)) {
+                            tilConfirm.setError(getString(R.string.new_passwords_do_not_match));
+                            etConfirm.requestFocus();
+                            return;
+                        }
+                        tilConfirm.setError(null);
+
+                        int gen = ++mutationGeneration;
+                        setMutationActionsEnabled(false);
+                        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                        dialog.setCancelable(false);
+                        userRepository.updateProfileAsync(
+                                userId, currentPwd, name2, email2,
+                                newPwd.isEmpty() ? null : newPwd, result -> {
+                                    if (!canRenderMutation(gen)) return;
+                                    setMutationActionsEnabled(true);
+                                    if (!result.success) {
+                                        dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                                                .setEnabled(true);
+                                        dialog.setCancelable(true);
+                                        tilCurrent.setError(result.message);
+                                        etCurrent.requestFocus();
+                                        return;
+                                    }
+                                    dialog.dismiss();
+                                    Toast.makeText(requireContext(),
+                                            R.string.profile_updated,
+                                            Toast.LENGTH_SHORT).show();
+                                    loadUser();
+                                });
+                    }));
+            dialog.show();
+        });
     }
 
     private String valueOf(TextInputEditText field) {

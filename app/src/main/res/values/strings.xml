@@ -467,4 +467,14 @@
     <string name="open_saved_answer_description">Open saved answer for “%1$s”</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
 
+    <!-- Edit profile -->
+    <string name="edit_profile">Edit profile</string>
+    <string name="edit_profile_title">Edit your profile</string>
+    <string name="current_password">Current password</string>
+    <string name="new_password_optional">New password (leave blank to keep current)</string>
+    <string name="confirm_new_password">Confirm new password</string>
+    <string name="profile_updated">Profile updated.</string>
+    <string name="new_passwords_do_not_match">New passwords do not match.</string>
+
 </resources>
+

@@ -52,6 +52,9 @@ public interface UserDao {
     @Query("SELECT COUNT(*) FROM users WHERE email = :email")
     int countByEmail(String email);
 
+    @Query("UPDATE users SET name = :name, email = :email WHERE id = :userId")
+    int updateProfile(long userId, String name, String email);
+
     @Query("DELETE FROM users WHERE id = :userId")
     int deleteById(long userId);
 }
