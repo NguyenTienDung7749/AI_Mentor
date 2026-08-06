@@ -697,7 +697,7 @@ public class SettingsFragment extends Fragment {
             AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                     .setTitle(R.string.edit_profile_title)
                     .setView(form)
-                    .setNegativeButton(android.R.string.cancel, null)
+                    .setNegativeButton(R.string.delete_account_cancel, null)
                     .setPositiveButton(R.string.save_preferences, null)
                     .create();
             dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE)
